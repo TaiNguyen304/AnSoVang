@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Viewer - An Số Vàng</title>
+    <meta name="description" content="Trang khán giả / màn hình hiển thị sân khấu của gameshow An Số Vàng" />
+
+    <!-- 100% font-weight là bold cho tất cả các phần tử -->
+        <style>
+      *, *::before, *::after {
+        font-weight: bold !important;
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: #0b1120;
+        color: #f8fafc;
+      }
+      /* Nút bấm và hiệu ứng hover cố định 1 màu duy nhất trên toàn bộ hệ thống - GPU accelerated */
+      button, .btn, a.btn, input[type='button'], input[type='submit'], input[type='reset'] {
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        outline: none;
+        will-change: background-color, color, box-shadow;
+      }
+      button:hover, .btn:hover, a.btn:hover, input[type='button']:hover, input[type='submit']:hover, input[type='reset']:hover {
+        background: #eab308 !important;
+        background-color: #eab308 !important;
+        background-image: none !important;
+        color: #000000 !important;
+        border-color: #eab308 !important;
+        box-shadow: 0 0 12px rgba(234, 179, 8, 0.5) !important;
+        filter: none !important;
+      }
+      button:active, .btn:active, a.btn:active {
+        opacity: 0.85;
+      }
+      .view-container {
+        display: none;
+      }
+      .view-container.active {
+        display: flex;
+        flex-direction: column;
+      }
+    </style>
+
+    <!-- Thư viện disable-devtool -->
+        <script>
+      function disableDevTools() {
+        // Chặn phím tắt mở DevTools
+        window.addEventListener('keydown', function (e) {
+          if (e.key === 'F12' || e.keyCode === 123) {
+            e.preventDefault(); e.stopPropagation(); return false;
+          }
+          const isCmdOrCtrl = e.ctrlKey || e.metaKey;
+          if (isCmdOrCtrl && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
+            e.preventDefault(); e.stopPropagation(); return false;
+          }
+          if (isCmdOrCtrl && ['u', 'U', 's', 'S'].includes(e.key)) {
+            e.preventDefault(); e.stopPropagation(); return false;
+          }
+        }, true);
+        // Chặn chuột phải
+        window.addEventListener('contextmenu', function (e) {
+          e.preventDefault(); return false;
+        }, true);
+      }
+      disableDevTools();
+      window.disableDevTools = disableDevTools;
+    </script>
+    <script src="/sync-client.js"></script>
+  </head>
+  <body class="min-h-screen p-4 md:p-8 bg-slate-950 text-slate-100 flex flex-col justify-between">
+    <div style="max-width: 1280px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; min-height: 90vh; justify-content: space-between;">
+
+      <!-- Sân khấu Header: Tên 4 Người Chơi -->
+      <div id="viewer-players-header" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px;">
+        <!-- 4 Người chơi hiển thị nổi bật -->
+      </div>
+
+      <!-- KHU VỰC HIỂN THỊ CHÍNH (ĐỒNG BỘ THEO CONTROLLER) -->
+      <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
+
+        <!-- 1. VIEW TRỐNG -->
+        <div id="view-blank" class="view-container active" style="align-items: center; justify-content: center; text-align: center; padding: 80px 20px;">
+          <div style="font-size: 72px; margin-bottom: 20px; animation: pulse 2s infinite;">✨</div>
+          <h1 style="font-size: 42px; margin: 0; background: linear-gradient(to right, #facc15, #f59e0b, #eab308); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 2px;">
+            ẨN SỐ VÀNG
+          </h1>
+          <p style="color: #64748b; font-size: 18px; margin-top: 12px;">Đang chuẩn bị vòng thi tiếp theo...</p>
+        </div>
+
+        <!-- 2. VIEW VÒNG 1 -->
+        <div id="view-vong1" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 3px solid #38bdf8; border-radius: 24px; padding: 36px; box-shadow: 0 20px 40px -10px rgba(56, 189, 248, 0.2);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <span style="background: #0284c7; color: white; padding: 6px 18px; border-radius: 999px; font-size: 14px; letter-spacing: 1px;">VÒNG 1</span>
+            <h2 style="font-size: 36px; color: #38bdf8; margin: 10px 0 0 0;">THỬ SỨC</h2>
+          </div>
+          <div id="viewer-v1-stage" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Câu hỏi Vòng 1 -->
+          </div>
+        </div>
+
+        <!-- 3. VIEW VÒNG 2 -->
+        <div id="view-vong2" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 3px solid #f59e0b; border-radius: 24px; padding: 36px; box-shadow: 0 20px 40px -10px rgba(245, 158, 11, 0.2);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <span style="background: #d97706; color: white; padding: 6px 18px; border-radius: 999px; font-size: 14px; letter-spacing: 1px;">VÒNG 2</span>
+            <h2 style="font-size: 36px; color: #f59e0b; margin: 10px 0 0 0;">ĐẶT CƯỢC</h2>
+          </div>
+          <div id="viewer-v2-stage" style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Nội dung trắc nghiệm Vòng 2 -->
+          </div>
+        </div>
+
+        <!-- 4. VIEW VÒNG 3 -->
+        <div id="view-vong3" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 3px solid #a855f7; border-radius: 24px; padding: 36px; box-shadow: 0 20px 40px -10px rgba(168, 85, 247, 0.2);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <span style="background: #7c3aed; color: white; padding: 6px 18px; border-radius: 999px; font-size: 14px; letter-spacing: 1px;">VÒNG 3</span>
+            <h2 style="font-size: 36px; color: #c084fc; margin: 10px 0 0 0;">SO TÀI (3 GỢI Ý)</h2>
+          </div>
+          <div id="viewer-v3-stage" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+            <!-- Nội dung gợi ý Vòng 3 -->
+          </div>
+        </div>
+
+        <!-- 5. VIEW VÒNG 4 -->
+        <div id="view-vong4" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 3px solid #22c55e; border-radius: 24px; padding: 36px; box-shadow: 0 20px 40px -10px rgba(34, 197, 94, 0.2);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <span style="background: #059669; color: white; padding: 6px 18px; border-radius: 999px; font-size: 14px; letter-spacing: 1px;">VÒNG 4</span>
+            <h2 style="font-size: 36px; color: #4ade80; margin: 10px 0 0 0;">ẨN SỐ MAY MẮN</h2>
+          </div>
+          <div id="viewer-v4-stage" style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Mảnh ghép và ô tặng Vòng 4 -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer hiển thị nguồn cấp dữ liệu kết nối OnRender -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1e293b; padding-top: 16px; margin-top: 24px; color: #64748b; font-size: 13px;">
+        <div>Gameshow Ẩn Số Vàng | Màn hình Viewer Sân Khấu</div>
+        <div>Đồng bộ từ Controller qua OnRender: ansovang.onrender.com</div>
+      </div>
+
+    </div>
+
+    <script>
+      const viewMap = {
+        blank: 'view-blank',
+        vong1: 'view-vong1',
+        vong2: 'view-vong2',
+        vong3: 'view-vong3',
+        vong4: 'view-vong4'
+      };
+
+      let currentRenderedView = null;
+      let lastRenderedPlayers = '';
+      let lastRenderedQuestions = null;
+
+      window.onGameStateChange(function(state, changes) {
+        // Chỉ chuyển container View khi view thực sự thay đổi
+        if (state.currentView !== currentRenderedView) {
+          currentRenderedView = state.currentView;
+          document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+          const activeContainerId = viewMap[state.currentView] || 'view-blank';
+          const targetEl = document.getElementById(activeContainerId);
+          if (targetEl) targetEl.classList.add('active');
+        }
+
+        // Chỉ vẽ lại Header người chơi nếu có sự thay đổi
+        const playersJson = JSON.stringify(state.players);
+        if (playersJson !== lastRenderedPlayers) {
+          lastRenderedPlayers = playersJson;
+          const pHeader = document.getElementById('viewer-players-header');
+          if (pHeader && state.players) {
+            const colors = [
+              { border: '#38bdf8', bg: 'rgba(56, 189, 248, 0.1)', tag: 'P1' },
+              { border: '#f43f5e', bg: 'rgba(244, 63, 94, 0.1)', tag: 'P2' },
+              { border: '#eab308', bg: 'rgba(234, 179, 8, 0.1)', tag: 'P3' },
+              { border: '#22c55e', bg: 'rgba(34, 197, 94, 0.1)', tag: 'P4' }
+            ];
+            pHeader.innerHTML = state.players.map((p, idx) => `
+              <div style="background: ${colors[idx].bg}; border: 2px solid ${colors[idx].border}; border-radius: 16px; padding: 14px; text-align: center;">
+                <span style="font-size: 12px; color: ${colors[idx].border}; text-transform: uppercase;">NGƯỜI CHƠI ${p.id}</span>
+                <div style="font-size: 18px; color: white; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</div>
+              </div>
+            `).join('');
+          }
+        }
+
+        // Chỉ đổ lại nội dung câu hỏi khi questions thực sự thay đổi
+        const q = state.questions;
+        if (!q || q === lastRenderedQuestions) return;
+        lastRenderedQuestions = q;
+
+        // Vòng 1
+        const v1Stage = document.getElementById('viewer-v1-stage');
+        if (v1Stage) {
+          const l1 = q.vong1?.luot1 || [];
+          const l2 = q.vong1?.luot2 || [];
+          v1Stage.innerHTML = `
+            <div style="background: #0f172a; padding: 20px; border-radius: 16px; border: 1px solid #334155;">
+              <h4 style="color: #facc15; font-size: 20px; margin: 0 0 14px 0; text-align: center;">LƯỢT 1</h4>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                ${l1.map((item, i) => `
+                  <div style="background: #1e293b; padding: 12px; border-radius: 10px; font-size: 16px;">
+                    <span style="color: #38bdf8;">${i+1}.</span> ${item.q}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            <div style="background: #0f172a; padding: 20px; border-radius: 16px; border: 1px solid #334155;">
+              <h4 style="color: #facc15; font-size: 20px; margin: 0 0 14px 0; text-align: center;">LƯỢT 2</h4>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                ${l2.map((item, i) => `
+                  <div style="background: #1e293b; padding: 12px; border-radius: 10px; font-size: 16px;">
+                    <span style="color: #38bdf8;">${i+1}.</span> ${item.q}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        // Vòng 2
+        const v2Stage = document.getElementById('viewer-v2-stage');
+        if (v2Stage && q.vong2) {
+          v2Stage.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+              ${q.vong2.map((t, idx) => `
+                <div style="background: #0f172a; border: 2px solid #f59e0b; padding: 16px; border-radius: 14px; text-align: center;">
+                  <span style="font-size: 12px; color: #94a3b8;">CHỦ ĐỀ ${idx+1}</span>
+                  <div style="font-size: 18px; color: #fde68a; margin-top: 4px;">${t.topic}</div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+        // Vòng 3
+        const v3Stage = document.getElementById('viewer-v3-stage');
+        if (v3Stage && q.vong3) {
+          v3Stage.innerHTML = q.vong3.map((it, idx) => `
+            <div style="background: #0f172a; border-radius: 16px; padding: 18px; border: 2px solid #a855f7; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <span style="color: #facc15; font-size: 13px;">BỘ CÂU ${idx+1}</span>
+                <h4 style="color: #e2e8f0; font-size: 20px; margin: 6px 0 12px 0;">${it.topic}</h4>
+                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #cbd5e1;">
+                  <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px;">💡 Gợi ý 1: ${it.clue1}</div>
+                  <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px;">💡 Gợi ý 2: ${it.clue2}</div>
+                  <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px;">💡 Gợi ý 3: ${it.clue3}</div>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // Vòng 4
+        const v4Stage = document.getElementById('viewer-v4-stage');
+        if (v4Stage && q.vong4) {
+          const v4 = q.vong4;
+          v4Stage.innerHTML = `
+            <div style="background: #0f172a; border: 2px dashed #eab308; border-radius: 16px; padding: 20px; text-align: center;">
+              <span style="color: #eab308; font-size: 16px;">🎁 Ô TẶNG ĐẶC BIỆT</span>
+              <div style="font-size: 24px; color: #fef08a; margin-top: 6px;">"${v4.gift?.clue}"</div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+              ${(v4.clues || []).map(c => `
+                <div style="background: #0f172a; border: 2px solid #22c55e; border-radius: 14px; padding: 20px; text-align: center;">
+                  <span style="font-size: 14px; color: #4ade80;">MẢNH GHÉP SỐ ${c.index}</span>
+                  <div style="font-size: 20px; color: white; margin-top: 8px;">${c.clue}</div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+      });
+    </script>
+  </body>
+</html>

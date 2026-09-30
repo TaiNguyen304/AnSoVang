@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>An Số Vàng Hub - Điều Hướng</title>
+    <meta name="description" content="Trang điều hướng 7 vai trò: Controller, Host, Player 1-4, Viewer kết nối máy chủ OnRender" />
+
+    <!-- 100% font-weight là bold cho tất cả các phần tử -->
+        <style>
+      *, *::before, *::after {
+        font-weight: bold !important;
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: #0b1120;
+        color: #f8fafc;
+      }
+      /* Nút bấm và hiệu ứng hover cố định 1 màu duy nhất trên toàn bộ hệ thống - GPU accelerated */
+      button, .btn, a.btn, input[type='button'], input[type='submit'], input[type='reset'] {
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        outline: none;
+        will-change: background-color, color, box-shadow;
+      }
+      button:hover, .btn:hover, a.btn:hover, input[type='button']:hover, input[type='submit']:hover, input[type='reset']:hover {
+        background: #eab308 !important;
+        background-color: #eab308 !important;
+        background-image: none !important;
+        color: #000000 !important;
+        border-color: #eab308 !important;
+        box-shadow: 0 0 12px rgba(234, 179, 8, 0.5) !important;
+        filter: none !important;
+      }
+      button:active, .btn:active, a.btn:active {
+        opacity: 0.85;
+      }
+    </style>
+
+    <!-- Kích hoạt disableDevTools và kết nối OnRender -->
+    <script>
+      window.RENDER_SERVER_URL = "https://ansovang.onrender.com";
+      window.APP_PAGES = {
+        controller: "Controller.html",
+        host: "Host.html",
+        player1: "Player1.html",
+        player2: "Player2.html",
+        player3: "Player3.html",
+        player4: "Player4.html",
+        viewer: "Viewer.html"
+      };
+
+      function disableDevTools() {
+        window.addEventListener('keydown', function (e) {
+          if (e.key === 'F12' || e.keyCode === 123) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+          const isCmdOrCtrl = e.ctrlKey || e.metaKey;
+          if (isCmdOrCtrl && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+          if (isCmdOrCtrl && ['u', 'U', 's', 'S'].includes(e.key)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        }, true);
+
+        window.addEventListener('contextmenu', function (e) {
+          e.preventDefault();
+          return false;
+        }, true);
+      }
+
+      disableDevTools();
+      window.disableDevTools = disableDevTools;
+    </script>
+  </head>
+  <body>
+    <!-- File index.html: Trước mắt để trống, sẽ thêm từ từ sau -->
+  </body>
+</html>

@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Controller - An Số Vàng</title>
+    <meta name="description" content="Trang điều khiển Controller của gameshow An Số Vàng" />
+
+    <!-- 100% font-weight là bold cho tất cả các phần tử -->
+        <style>
+      *, *::before, *::after {
+        font-weight: bold !important;
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: #0b1120;
+        color: #f8fafc;
+      }
+      /* Nút bấm và hiệu ứng hover cố định 1 màu duy nhất trên toàn bộ hệ thống - GPU accelerated */
+      button, .btn, a.btn, input[type='button'], input[type='submit'], input[type='reset'] {
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        outline: none;
+        will-change: background-color, color, box-shadow;
+      }
+      button:hover, .btn:hover, a.btn:hover, input[type='button']:hover, input[type='submit']:hover, input[type='reset']:hover {
+        background: #eab308 !important;
+        background-color: #eab308 !important;
+        background-image: none !important;
+        color: #000000 !important;
+        border-color: #eab308 !important;
+        box-shadow: 0 0 12px rgba(234, 179, 8, 0.5) !important;
+        filter: none !important;
+      }
+      button:active, .btn:active, a.btn:active {
+        opacity: 0.85;
+      }
+      /* Modal */
+      .modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+      }
+      .modal-backdrop.open {
+        display: flex;
+      }
+    </style>
+
+    <!-- Thư viện SheetJS đọc Excel trực tiếp trên trình duyệt từ tệp người dùng -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Thư viện disable-devtool -->
+        <script>
+      function disableDevTools() {
+        // Chặn phím tắt mở DevTools
+        window.addEventListener('keydown', function (e) {
+          if (e.key === 'F12' || e.keyCode === 123) {
+            e.preventDefault(); e.stopPropagation(); return false;
+          }
+          const isCmdOrCtrl = e.ctrlKey || e.metaKey;
+          if (isCmdOrCtrl && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
+            e.preventDefault(); e.stopPropagation(); return false;
+          }
+          if (isCmdOrCtrl && ['u', 'U', 's', 'S'].includes(e.key)) {
+            e.preventDefault(); e.stopPropagation(); return false;
+          }
+        }, true);
+        // Chặn chuột phải
+        window.addEventListener('contextmenu', function (e) {
+          e.preventDefault(); return false;
+        }, true);
+      }
+      disableDevTools();
+      window.disableDevTools = disableDevTools;
+    </script>
+    <!-- Đồng bộ thời gian thực -->
+    <script src="/sync-client.js"></script>
+  </head>
+  <body class="min-h-screen p-4 md:p-6 bg-slate-950 text-slate-100">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+
+      <!-- Header & Trạng thái kết nối OnRender -->
+      <div style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid #eab308; border-radius: 16px; padding: 20px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; box-shadow: 0 10px 25px -5px rgba(234, 179, 8, 0.15);">
+        <div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 28px;">👑</span>
+            <h1 style="font-size: 26px; margin: 0; color: #facc15; text-transform: uppercase; letter-spacing: 1px;">BẢNG ĐIỀU KHIỂN - CONTROLLER</h1>
+          </div>
+          <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 14px;">Hệ thống Gameshow Ẩn Số Vàng | Kết nối liên trang OnRender</p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; background: #020617; padding: 10px 16px; border-radius: 12px; border: 1px solid #334155;">
+          <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #22c55e;" id="status-indicator"></span>
+          <div style="font-size: 13px;">
+            <div style="color: #cbd5e1;">Máy chủ OnRender:</div>
+            <a href="https://ansovang.onrender.com" target="_blank" style="color: #38bdf8; text-decoration: none; word-break: break-all;">ansovang.onrender.com</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Khối điều khiển chính: Nút chức năng & Người chơi -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+        
+        <!-- Khối 1: Nút Nhập Tên 4 Người Chơi & Nhập Đề -->
+        <div style="background: #1e293b; border-radius: 16px; padding: 20px; border: 1px solid #334155;">
+          <h2 style="font-size: 18px; margin: 0 0 16px 0; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+            <span>⚙️</span> THIẾT LẬP DỮ LIỆU GAME
+          </h2>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button id="btn-open-players" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; padding: 14px 20px; border-radius: 12px; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
+              <span>👥</span> NHẬP TÊN 4 NGƯỜI CHƠI
+            </button>
+
+            <button id="btn-open-questions" class="btn" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; padding: 14px 20px; border-radius: 12px; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
+              <span>📑</span> NHẬP ĐỀ (TỪ FILE EXCEL)
+            </button>
+          </div>
+
+          <!-- Thông tin 4 người chơi hiện tại -->
+          <div style="margin-top: 20px; background: #0f172a; padding: 14px; border-radius: 12px; border: 1px solid #334155;">
+            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase;">Danh sách 4 người chơi:</div>
+            <div id="players-list-display" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px;">
+              <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; border-left: 3px solid #38bdf8;">P1: Người chơi 1</div>
+              <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; border-left: 3px solid #f43f5e;">P2: Người chơi 2</div>
+              <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; border-left: 3px solid #eab308;">P3: Người chơi 3</div>
+              <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; border-left: 3px solid #22c55e;">P4: Người chơi 4</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Khối 2: Trạng thái View hiện tại & Mở nhanh các trang -->
+        <div style="background: #1e293b; border-radius: 16px; padding: 20px; border: 1px solid #334155;">
+          <h2 style="font-size: 18px; margin: 0 0 16px 0; color: #f59e0b; display: flex; align-items: center; gap: 8px;">
+            <span>📺</span> TRẠNG THÁI HIỂN THỊ TOÀN HỆ THỐNG
+          </h2>
+          <div style="background: #0f172a; border-radius: 12px; padding: 16px; border: 2px solid #f59e0b; text-align: center;">
+            <div style="font-size: 13px; color: #94a3b8; text-transform: uppercase;">View đang hiển thị hiện tại:</div>
+            <div id="current-view-badge" style="font-size: 26px; color: #facc15; margin-top: 6px; letter-spacing: 1px;">TRỐNG</div>
+          </div>
+
+          <div style="margin-top: 16px;">
+            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 8px;">Mở các màn hình khác (Tabs riêng):</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <a href="/Host.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f8fafc; padding: 6px 12px; border-radius: 6px; font-size: 13px;">Host 🎙️</a>
+              <a href="/Viewer.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f8fafc; padding: 6px 12px; border-radius: 6px; font-size: 13px;">Viewer 🖥️</a>
+              <a href="/Player1.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #38bdf8; padding: 6px 12px; border-radius: 6px; font-size: 13px;">Player 1</a>
+              <a href="/Player2.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f43f5e; padding: 6px 12px; border-radius: 6px; font-size: 13px;">Player 2</a>
+              <a href="/Player3.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #eab308; padding: 6px 12px; border-radius: 6px; font-size: 13px;">Player 3</a>
+              <a href="/Player4.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #22c55e; padding: 6px 12px; border-radius: 6px; font-size: 13px;">Player 4</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- KHỐI CHÍNH 1: CÁC NÚT VIEW TẠI CONTROLLER -->
+      <div style="background: #1e293b; border-radius: 16px; padding: 22px; border: 1px solid #334155;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2 style="font-size: 20px; margin: 0; color: #e2e8f0; display: flex; align-items: center; gap: 10px;">
+              <span>👁️</span> CÁC NÚT VIEW (Xem trước tại Controller)
+            </h2>
+            <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 13px;">Nhấn vào để xem trước nội dung giao diện ngay trên Controller (100% không chèn câu hỏi cứng trong mã)</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px;">
+          <button class="btn btn-preview-view" data-view="blank" style="background: #334155; color: white; padding: 14px; border-radius: 12px; font-size: 15px; border-left: 5px solid #64748b;">
+            🔘 Trống
+          </button>
+          <button class="btn btn-preview-view" data-view="vong1" style="background: #334155; color: white; padding: 14px; border-radius: 12px; font-size: 15px; border-left: 5px solid #38bdf8;">
+            1️⃣ Vòng 1
+          </button>
+          <button class="btn btn-preview-view" data-view="vong2" style="background: #334155; color: white; padding: 14px; border-radius: 12px; font-size: 15px; border-left: 5px solid #f59e0b;">
+            2️⃣ Vòng 2
+          </button>
+          <button class="btn btn-preview-view" data-view="vong3" style="background: #334155; color: white; padding: 14px; border-radius: 12px; font-size: 15px; border-left: 5px solid #a855f7;">
+            3️⃣ Vòng 3
+          </button>
+          <button class="btn btn-preview-view" data-view="vong4" style="background: #334155; color: white; padding: 14px; border-radius: 12px; font-size: 15px; border-left: 5px solid #22c55e;">
+            4️⃣ Vòng 4
+          </button>
+        </div>
+
+        <!-- Khung xem trước view trên Controller -->
+        <div id="controller-preview-area" style="margin-top: 16px; background: #0f172a; border-radius: 12px; padding: 20px; border: 1px dashed #475569; min-height: 120px;">
+          <div style="color: #94a3b8; font-size: 14px; text-align: center;">Chưa có dữ liệu câu hỏi. Hãy bấm "Nhập đề" để tải tệp Excel.</div>
+        </div>
+      </div>
+
+      <!-- KHỐI CHÍNH 2: CÁC NÚT CHUYỂN VIEW KÍCH HOẠT TẤT CẢ FILE CÒN LẠI -->
+      <div style="background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 16px; padding: 24px; border: 2px solid #ef4444; box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.2);">
+        <div style="margin-bottom: 18px;">
+          <h2 style="font-size: 22px; margin: 0; color: #f87171; display: flex; align-items: center; gap: 10px;">
+            <span>🚀</span> CÁC NÚT CHUYỂN VIEW (KÍCH HOẠT TẤT CẢ CÁC FILE CÒN LẠI)
+          </h2>
+          <p style="margin: 6px 0 0 0; color: #cbd5e1; font-size: 14px;">
+            Khi bấm nút dưới đây, toàn bộ các trang <span style="color: #facc15;">Host.html, Player 1-4.html, Viewer.html</span> sẽ lập tức chuyển đồng bộ sang view tương ứng qua hệ thống kết nối OnRender!
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;">
+          
+          <!-- Chuyển view trống -->
+          <button id="btn-switch-blank" class="btn btn-switch" data-view="blank" style="background: linear-gradient(135deg, #475569, #334155); color: white; padding: 18px; border-radius: 14px; font-size: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);">
+            <span style="font-size: 24px;">⏹️</span>
+            <span>Chuyển view trống</span>
+            <span style="font-size: 12px; color: #94a3b8;">Xóa màn hình / Nghỉ</span>
+          </button>
+
+          <!-- Chuyển view vòng 1 -->
+          <button id="btn-switch-v1" class="btn btn-switch" data-view="vong1" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; padding: 18px; border-radius: 14px; font-size: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);">
+            <span style="font-size: 24px;">⚡</span>
+            <span>Chuyển view vòng 1</span>
+            <span style="font-size: 12px; color: #bae6fd;">Vòng 1</span>
+          </button>
+
+          <!-- Chuyển view vòng 2 -->
+          <button id="btn-switch-v2" class="btn btn-switch" data-view="vong2" style="background: linear-gradient(135deg, #d97706, #b45309); color: white; padding: 18px; border-radius: 14px; font-size: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4);">
+            <span style="font-size: 24px;">🎲</span>
+            <span>Chuyển view vòng 2</span>
+            <span style="font-size: 12px; color: #fde68a;">Vòng 2</span>
+          </button>
+
+          <!-- Chuyển view vòng 3 -->
+          <button id="btn-switch-v3" class="btn btn-switch" data-view="vong3" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; padding: 18px; border-radius: 14px; font-size: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);">
+            <span style="font-size: 24px;">🎯</span>
+            <span>Chuyển view vòng 3</span>
+            <span style="font-size: 12px; color: #ddd6fe;">Vòng 3</span>
+          </button>
+
+          <!-- Chuyển view vòng 4 -->
+          <button id="btn-switch-v4" class="btn btn-switch" data-view="vong4" style="background: linear-gradient(135deg, #059669, #047857); color: white; padding: 18px; border-radius: 14px; font-size: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(5, 150, 105, 0.4);">
+            <span style="font-size: 24px;">🏆</span>
+            <span>Chuyển view vòng 4</span>
+            <span style="font-size: 12px; color: #a7f3d0;">Vòng 4</span>
+          </button>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MODAL 1: NHẬP TÊN 4 NGƯỜI CHƠI -->
+    <div id="modal-players" class="modal-backdrop">
+      <div style="background: #1e293b; border-radius: 20px; width: 95%; max-width: 540px; padding: 24px; border: 2px solid #38bdf8; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h3 style="font-size: 20px; margin: 0; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+            <span>👥</span> NHẬP TÊN 4 NGƯỜI CHƠI
+          </h3>
+          <button id="btn-close-players" class="btn" style="background: transparent; color: #94a3b8; font-size: 22px;">✕</button>
+        </div>
+
+        <form id="form-players" style="display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="font-size: 14px; color: #38bdf8; display: block; margin-bottom: 6px;">Người chơi 1 (Player 1):</label>
+            <input type="text" id="input-p1" required style="width: 100%; padding: 10px 14px; border-radius: 8px; background: #0f172a; border: 1px solid #334155; color: white; font-size: 15px;" placeholder="Ví dụ: Nguyễn Văn A" />
+          </div>
+          <div>
+            <label style="font-size: 14px; color: #f43f5e; display: block; margin-bottom: 6px;">Người chơi 2 (Player 2):</label>
+            <input type="text" id="input-p2" required style="width: 100%; padding: 10px 14px; border-radius: 8px; background: #0f172a; border: 1px solid #334155; color: white; font-size: 15px;" placeholder="Ví dụ: Trần Thị B" />
+          </div>
+          <div>
+            <label style="font-size: 14px; color: #eab308; display: block; margin-bottom: 6px;">Người chơi 3 (Player 3):</label>
+            <input type="text" id="input-p3" required style="width: 100%; padding: 10px 14px; border-radius: 8px; background: #0f172a; border: 1px solid #334155; color: white; font-size: 15px;" placeholder="Ví dụ: Lê Văn C" />
+          </div>
+          <div>
+            <label style="font-size: 14px; color: #22c55e; display: block; margin-bottom: 6px;">Người chơi 4 (Player 4):</label>
+            <input type="text" id="input-p4" required style="width: 100%; padding: 10px 14px; border-radius: 8px; background: #0f172a; border: 1px solid #334155; color: white; font-size: 15px;" placeholder="Ví dụ: Phạm Thị D" />
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+            <button type="button" id="btn-cancel-players" class="btn" style="background: #334155; color: white; padding: 10px 18px; border-radius: 8px;">Hủy</button>
+            <button type="submit" class="btn" style="background: #0284c7; color: white; padding: 10px 24px; border-radius: 8px;">LƯU TÊN 4 NGƯỜI CHƠI</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL 2: NHẬP ĐỀ (QUẢN LÝ CÂU HỎI TỪ EXCEL KHÔNG CHÈN CÂU HỎI TRONG CODE) -->
+    <div id="modal-questions" class="modal-backdrop">
+      <div style="background: #1e293b; border-radius: 20px; width: 95%; max-width: 860px; max-height: 90vh; overflow-y: auto; padding: 24px; border: 2px solid #a855f7; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h3 style="font-size: 20px; margin: 0; color: #c084fc; display: flex; align-items: center; gap: 8px;">
+              <span>📑</span> NHẬP ĐỀ TỪ EXCEL (KHÔNG LẤY TÊN CỘT)
+            </h3>
+            <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 13px;">Dữ liệu câu hỏi được đọc động 100% từ file Excel, không chèn cố định trong mã</p>
+          </div>
+          <button id="btn-close-questions" class="btn" style="background: transparent; color: #94a3b8; font-size: 22px;">✕</button>
+        </div>
+
+        <!-- Khu vực nạp tệp Excel mới hoặc chọn tệp -->
+        <div style="background: #0f172a; padding: 18px; border-radius: 12px; margin-bottom: 16px; border: 2px dashed #7c3aed; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px;">
+          <div>
+            <div style="font-size: 14px; color: #e2e8f0; margin-bottom: 6px;">Chọn file Excel từ máy của bạn (.xlsx):</div>
+            <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="font-size: 14px; color: #cbd5e1;" />
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button id="btn-reload-server-excel" class="btn" style="background: #059669; color: white; padding: 10px 16px; border-radius: 8px; font-size: 13px;">
+              📥 Đọc từ file "Ẩn số vàng.xlsx" trên máy chủ
+            </button>
+          </div>
+        </div>
+
+        <div style="background: #0f172a; border-radius: 12px; padding: 16px; border: 1px solid #334155;">
+          <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
+            <button class="btn btn-q-tab active" data-qtab="v1" style="background: #334155; color: white; padding: 8px 14px; border-radius: 6px; font-size: 13px;">Vòng 1</button>
+            <button class="btn btn-q-tab" data-qtab="v2" style="background: #1e293b; color: #94a3b8; padding: 8px 14px; border-radius: 6px; font-size: 13px;">Vòng 2</button>
+            <button class="btn btn-q-tab" data-qtab="v3" style="background: #1e293b; color: #94a3b8; padding: 8px 14px; border-radius: 6px; font-size: 13px;">Vòng 3</button>
+            <button class="btn btn-q-tab" data-qtab="v4" style="background: #1e293b; color: #94a3b8; padding: 8px 14px; border-radius: 6px; font-size: 13px;">Vòng 4</button>
+          </div>
+
+          <div id="qtab-content" style="min-height: 250px; color: #e2e8f0; font-size: 14px;">
+            Chưa có câu hỏi nào được nạp. Hãy chọn tệp Excel để nhập đề.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCRIPT ĐIỀU KHIỂN & PARSER EXCEL KHÔNG CHÈN CÂU HỎI TRONG CODE & KHÔNG LẤY TÊN CỘT -->
+    <script>
+      let activeTabQuestions = 'v1';
+      let localQuestions = null;
+
+      const viewNames = {
+        blank: 'TRỐNG (NGHỈ / CLEAR)',
+        vong1: 'VÒNG 1',
+        vong2: 'VÒNG 2',
+        vong3: 'VÒNG 3',
+        vong4: 'VÒNG 4'
+      };
+
+      // HÀM CHUYÊN DỤNG PHÂN TÍCH EXCEL: 100% ĐỘNG TỪ FILE EXCEL, LOẠI BỎ TOÀN BỘ TÊN CỘT
+      function parseExcelWorkbookWithoutHeaders(workbook) {
+        const sheetNames = workbook.SheetNames;
+        console.log('Các sheet phát hiện trong Excel:', sheetNames);
+
+        // 1. VÒNG 1: Sheet 1 (Thử sức)
+        // Bỏ qua dòng 1 & 2 (Tiêu đề: Lượt 1, Lượt 2, Câu hỏi, Đáp án), bắt đầu lấy từ dòng 3 (index 2)
+        const sheet1 = workbook.Sheets[sheetNames[0]];
+        const s1Rows = XLSX.utils.sheet_to_json(sheet1, { header: 1, defval: '' });
+        const v1_luot1 = [];
+        const v1_luot2 = [];
+
+        for (let r = 2; r < s1Rows.length; r++) {
+          const row = s1Rows[r];
+          if (!row || row.length === 0) continue;
+          const q1 = String(row[0] || '').trim();
+          const a1 = String(row[1] || '').trim();
+          const q2 = String(row[2] || '').trim();
+          const a2 = String(row[3] || '').trim();
+
+          // Lọc không lấy tiêu đề cột
+          if (q1 && q1 !== 'Câu hỏi' && q1 !== 'Lượt 1') {
+            v1_luot1.push({ q: q1, a: a1 });
+          }
+          if (q2 && q2 !== 'Câu hỏi' && q2 !== 'Lượt 2') {
+            v1_luot2.push({ q: q2, a: a2 });
+          }
+        }
+
+        // 2. VÒNG 2: Sheet 2 (Đặt cược)
+        // Bỏ qua dòng 1 (Chủ đề, Số đáp án, Câu hỏi, Đáp án 1, Đáp án 2, Đáp án 3, Đáp án 4, Đáp án đúng)
+        const sheet2 = workbook.Sheets[sheetNames[1]];
+        const s2Rows = XLSX.utils.sheet_to_json(sheet2, { header: 1, defval: '' });
+        const v2_topics = [];
+        let currentTopic = null;
+
+        for (let r = 1; r < s2Rows.length; r++) {
+          const row = s2Rows[r];
+          if (!row || row.length === 0) continue;
+
+          const topicName = String(row[0] || '').trim();
+          const numOptsStr = String(row[1] || '').trim();
+          const qText = String(row[2] || '').trim();
+          const opt1 = String(row[3] || '').trim();
+          const opt2 = String(row[4] || '').trim();
+          const opt3 = String(row[5] || '').trim();
+          const opt4 = String(row[6] || '').trim();
+          const correct = String(row[7] || '').trim();
+
+          // Bỏ qua dòng tiêu đề nếu có
+          if (topicName === 'Chủ đề' || qText === 'Câu hỏi') continue;
+
+          if (topicName) {
+            currentTopic = { topic: topicName, questions: [] };
+            v2_topics.push(currentTopic);
+          }
+
+          if (qText && currentTopic) {
+            const count = parseInt(numOptsStr) || 4;
+            const options = count === 2 ? [opt1, opt2] : [opt1, opt2, opt3, opt4];
+            currentTopic.questions.push({
+              question: qText,
+              optionsCount: count,
+              options: options.filter(o => o),
+              correct: parseInt(correct) || 1
+            });
+          }
+        }
+
+        // 3. VÒNG 3: Sheet 3 (So tài)
+        // Bỏ qua dòng 1 (Chủ đề, Gợi ý 1, Gợi ý 2, Gợi ý 3, Đáp án)
+        const sheet3 = workbook.Sheets[sheetNames[2]];
+        const s3Rows = XLSX.utils.sheet_to_json(sheet3, { header: 1, defval: '' });
+        const v3_questions = [];
+
+        for (let r = 1; r < s3Rows.length; r++) {
+          const row = s3Rows[r];
+          if (!row || row.length === 0) continue;
+          const topic = String(row[0] || '').trim();
+          const clue1 = String(row[1] || '').trim();
+          const clue2 = String(row[2] || '').trim();
+          const clue3 = String(row[3] || '').trim();
+          const answer = String(row[4] || '').trim();
+
+          if (topic === 'Chủ đề' || clue1 === 'Gợi ý 1') continue;
+          if (topic || clue1) {
+            v3_questions.push({ topic, clue1, clue2, clue3, answer });
+          }
+        }
+
+        // 4. VÒNG 4: Sheet 4 (Ẩn số may mắn)
+        // Bỏ qua dòng 1 (Gợi ý, Nội dung gợi ý, Đáp án)
+        const sheet4 = workbook.Sheets[sheetNames[3]];
+        const s4Rows = XLSX.utils.sheet_to_json(sheet4, { header: 1, defval: '' });
+        let v4_gift = { clue: '', answer: '' };
+        const v4_clues = [];
+
+        for (let r = 1; r < s4Rows.length; r++) {
+          const row = s4Rows[r];
+          if (!row || row.length === 0) continue;
+          const idxCol = String(row[0] || '').trim();
+          const clueCol = String(row[1] || '').trim();
+          const ansCol = String(row[2] || '').trim();
+
+          if (idxCol === 'Gợi ý' || clueCol === 'Nội dung gợi ý') continue;
+
+          if (idxCol.toLowerCase().includes('tặng')) {
+            v4_gift = { clue: clueCol, answer: ansCol };
+          } else if (idxCol) {
+            v4_clues.push({ index: idxCol, clue: clueCol, answer: ansCol });
+          }
+        }
+
+        return {
+          vong1: { luot1: v1_luot1, luot2: v1_luot2 },
+          vong2: v2_topics,
+          vong3: v3_questions,
+          vong4: { gift: v4_gift, clues: v4_clues }
+        };
+      }
+
+      // Xử lý khi chọn file Excel từ máy người dùng
+      const fileInput = document.getElementById('excel-file-input');
+      if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = async function(evt) {
+            try {
+              const data = new Uint8Array(evt.target.result);
+              const workbook = XLSX.read(data, { type: 'array' });
+              const parsed = parseExcelWorkbookWithoutHeaders(workbook);
+              console.log('Parsed Questions từ Excel:', parsed);
+
+              localQuestions = parsed;
+              renderQuestionsTab();
+              renderPreview(window.currentGameState.currentView);
+
+              // Phát tán trạng thái câu hỏi tới tất cả các màn hình khác
+              await window.broadcastStateUpdate({ questions: parsed });
+              alert('Đã nhập thành công toàn bộ câu hỏi từ file Excel của bạn (Đã loại bỏ toàn bộ tên cột)!');
+            } catch (err) {
+              console.error(err);
+              alert('Lỗi khi đọc file Excel: ' + err.message);
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        });
+      }
+
+      // Xử lý nút đọc từ file Excel có sẵn trên server
+      document.getElementById('btn-reload-server-excel').addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/game/excel-file');
+          if (!res.ok) {
+            alert('Không tìm thấy file Excel trên máy chủ.');
+            return;
+          }
+          const arrayBuffer = await res.arrayBuffer();
+          const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+          const parsed = parseExcelWorkbookWithoutHeaders(workbook);
+
+          localQuestions = parsed;
+          renderQuestionsTab();
+          renderPreview(window.currentGameState.currentView);
+
+          await window.broadcastStateUpdate({ questions: parsed });
+          alert('Đã đọc và nạp thành công câu hỏi từ file Ẩn số vàng.xlsx (Không chứa tên cột)!');
+        } catch (err) {
+          alert('Lỗi: ' + err.message);
+        }
+      });
+
+      // Tự động kiểm tra nếu trên server đã có file Excel thì đọc lần đầu
+      async function autoLoadExcelIfEmpty() {
+        if (!localQuestions && (!window.currentGameState || !window.currentGameState.questions)) {
+          try {
+            const res = await fetch('/api/game/excel-file');
+            if (res.ok) {
+              const arrayBuffer = await res.arrayBuffer();
+              const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+              const parsed = parseExcelWorkbookWithoutHeaders(workbook);
+              localQuestions = parsed;
+              renderQuestionsTab();
+              renderPreview(window.currentGameState.currentView);
+              window.broadcastStateUpdate({ questions: parsed });
+            }
+          } catch (e) {}
+        }
+      }
+      setTimeout(autoLoadExcelIfEmpty, 600);
+
+      let currentPreviewingView = null;
+
+      // Cập nhật giao diện khi có thay đổi trạng thái
+      window.onGameStateChange(function(state, changes) {
+        // Cập nhật huy hiệu view hiện tại
+        const badge = document.getElementById('current-view-badge');
+        if (badge) {
+          badge.textContent = viewNames[state.currentView] || state.currentView.toUpperCase();
+        }
+
+        // Cập nhật danh sách 4 người chơi chỉ khi người chơi thay đổi
+        if (changes && changes.playersChanged) {
+          const listDiv = document.getElementById('players-list-display');
+          if (listDiv && state.players && state.players.length === 4) {
+            listDiv.innerHTML = `
+              <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; border-left: 3px solid #38bdf8;">P1: ${state.players[0].name}</div>
+              <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; border-left: 3px solid #f43f5e;">P2: ${state.players[1].name}</div>
+              <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; border-left: 3px solid #eab308;">P3: ${state.players[2].name}</div>
+              <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; border-left: 3px solid #22c55e;">P4: ${state.players[3].name}</div>
+            `;
+          }
+
+          if (state.players && state.players.length === 4) {
+            const p1 = document.getElementById('input-p1');
+            const p2 = document.getElementById('input-p2');
+            const p3 = document.getElementById('input-p3');
+            const p4 = document.getElementById('input-p4');
+            if (p1 && !p1.value) p1.value = state.players[0].name;
+            if (p2 && !p2.value) p2.value = state.players[1].name;
+            if (p3 && !p3.value) p3.value = state.players[2].name;
+            if (p4 && !p4.value) p4.value = state.players[3].name;
+          }
+        }
+
+        // Cập nhật câu hỏi chỉ khi có dữ liệu câu hỏi mới
+        if (changes && changes.questionsChanged && state.questions) {
+          localQuestions = state.questions;
+          renderQuestionsTab();
+        }
+
+        // Cập nhật preview nếu chưa chọn preview hoặc view thay đổi
+        if (!currentPreviewingView || (changes && changes.viewChanged)) {
+          currentPreviewingView = state.currentView;
+          renderPreview(state.currentView);
+        }
+      });
+
+      // 1. Xử lý các nút CHUYỂN VIEW (Kích hoạt tất cả file còn lại)
+      document.querySelectorAll('.btn-switch').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const targetView = btn.getAttribute('data-view');
+          btn.style.opacity = '0.7';
+          await window.broadcastStateUpdate({ currentView: targetView });
+          setTimeout(() => { btn.style.opacity = '1'; }, 300);
+        });
+      });
+
+      // 2. Xử lý các nút VIEW (Xem trước trên Controller)
+      document.querySelectorAll('.btn-preview-view').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetView = btn.getAttribute('data-view');
+          renderPreview(targetView);
+        });
+      });
+
+      function renderPreview(viewKey) {
+        const area = document.getElementById('controller-preview-area');
+        if (!area) return;
+
+        if (viewKey === 'blank') {
+          area.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+              <span style="font-size: 32px;">⏹️</span>
+              <h3 style="color: #94a3b8; margin: 8px 0 0 0;">CHẾ ĐỘ MÀN HÌNH TRỐNG</h3>
+              <p style="color: #64748b; font-size: 13px;">Tất cả các màn hình Host, Player 1-4, Viewer đang ở trạng thái trống.</p>
+            </div>
+          `;
+          return;
+        }
+
+        const q = localQuestions || (window.currentGameState && window.currentGameState.questions);
+        if (!q) {
+          area.innerHTML = `<div style="text-align:center; color:#94a3b8;">Chưa nạp câu hỏi từ file Excel. Hãy nhấn "Nhập đề".</div>`;
+          return;
+        }
+
+        if (viewKey === 'vong1') {
+          const l1 = q.vong1?.luot1 || [];
+          const l2 = q.vong1?.luot2 || [];
+          area.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 12px;">
+              <h4 style="margin: 0; color: #38bdf8;">⚡ XEM TRƯỚC VÒNG 1</h4>
+              <span style="font-size: 12px; color: #94a3b8;">Tổng cộng: ${l1.length + l2.length} câu Đúng/Sai (Đọc từ Excel, không có tên cột)</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 13px;">
+              <div>
+                <div style="color: #facc15; margin-bottom: 6px;">Lượt 1 (${l1.length} câu):</div>
+                ${l1.map((item, i) => `
+                  <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px;">
+                    <b>${i+1}.</b> ${item.q} <span style="color: ${item.a === 'Đúng' ? '#22c55e' : '#ef4444'}; float: right;">[${item.a}]</span>
+                  </div>
+                `).join('')}
+              </div>
+              <div>
+                <div style="color: #facc15; margin-bottom: 6px;">Lượt 2 (${l2.length} câu):</div>
+                ${l2.map((item, i) => `
+                  <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px;">
+                    <b>${i+1}.</b> ${item.q} <span style="color: ${item.a === 'Đúng' ? '#22c55e' : '#ef4444'}; float: right;">[${item.a}]</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        } else if (viewKey === 'vong2') {
+          const topics = q.vong2 || [];
+          area.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 12px;">
+              <h4 style="margin: 0; color: #f59e0b;">🎲 XEM TRƯỚC VÒNG 2</h4>
+              <span style="font-size: 12px; color: #94a3b8;">${topics.length} Chủ đề trắc nghiệm (Đọc từ Excel, không có tên cột)</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+              ${topics.map((t, idx) => `
+                <span style="background: #334155; color: #fde68a; padding: 4px 10px; border-radius: 6px; font-size: 12px;">
+                  ${idx + 1}. ${t.topic} (${t.questions?.length || 0} câu)
+                </span>
+              `).join('')}
+            </div>
+            <div style="font-size: 13px; color: #cbd5e1; background: #1e293b; padding: 10px; border-radius: 8px;">
+              Mẫu câu hỏi chủ đề 1 (${topics[0]?.topic || ''}): <b>${topics[0]?.questions[0]?.question || ''}</b>
+              <div style="margin-top: 6px; color: #94a3b8;">
+                Các phương án: ${topics[0]?.questions[0]?.options.join(' | ') || ''} (Đáp án đúng: số ${topics[0]?.questions[0]?.correct || ''})
+              </div>
+            </div>
+          `;
+        } else if (viewKey === 'vong3') {
+          const items = q.vong3 || [];
+          area.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 12px;">
+              <h4 style="margin: 0; color: #c084fc;">🎯 XEM TRƯỚC VÒNG 3</h4>
+              <span style="font-size: 12px; color: #94a3b8;">${items.length} Bộ câu hỏi 3 gợi ý (Đọc từ Excel, không có tên cột)</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; font-size: 13px;">
+              ${items.map((item, idx) => `
+                <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #c084fc;">
+                  <div style="color: #facc15; margin-bottom: 4px;">Câu ${idx + 1}: Chủ đề ${item.topic}</div>
+                  <div style="color: #94a3b8; font-size: 12px;">
+                    1. ${item.clue1}<br>
+                    2. ${item.clue2}<br>
+                    3. ${item.clue3}
+                  </div>
+                  <div style="color: #4ade80; margin-top: 4px;">=> Đáp án: ${item.answer}</div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else if (viewKey === 'vong4') {
+          const v4 = q.vong4 || {};
+          const gift = v4.gift || {};
+          const clues = v4.clues || [];
+          area.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 12px;">
+              <h4 style="margin: 0; color: #4ade80;">🏆 XEM TRƯỚC VÒNG 4</h4>
+              <span style="font-size: 12px; color: #94a3b8;">6 Mảnh ghép & 1 Ô Tặng (Đọc từ Excel, không có tên cột)</span>
+            </div>
+            <div style="background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #eab308; font-size: 13px;">
+              <span style="color: #eab308;">🎁 Ô TẶNG:</span> Gợi ý: "${gift.clue}" | Đáp án mở: <b>${gift.answer}</b>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; font-size: 13px;">
+              ${clues.map(c => `
+                <div style="background: #1e293b; padding: 8px; border-radius: 6px; border: 1px solid #334155; text-align: center;">
+                  <div style="color: #38bdf8;">Mảnh số ${c.index}</div>
+                  <div style="color: #cbd5e1; margin-top: 4px; font-size: 12px;">${c.clue}</div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+      }
+
+      // 3. Xử lý Modal Nhập Tên 4 Người Chơi
+      const modalPlayers = document.getElementById('modal-players');
+      document.getElementById('btn-open-players').addEventListener('click', () => {
+        modalPlayers.classList.add('open');
+      });
+      document.getElementById('btn-close-players').addEventListener('click', () => {
+        modalPlayers.classList.remove('open');
+      });
+      document.getElementById('btn-cancel-players').addEventListener('click', () => {
+        modalPlayers.classList.remove('open');
+      });
+
+      document.getElementById('form-players').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const p1 = document.getElementById('input-p1').value.trim();
+        const p2 = document.getElementById('input-p2').value.trim();
+        const p3 = document.getElementById('input-p3').value.trim();
+        const p4 = document.getElementById('input-p4').value.trim();
+
+        const updatedPlayers = [
+          { id: 1, name: p1 || 'Người chơi 1', score: 0 },
+          { id: 2, name: p2 || 'Người chơi 2', score: 0 },
+          { id: 3, name: p3 || 'Người chơi 3', score: 0 },
+          { id: 4, name: p4 || 'Người chơi 4', score: 0 }
+        ];
+
+        await window.broadcastStateUpdate({ players: updatedPlayers });
+        modalPlayers.classList.remove('open');
+      });
+
+      // 4. Xử lý Modal Nhập Đề
+      const modalQuestions = document.getElementById('modal-questions');
+      document.getElementById('btn-open-questions').addEventListener('click', () => {
+        modalQuestions.classList.add('open');
+        renderQuestionsTab();
+      });
+      document.getElementById('btn-close-questions').addEventListener('click', () => {
+        modalQuestions.classList.remove('open');
+      });
+
+      document.querySelectorAll('.btn-q-tab').forEach(b => {
+        b.addEventListener('click', () => {
+          document.querySelectorAll('.btn-q-tab').forEach(x => {
+            x.style.background = '#1e293b';
+            x.style.color = '#94a3b8';
+          });
+          b.style.background = '#334155';
+          b.style.color = '#ffffff';
+          activeTabQuestions = b.getAttribute('data-qtab');
+          renderQuestionsTab();
+        });
+      });
+
+      function renderQuestionsTab() {
+        const container = document.getElementById('qtab-content');
+        if (!container) return;
+        const q = localQuestions || (window.currentGameState && window.currentGameState.questions);
+        if (!q) {
+          container.innerHTML = 'Chưa có câu hỏi nào được nạp. Hãy chọn tệp Excel để nhập đề.';
+          return;
+        }
+
+        if (activeTabQuestions === 'v1') {
+          const l1 = q.vong1?.luot1 || [];
+          const l2 = q.vong1?.luot2 || [];
+          container.innerHTML = `
+            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 10px;">Bộ câu hỏi Vòng 1 (Đọc từ Excel, không có tên cột):</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div>
+                <h5 style="color: #38bdf8; margin: 0 0 6px 0;">Lượt 1 (${l1.length} câu):</h5>
+                ${l1.map((item, i) => `
+                  <div style="background: #1e293b; padding: 6px 8px; border-radius: 6px; margin-bottom: 6px; font-size: 13px;">
+                    ${i+1}. ${item.q} <b style="color: ${item.a === 'Đúng' ? '#22c55e' : '#ef4444'}; float: right;">${item.a}</b>
+                  </div>
+                `).join('')}
+              </div>
+              <div>
+                <h5 style="color: #38bdf8; margin: 0 0 6px 0;">Lượt 2 (${l2.length} câu):</h5>
+                ${l2.map((item, i) => `
+                  <div style="background: #1e293b; padding: 6px 8px; border-radius: 6px; margin-bottom: 6px; font-size: 13px;">
+                    ${i+1}. ${item.q} <b style="color: ${item.a === 'Đúng' ? '#22c55e' : '#ef4444'}; float: right;">${item.a}</b>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        } else if (activeTabQuestions === 'v2') {
+          const topics = q.vong2 || [];
+          container.innerHTML = `
+            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 10px;">Bộ câu hỏi trắc nghiệm Vòng 2 (${topics.length} chủ đề - Không chứa tên cột):</div>
+            <div style="max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+              ${topics.map((t, idx) => `
+                <div style="background: #1e293b; padding: 10px; border-radius: 8px;">
+                  <div style="color: #f59e0b; margin-bottom: 6px;">Chủ đề ${idx+1}: <b>${t.topic}</b> (${t.questions?.length || 0} câu)</div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    ${t.questions.map((qs, qidx) => `
+                      <div style="background: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 12px;">
+                        <b>Câu ${qidx+1}:</b> ${qs.question}<br>
+                        <span style="color: #94a3b8;">${qs.options.join(' | ')} (Đúng: số ${qs.correct})</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else if (activeTabQuestions === 'v3') {
+          const items = q.vong3 || [];
+          container.innerHTML = `
+            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 10px;">Vòng 3: So tài (${items.length} câu - Không chứa tên cột):</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${items.map((it, idx) => `
+                <div style="background: #1e293b; padding: 8px 12px; border-radius: 8px; font-size: 13px;">
+                  <span style="color: #c084fc;">Câu ${idx+1} [${it.topic}]:</span> 1: <i>${it.clue1}</i> | 2: <i>${it.clue2}</i> | 3: <i>${it.clue3}</i> 
+                  <span style="color: #4ade80; float: right;">=> ${it.answer}</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else if (activeTabQuestions === 'v4') {
+          const v4 = q.vong4 || {};
+          const gift = v4.gift || {};
+          const clues = v4.clues || [];
+          container.innerHTML = `
+            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 10px;">Vòng 4: Ẩn số may mắn (Mảnh ghép & Ô Tặng - Không chứa tên cột):</div>
+            <div style="background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #eab308; font-size: 13px;">
+              <b>🎁 Ô Tặng:</b> "${gift.clue}" -> Đáp án: <span style="color: #4ade80;">${gift.answer}</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+              ${clues.map(c => `
+                <div style="background: #1e293b; padding: 10px; border-radius: 8px; font-size: 13px;">
+                  <div style="color: #38bdf8;">Mảnh ${c.index}</div>
+                  <div style="margin-top: 4px;">${c.clue}</div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+      }
+    </script>
+  </body>
+</html>
