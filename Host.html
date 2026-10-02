@@ -3,52 +3,68 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Host - An Số Vàng</title>
+    <title>Host</title>
     <meta name="description" content="Trang Host dẫn chương trình kết nối với máy chủ An Số Vàng trên OnRender" />
 
-    <!-- 100% font-weight là bold cho tất cả các phần tử -->
-        <style>
+    <style>
       *, *::before, *::after {
         font-weight: bold !important;
         box-sizing: border-box;
       }
-      body {
+      html, body {
+        width: 100vw;
+        height: 100vh;
         margin: 0;
         padding: 0;
+        overflow: hidden;
+        box-sizing: border-box;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background-color: #0b1120;
         color: #f8fafc;
       }
-      /* Nút bấm và hiệu ứng hover cố định 1 màu duy nhất trên toàn bộ hệ thống - GPU accelerated */
       button, .btn, a.btn, input[type='button'], input[type='submit'], input[type='reset'] {
         cursor: pointer;
         transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
         outline: none;
         will-change: background-color, color, box-shadow;
       }
-      button:hover, .btn:hover, a.btn:hover, input[type='button']:hover, input[type='submit']:hover, input[type='reset']:hover {
+      button:hover, .btn:hover, a.btn:hover {
         background: #eab308 !important;
         background-color: #eab308 !important;
-        background-image: none !important;
         color: #000000 !important;
         border-color: #eab308 !important;
         box-shadow: 0 0 12px rgba(234, 179, 8, 0.5) !important;
-        filter: none !important;
       }
-      button:active, .btn:active, a.btn:active {
-        opacity: 0.85;
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0f172a;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
       }
       .view-container {
         display: none;
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-sizing: border-box;
+        border-radius: 12px;
+        padding: 10px 14px;
       }
       .view-container.active {
-        display: block;
+        display: flex !important;
+        flex-direction: column;
       }
     </style>
 
     <script>
       function disableDevTools() {
-        // Chặn phím tắt mở DevTools
         window.addEventListener('keydown', function (e) {
           if (e.key === 'F12' || e.keyCode === 123) {
             e.preventDefault(); e.stopPropagation(); return false;
@@ -61,7 +77,6 @@
             e.preventDefault(); e.stopPropagation(); return false;
           }
         }, true);
-        // Chặn chuột phải
         window.addEventListener('contextmenu', function (e) {
           e.preventDefault(); return false;
         }, true);
@@ -69,68 +84,142 @@
       disableDevTools();
       window.disableDevTools = disableDevTools;
     </script>
-    <script src="/sync-client.js"></script>
+    <script src="./sync-client.js"></script>
   </head>
-  <body class="min-h-screen p-4 md:p-6 bg-slate-950 text-slate-100">
-    <div style="max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+  <body class="bg-slate-950 text-slate-100 flex flex-col p-2" style="height: 100vh; width: 100vw; overflow: hidden; box-sizing: border-box;">
+    <div style="max-width: 1100px; width: 100%; height: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 6px; box-sizing: border-box; overflow: hidden;">
       
-      <!-- Thanh điều hướng Header cho Host -->
-      <div style="background: #1e293b; border-radius: 14px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 24px;">🎙️</span>
-          <h2 style="margin: 0; font-size: 20px; color: #facc15;">MÀN HÌNH HOST (MC DẪN CHƯƠNG TRÌNH)</h2>
+      <!-- Header Host -->
+      <div style="background: #1e293b; border-radius: 10px; padding: 6px 14px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; flex-shrink: 0; min-height: 38px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div>
+            <h2 style="margin: 0; font-size: 15px; color: #facc15;">HOST</h2>
+          </div>
         </div>
-        <div style="background: #0f172a; padding: 6px 14px; border-radius: 8px; border: 1px solid #475569; font-size: 13px;">
+        <div style="background: #0f172a; padding: 4px 10px; border-radius: 6px; border: 1px solid #475569; font-size: 12px;">
           Trạng thái View: <span id="host-current-view" style="color: #38bdf8;">TRỐNG</span>
         </div>
       </div>
 
-      <!-- Danh sách 4 người chơi -->
-      <div id="host-players-bar" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+      <!-- Bảng điểm 4 người chơi -->
+      <div id="host-players-bar" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; flex-shrink: 0;">
         <!-- Tự động đổ dữ liệu người chơi -->
       </div>
 
-      <!-- VÙNG HIỂN THỊ CHUYỂN ĐỘNG THEO CONTROLLER -->
-      <div id="view-blank" class="view-container active" style="background: #0f172a; border-radius: 16px; padding: 60px 20px; text-align: center; border: 2px dashed #334155;">
-        <div style="font-size: 48px; margin-bottom: 12px;">⏳</div>
-        <h3 style="color: #94a3b8; font-size: 22px; margin: 0;">MÀN HÌNH ĐANG Ở TRẠNG THÁI CHỜ (TRỐNG)</h3>
-        <p style="color: #64748b; font-size: 14px; margin-top: 8px;">Đang đợi lệnh kích hoạt từ Controller...</p>
+      <!-- VIEW TRỐNG -->
+      <div id="view-blank" class="view-container active" style="background: #0f172a; border-radius: 12px; padding: 20px 10px; text-align: center; border: 2px dashed #334155; justify-content: center; align-items: center;">
+        <h3 style="color: #94a3b8; font-size: 16px; margin: 0;">MÀN HÌNH ĐANG Ở TRẠNG THÁI CHỜ (TRỐNG)</h3>
+        <p style="color: #64748b; font-size: 12px; margin-top: 6px;">Đang đợi lệnh kích hoạt chuyển view từ Controller...</p>
       </div>
 
-      <!-- VIEW VÒNG 1 -->
-      <div id="view-vong1" class="view-container" style="background: #1e293b; border-radius: 16px; padding: 24px; border: 2px solid #38bdf8;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="margin: 0; font-size: 22px; color: #38bdf8;">⚡ VÒNG 1: THỬ SỨC (ĐÚNG / SAI)</h3>
-          <span style="background: #0369a1; color: white; padding: 4px 12px; border-radius: 999px; font-size: 13px;">Host Script</span>
+      <!-- VIEW VÒNG 1: THỬ SỨC (ĐÚNG / SAI) -->
+      <div id="view-vong1" class="view-container" style="background: #1e293b; border-radius: 12px; padding: 10px; border: 2px solid #38bdf8; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="background: #0284c7; color: white; padding: 3px 8px; border-radius: 5px; font-size: 11px;">VÒNG 1</span>
+            <h3 style="margin: 0; font-size: 16px; color: #38bdf8;">THỬ SỨC (ĐÚNG / SAI)</h3>
+          </div>
+          <div id="host-v1-timer-badge" style="background: #0f172a; border: 1.5px solid #facc15; padding: 3px 10px; border-radius: 6px; font-size: 13px; color: #facc15;">
+            Đồng hồ: <span id="host-v1-timer-sec">5s</span>
+          </div>
         </div>
-        <div id="host-v1-content">Đang tải câu hỏi...</div>
+
+        <!-- 1. Ô HIỆN CÂU HỎI VÒNG 1 -->
+        <div style="background: #0f172a; border-radius: 10px; padding: 10px 14px; border: 1.5px solid #0284c7; margin-bottom: 8px; flex-shrink: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span id="host-v1-turn-label" style="color: #facc15; font-size: 12px; text-transform: uppercase;">LƯỢT 1: Player 1 & Player 2</span>
+            <span id="host-v1-q-number" style="background: #1e293b; color: #38bdf8; padding: 2px 8px; border-radius: 5px; font-size: 11px;">CÂU HỎI SỐ 1</span>
+          </div>
+          
+          <div id="host-v1-q-text" style="font-size: 16px; color: #ffffff; line-height: 1.3; min-height: 36px; display: flex; align-items: center;">
+            Chờ Controller bấm "Hiện câu hỏi Lượt 1" hoặc "Hiện câu hỏi Lượt 2"...
+          </div>
+
+          <!-- Ô ĐÁP ÁN ĐÚNG KHI CONTROLLER MỞ -->
+          <div id="host-v1-correct-box" style="margin-top: 8px; padding: 6px 12px; border-radius: 6px; background: #064e3b; border: 1px solid #22c55e; display: none; justify-content: space-between; align-items: center;">
+            <span style="color: #a7f3d0; font-size: 12px;">ĐÁP ÁN ĐÚNG CỦA CÂU HỎI:</span>
+            <span id="host-v1-correct-val" style="font-size: 14px; color: #ffffff; background: #059669; padding: 2px 10px; border-radius: 4px;">ĐÚNG</span>
+          </div>
+        </div>
+
+        <!-- 2. BỐN (4) Ô CHỨA 4 ĐÁP ÁN CỦA 4 NGƯỜI CHƠI -->
+        <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+          <h4 style="margin: 0 0 6px 0; color: #e2e8f0; font-size: 12px;">
+            ĐÁP ÁN CỦA 4 NGƯỜI CHƠI:
+          </h4>
+          
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+            
+            <!-- Ô Người chơi 1 -->
+            <div id="host-card-p1" style="background: #0f172a; padding: 8px; border-radius: 8px; border: 1.5px solid #38bdf8; text-align: center;">
+              <div style="font-size: 11px; color: #38bdf8;" id="host-p1-title">PLAYER 1</div>
+              <div style="font-size: 12px; color: #f8fafc; margin-top: 2px;" id="host-p1-name">Người chơi 1</div>
+              <div id="host-p1-ans-badge" style="margin-top: 6px; padding: 6px 8px; border-radius: 6px; font-size: 14px; background: #1e293b; color: #94a3b8;">
+                Chưa chọn
+              </div>
+              <div id="host-p1-score-status" style="font-size: 10px; margin-top: 4px; color: #64748b;">(Điểm: 0đ)</div>
+            </div>
+
+            <!-- Ô Người chơi 2 -->
+            <div id="host-card-p2" style="background: #0f172a; padding: 8px; border-radius: 8px; border: 1.5px solid #f43f5e; text-align: center;">
+              <div style="font-size: 11px; color: #f43f5e;" id="host-p2-title">PLAYER 2</div>
+              <div style="font-size: 12px; color: #f8fafc; margin-top: 2px;" id="host-p2-name">Người chơi 2</div>
+              <div id="host-p2-ans-badge" style="margin-top: 6px; padding: 6px 8px; border-radius: 6px; font-size: 14px; background: #1e293b; color: #94a3b8;">
+                Chưa chọn
+              </div>
+              <div id="host-p2-score-status" style="font-size: 10px; margin-top: 4px; color: #64748b;">(Điểm: 0đ)</div>
+            </div>
+
+            <!-- Ô Người chơi 3 -->
+            <div id="host-card-p3" style="background: #0f172a; padding: 8px; border-radius: 8px; border: 1.5px solid #eab308; text-align: center;">
+              <div style="font-size: 11px; color: #eab308;" id="host-p3-title">PLAYER 3</div>
+              <div style="font-size: 12px; color: #f8fafc; margin-top: 2px;" id="host-p3-name">Người chơi 3</div>
+              <div id="host-p3-ans-badge" style="margin-top: 6px; padding: 6px 8px; border-radius: 6px; font-size: 14px; background: #1e293b; color: #94a3b8;">
+                Chưa chọn
+              </div>
+              <div id="host-p3-score-status" style="font-size: 10px; margin-top: 4px; color: #64748b;">(Điểm: 0đ)</div>
+            </div>
+
+            <!-- Ô Người chơi 4 -->
+            <div id="host-card-p4" style="background: #0f172a; padding: 8px; border-radius: 8px; border: 1.5px solid #22c55e; text-align: center;">
+              <div style="font-size: 11px; color: #22c55e;" id="host-p4-title">PLAYER 4</div>
+              <div style="font-size: 12px; color: #f8fafc; margin-top: 2px;" id="host-p4-name">Người chơi 4</div>
+              <div id="host-p4-ans-badge" style="margin-top: 6px; padding: 6px 8px; border-radius: 6px; font-size: 14px; background: #1e293b; color: #94a3b8;">
+                Chưa chọn
+              </div>
+              <div id="host-p4-score-status" style="font-size: 10px; margin-top: 4px; color: #64748b;">(Điểm: 0đ)</div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
 
       <!-- VIEW VÒNG 2 -->
-      <div id="view-vong2" class="view-container" style="background: #1e293b; border-radius: 16px; padding: 24px; border: 2px solid #f59e0b;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="margin: 0; font-size: 22px; color: #f59e0b;">🎲 VÒNG 2: ĐẶT CƯỢC (TRẮC NGHIỆM)</h3>
-          <span style="background: #b45309; color: white; padding: 4px 12px; border-radius: 999px; font-size: 13px;">Host Script</span>
+      <div id="view-vong2" class="view-container" style="background: #1e293b; border-radius: 12px; padding: 12px; border: 2px solid #f59e0b;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0;">
+          <h3 style="margin: 0; font-size: 18px; color: #f59e0b;">VÒNG 2: ĐẶT CƯỢC (TRẮC NGHIỆM)</h3>
+          <span style="background: #b45309; color: white; padding: 3px 10px; border-radius: 999px; font-size: 11px;">Host Script</span>
         </div>
-        <div id="host-v2-content">Đang tải chủ đề và câu hỏi...</div>
+        <div id="host-v2-content" style="flex: 1; min-height: 0; overflow-y: auto;">Đang tải chủ đề và câu hỏi...</div>
       </div>
 
       <!-- VIEW VÒNG 3 -->
-      <div id="view-vong3" class="view-container" style="background: #1e293b; border-radius: 16px; padding: 24px; border: 2px solid #a855f7;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="margin: 0; font-size: 22px; color: #c084fc;">🎯 VÒNG 3: SO TÀI (3 GỢI Ý)</h3>
-          <span style="background: #6d28d9; color: white; padding: 4px 12px; border-radius: 999px; font-size: 13px;">Host Script</span>
+      <div id="view-vong3" class="view-container" style="background: #1e293b; border-radius: 12px; padding: 12px; border: 2px solid #a855f7;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0;">
+          <h3 style="margin: 0; font-size: 18px; color: #c084fc;">VÒNG 3: SO TÀI (3 GỢI Ý)</h3>
+          <span style="background: #6d28d9; color: white; padding: 3px 10px; border-radius: 999px; font-size: 11px;">Host Script</span>
         </div>
-        <div id="host-v3-content">Đang tải bộ gợi ý...</div>
+        <div id="host-v3-content" style="flex: 1; min-height: 0; overflow-y: auto;">Đang tải bộ gợi ý...</div>
       </div>
 
       <!-- VIEW VÒNG 4 -->
-      <div id="view-vong4" class="view-container" style="background: #1e293b; border-radius: 16px; padding: 24px; border: 2px solid #22c55e;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="margin: 0; font-size: 22px; color: #4ade80;">🏆 VÒNG 4: ẨN SỐ MAY MẮN</h3>
-          <span style="background: #047857; color: white; padding: 4px 12px; border-radius: 999px; font-size: 13px;">Host Script</span>
+      <div id="view-vong4" class="view-container" style="background: #1e293b; border-radius: 12px; padding: 12px; border: 2px solid #22c55e;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0;">
+          <h3 style="margin: 0; font-size: 18px; color: #4ade80;">VÒNG 4: ẨN SỐ MAY MẮN</h3>
+          <span style="background: #047857; color: white; padding: 3px 10px; border-radius: 999px; font-size: 11px;">Host Script</span>
         </div>
-        <div id="host-v4-content">Đang tải gợi ý mảnh ghép...</div>
+        <div id="host-v4-content" style="flex: 1; min-height: 0; overflow-y: auto;">Đang tải gợi ý mảnh ghép...</div>
       </div>
 
     </div>
@@ -153,11 +242,9 @@
       };
 
       let currentHostRenderedView = null;
-      let lastHostRenderedPlayers = '';
-      let lastHostRenderedQuestions = null;
 
       window.onGameStateChange(function(state, changes) {
-        // Cập nhật View khi có thay đổi
+        // 1. Cập nhật View
         if (state.currentView !== currentHostRenderedView) {
           currentHostRenderedView = state.currentView;
           const viewLabel = document.getElementById('host-current-view');
@@ -165,121 +252,606 @@
             viewLabel.textContent = viewDisplayNames[state.currentView] || state.currentView;
           }
 
-          document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+          document.querySelectorAll('.view-container').forEach(el => {
+            el.style.display = 'none';
+            el.classList.remove('active');
+          });
           const activeContainerId = viewMap[state.currentView] || 'view-blank';
           const targetEl = document.getElementById(activeContainerId);
-          if (targetEl) targetEl.classList.add('active');
+          if (targetEl) {
+            targetEl.style.display = 'flex';
+            targetEl.classList.add('active');
+          }
         }
 
-        // Cập nhật người chơi chỉ khi thay đổi
-        const playersJson = JSON.stringify(state.players);
-        if (playersJson !== lastHostRenderedPlayers) {
-          lastHostRenderedPlayers = playersJson;
-          const pBar = document.getElementById('host-players-bar');
-          if (pBar && state.players) {
-            pBar.innerHTML = state.players.map((p, idx) => {
-              const colors = ['#38bdf8', '#f43f5e', '#eab308', '#22c55e'];
-              return `
-                <div style="background: #1e293b; padding: 12px; border-radius: 10px; border-left: 4px solid ${colors[idx % 4]};">
-                  <div style="font-size: 12px; color: #94a3b8;">NGƯỜI CHƠI ${p.id}</div>
-                  <div style="font-size: 16px; color: white; margin-top: 4px;">${p.name}</div>
+        // 2. Cập nhật thanh 4 người chơi
+        const pBar = document.getElementById('host-players-bar');
+        if (pBar && state.players) {
+          const colors = ['#38bdf8', '#f43f5e', '#eab308', '#22c55e'];
+          pBar.innerHTML = state.players.map((p, idx) => `
+            <div style="background: #1e293b; padding: 10px 14px; border-radius: 10px; border-left: 4px solid ${colors[idx % 4]}; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 11px; color: #94a3b8;">PLAYER ${p.id}</div>
+                <div style="font-size: 14px; color: white; margin-top: 2px;">${p.name}</div>
+              </div>
+              <div style="font-size: 18px; color: #facc15;">${p.score || 0}đ</div>
+            </div>
+          `).join('');
+        }
+
+        // 3. Cập nhật nội dung Vòng 1 chi tiết
+        renderHostVong1(state);
+
+        // 4. Cập nhật nội dung Vòng 2 chi tiết
+        renderHostVong2(state);
+
+        // 5. Cập nhật nội dung Vòng 3 chi tiết
+        renderHostVong3(state);
+
+        // 6. Cập nhật nội dung Vòng 4 chi tiết
+        renderHostVong4(state);
+
+        // 7. Các vòng khác
+        const q = state.questions;
+        if (q) {
+          if (q.vong2) {
+            const v2El = document.getElementById('host-v2-content');
+            if (v2El) {
+              v2El.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                  ${q.vong2.map((t, idx) => `
+                    <div style="background: #0f172a; padding: 12px; border-radius: 10px;">
+                      <div style="color: #f59e0b; margin-bottom: 6px;">Chủ đề ${idx+1}: <b>${t.topic}</b> (${t.questions?.length || 0} câu)</div>
+                      ${t.questions.map((qs, qi) => `
+                        <div style="margin-bottom: 6px; font-size: 13px;">
+                          <b>Câu ${qi+1}:</b> ${qs.question}<br>
+                          <span style="color: #94a3b8;">${qs.options.map((opt, oi) => `<span style="${oi+1 === qs.correct ? 'color: #22c55e; font-weight: bold;' : ''}">${oi+1}. ${opt}</span>`).join(' | ')}</span>
+                        </div>
+                      `).join('')}
+                    </div>
+                  `).join('')}
                 </div>
               `;
-            }).join('');
+            }
           }
-        }
 
-        // Đổ nội dung câu hỏi cho Host chỉ khi có câu hỏi mới
-        const q = state.questions;
-        if (!q || q === lastHostRenderedQuestions) return;
-        lastHostRenderedQuestions = q;
-          // Vòng 1
-          const v1El = document.getElementById('host-v1-content');
-          if (v1El) {
-            const l1 = q.vong1?.luot1 || [];
-            const l2 = q.vong1?.luot2 || [];
-            v1El.innerHTML = `
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 14px;">
-                <div style="background: #0f172a; padding: 14px; border-radius: 10px;">
-                  <h4 style="color: #facc15; margin: 0 0 10px 0;">LƯỢT 1:</h4>
-                  ${l1.map((item, i) => `
-                    <div style="margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #1e293b;">
-                      <b>Câu ${i+1}:</b> ${item.q} <span style="color: ${item.a === 'Đúng' ? '#22c55e' : '#ef4444'}; float: right;">[${item.a}]</span>
+          if (q.vong3) {
+            const v3El = document.getElementById('host-v3-content');
+            if (v3El) {
+              v3El.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px;">
+                  ${q.vong3.map((it, idx) => `
+                    <div style="background: #0f172a; padding: 12px; border-radius: 10px; border-left: 3px solid #c084fc;">
+                      <div style="color: #facc15; font-size: 13px;">Câu ${idx+1}: ${it.topic}</div>
+                      <div style="font-size: 12px; color: #cbd5e1; margin-top: 4px;">1: ${it.clue1} | 2: ${it.clue2} | 3: ${it.clue3}</div>
+                      <div style="color: #4ade80; margin-top: 4px;">=> Đáp án: ${it.answer}</div>
                     </div>
                   `).join('')}
                 </div>
-                <div style="background: #0f172a; padding: 14px; border-radius: 10px;">
-                  <h4 style="color: #facc15; margin: 0 0 10px 0;">LƯỢT 2:</h4>
-                  ${l2.map((item, i) => `
-                    <div style="margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #1e293b;">
-                      <b>Câu ${i+1}:</b> ${item.q} <span style="color: ${item.a === 'Đúng' ? '#22c55e' : '#ef4444'}; float: right;">[${item.a}]</span>
+              `;
+            }
+          }
+
+          if (q.vong4) {
+            const v4El = document.getElementById('host-v4-content');
+            if (v4El) {
+              v4El.innerHTML = `
+                <div style="background: #0f172a; padding: 12px; border-radius: 10px; margin-bottom: 10px; border-left: 3px solid #eab308;">
+                  <b>🎁 Ô TẶNG:</b> "${q.vong4.gift?.clue || ''}" => <b>${q.vong4.gift?.answer || ''}</b>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                  ${(q.vong4.clues || []).map(c => `
+                    <div style="background: #0f172a; padding: 10px; border-radius: 8px; font-size: 13px;">
+                      <div style="color: #38bdf8;">Mảnh ${c.index}</div>
+                      <div style="margin-top: 4px;">${c.clue}</div>
                     </div>
                   `).join('')}
                 </div>
-              </div>
-            `;
-          }
-
-          // Vòng 2
-          const v2El = document.getElementById('host-v2-content');
-          if (v2El && q.vong2) {
-            v2El.innerHTML = `
-              <div style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
-                ${q.vong2.map((t, idx) => `
-                  <div style="background: #0f172a; padding: 12px; border-radius: 10px;">
-                    <div style="color: #f59e0b; margin-bottom: 6px;">Chủ đề ${idx+1}: <b>${t.topic}</b></div>
-                    ${t.questions.map((qs, qi) => `
-                      <div style="margin-bottom: 6px; font-size: 13px;">
-                        <b>Câu ${qi+1}:</b> ${qs.question}<br>
-                        <span style="color: #94a3b8;">${qs.options.map((opt, oi) => `<span style="${oi+1 === qs.correct ? 'color: #22c55e; font-weight: bold;' : ''}">${oi+1}. ${opt}</span>`).join(' | ')}</span>
-                      </div>
-                    `).join('')}
-                  </div>
-                `).join('')}
-              </div>
-            `;
-          }
-
-          // Vòng 3
-          const v3El = document.getElementById('host-v3-content');
-          if (v3El && q.vong3) {
-            v3El.innerHTML = `
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
-                ${q.vong3.map((it, idx) => `
-                  <div style="background: #0f172a; padding: 12px; border-radius: 10px; border-left: 3px solid #c084fc;">
-                    <div style="color: #facc15; font-size: 14px;">Câu ${idx+1}: ${it.topic}</div>
-                    <div style="color: #94a3b8; font-size: 13px; margin: 6px 0;">
-                      1. ${it.clue1}<br>
-                      2. ${it.clue2}<br>
-                      3. ${it.clue3}
-                    </div>
-                    <div style="color: #4ade80; font-size: 14px;">ĐÁP ÁN: <b>${it.answer}</b></div>
-                  </div>
-                `).join('')}
-              </div>
-            `;
-          }
-
-          // Vòng 4
-          const v4El = document.getElementById('host-v4-content');
-          if (v4El && q.vong4) {
-            const v4 = q.vong4;
-            v4El.innerHTML = `
-              <div style="background: #0f172a; padding: 14px; border-radius: 10px; margin-bottom: 12px; border-left: 4px solid #eab308;">
-                🎁 <b>Ô TẶNG:</b> "${v4.gift?.clue}" -> Đáp án: <span style="color: #4ade80;">${v4.gift?.answer}</span>
-              </div>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
-                ${(v4.clues || []).map(c => `
-                  <div style="background: #0f172a; padding: 10px; border-radius: 8px;">
-                    <div style="color: #38bdf8;">Mảnh số ${c.index}</div>
-                    <div style="margin-top: 4px; font-size: 13px;">${c.clue}</div>
-                  </div>
-                `).join('')}
-              </div>
-            `;
+              `;
+            }
           }
         }
       });
+
+      function renderHostVong1(state) {
+        const v1 = state.vong1State || {};
+        const qTurnEl = document.getElementById('host-v1-turn-label');
+        const qNumEl = document.getElementById('host-v1-q-number');
+        const qTextEl = document.getElementById('host-v1-q-text');
+        const timerSec = document.getElementById('host-v1-timer-sec');
+        const correctBox = document.getElementById('host-v1-correct-box');
+        const correctVal = document.getElementById('host-v1-correct-val');
+
+        if (timerSec) {
+          timerSec.textContent = `${v1.timerSeconds || 0}s`;
+          timerSec.style.color = v1.timerRunning ? '#ef4444' : '#facc15';
+        }
+
+        if (v1.activeQuestion) {
+          const turn = v1.activeQuestion.turn || 1;
+          if (qTurnEl) {
+            qTurnEl.textContent = turn === 1 
+              ? '⚡ LƯỢT 1: THỬ SỨC (Player 1 & Player 2)' 
+              : '⚡ LƯỢT 2: THỬ SỨC (Player 3 & Player 4)';
+          }
+          if (qNumEl) qNumEl.textContent = `CÂU HỎI SỐ ${v1.activeQuestion.index || 1}`;
+          if (qTextEl) qTextEl.textContent = v1.activeQuestion.q;
+
+          if (correctBox && correctVal) {
+            if (v1.showAnswer) {
+              correctBox.style.display = 'flex';
+              correctVal.textContent = v1.activeQuestion.a;
+              correctVal.style.background = v1.activeQuestion.a === 'Đúng' ? '#0284c7' : '#e11d48';
+            } else {
+              correctBox.style.display = 'none';
+            }
+          }
+        } else {
+          if (qTurnEl) qTurnEl.textContent = '⚡ VÒNG 1: THỬ SỨC';
+          if (qNumEl) qNumEl.textContent = 'CHỜ BẮT ĐẦU';
+          if (qTextEl) qTextEl.textContent = 'Chờ Controller bấm "Hiện câu hỏi Lượt 1" hoặc "Hiện câu hỏi Lượt 2"...';
+          if (correctBox) correctBox.style.display = 'none';
+        }
+
+        // Cập nhật 4 ô đáp án của 4 người chơi
+        const players = state.players || [];
+        const answers = v1.answers || {};
+
+        for (let i = 1; i <= 4; i++) {
+          const nameEl = document.getElementById(`host-p${i}-name`);
+          const ansEl = document.getElementById(`host-p${i}-ans-badge`);
+          const scoreEl = document.getElementById(`host-p${i}-score-status`);
+          const cardEl = document.getElementById(`host-card-p${i}`);
+
+          if (nameEl && players[i-1]) nameEl.textContent = players[i-1].name;
+          if (scoreEl && players[i-1]) scoreEl.textContent = `(Điểm: ${players[i-1].score || 0}đ)`;
+
+          if (ansEl && cardEl) {
+            const playerAns = answers[i];
+            const isTurn1 = (v1.activeQuestion && v1.activeQuestion.turn === 1);
+            const isTurn2 = (v1.activeQuestion && v1.activeQuestion.turn === 2);
+            const isParticipant = (isTurn1 && (i === 1 || i === 2)) || (isTurn2 && (i === 3 || i === 4));
+
+            if (playerAns) {
+              ansEl.textContent = playerAns;
+              ansEl.style.background = playerAns === 'Đúng' ? '#0284c7' : '#e11d48';
+              ansEl.style.color = '#ffffff';
+
+              if (v1.scored && v1.activeQuestion && isParticipant) {
+                const isCorrect = (playerAns === v1.activeQuestion.a);
+                if (isCorrect) {
+                  cardEl.style.background = '#064e3b';
+                  cardEl.style.borderColor = '#22c55e';
+                  ansEl.textContent = `${playerAns} (+10đ 🎉)`;
+                  ansEl.style.background = '#059669';
+                } else {
+                  cardEl.style.background = '#4c0519';
+                  cardEl.style.borderColor = '#ef4444';
+                  ansEl.textContent = `${playerAns} (0đ ❌)`;
+                  ansEl.style.background = '#be123c';
+                }
+              } else {
+                cardEl.style.background = '#0f172a';
+              }
+            } else {
+              ansEl.textContent = isParticipant ? (v1.timerRunning ? 'Đang chọn...' : 'Chưa chọn') : 'Không thi lượt này';
+              ansEl.style.background = '#1e293b';
+              ansEl.style.color = '#94a3b8';
+              cardEl.style.background = '#0f172a';
+            }
+          }
+        }
+      }
+
+      function renderHostVong2(state) {
+        const v2 = state.vong2State || {};
+        const q = state.questions;
+        const v2El = document.getElementById('host-v2-content');
+        if (!v2El) return;
+
+        if (!q || !q.vong2 || q.vong2.length === 0) {
+          v2El.innerHTML = '<div style="color: #94a3b8; text-align: center; padding: 20px;">Chưa có dữ liệu câu hỏi Vòng 2. Hãy nạp từ Controller.</div>';
+          return;
+        }
+
+        const topics = q.vong2;
+        const scene = v2.scene || 'topics_board';
+        const chosen = Array.isArray(v2.chosenTopics) ? v2.chosenTopics : [];
+
+        if (scene === 'topics_board') {
+          // Bảng 10 chủ đề (2 - 3 - 3 - 2)
+          const row1 = topics.slice(0, 2);
+          const row2 = topics.slice(2, 5);
+          const row3 = topics.slice(5, 8);
+          const row4 = topics.slice(8, 10);
+
+          const renderTopicCard = (t, globalIdx) => {
+            if (!t) return '';
+            const isChosen = chosen.includes(globalIdx);
+            const isCurrent = (v2.selectedTopicIndex === globalIdx);
+            const bg = isChosen
+              ? 'linear-gradient(135deg, #9333ea, #7c3aed)'
+              : 'linear-gradient(135deg, #0284c7, #0369a1)';
+            const border = isCurrent ? '3px solid #facc15' : (isChosen ? '2px solid #d8b4fe' : '2px solid #38bdf8');
+            const shadow = isCurrent ? '0 0 16px rgba(250,204,21,0.6)' : 'none';
+
+            return `
+              <div style="background: ${bg}; border: ${border}; box-shadow: ${shadow}; color: white; padding: 12px 16px; border-radius: 12px; text-align: center; flex: 1; min-width: 140px; transition: all 0.3s ease;">
+                <div style="font-size: 11px; color: ${isChosen ? '#f5d0fe' : '#bae6fd'}; text-transform: uppercase;">Chủ đề ${globalIdx + 1}</div>
+                <div style="font-size: 16px; font-weight: bold; margin-top: 4px;">${t.topic}</div>
+                <div style="font-size: 11px; margin-top: 4px; opacity: 0.9;">${isChosen ? '🟣 ĐÃ CHỌN' : '🔵 CHƯA CHỌN'}</div>
+              </div>
+            `;
+          };
+
+          v2El.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 16px;">
+              <h4 style="margin: 0; color: #f59e0b; font-size: 16px;">📋 BẢNG 10 CHỦ ĐỀ (CẤU TRÚC 2 - 3 - 3 - 2)</h4>
+              <span style="font-size: 13px; color: #94a3b8;">Chủ đề chưa chọn: Màu Blue | Đã chọn: Màu Tím</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; gap: 12px; justify-content: center; max-width: 75%; margin: 0 auto; width: 100%;">
+                ${row1.map((t, idx) => renderTopicCard(t, idx)).join('')}
+              </div>
+              <div style="display: flex; gap: 12px; justify-content: center;">
+                ${row2.map((t, idx) => renderTopicCard(t, idx + 2)).join('')}
+              </div>
+              <div style="display: flex; gap: 12px; justify-content: center;">
+                ${row3.map((t, idx) => renderTopicCard(t, idx + 5)).join('')}
+              </div>
+              <div style="display: flex; gap: 12px; justify-content: center; max-width: 75%; margin: 0 auto; width: 100%;">
+                ${row4.map((t, idx) => renderTopicCard(t, idx + 8)).join('')}
+              </div>
+            </div>
+          `;
+        } else {
+          // Bảng câu hỏi (question_board)
+          const activeQ = v2.activeQuestion;
+          if (!activeQ || !activeQ.isOpened) {
+            v2El.innerHTML = `
+              <div style="text-align: center; padding: 40px 20px;">
+                <span style="font-size: 40px;">❓</span>
+                <h3 style="color: #f59e0b; margin: 10px 0 6px 0; font-size: 18px;">BẢNG CÂU HỎI VÒNG 2 (MẶC ĐỊNH ĐANG ẨN)</h3>
+                <p style="color: #94a3b8; font-size: 14px;">Chờ Controller bấm "Hiện câu hỏi" để hiển thị câu hỏi và các đáp án...</p>
+              </div>
+            `;
+          } else {
+            const opts = activeQ.options || [];
+            const bets = v2.bets || {};
+            const showAns = v2.showAnswer;
+            const correctIdx = activeQ.correct;
+
+            const renderOptionCard = (optText, optIdx) => {
+              const oneBased = optIdx + 1;
+              const betVal = bets[oneBased] || 0;
+              let bg = 'linear-gradient(135deg, #0284c7, #0369a1)'; // Blue
+              let color = '#ffffff';
+              let border = '2px solid #38bdf8';
+              let tag = '';
+
+              if (betVal > 0) {
+                bg = 'linear-gradient(135deg, #9333ea, #7c3aed)'; // Tím
+                border = '2px solid #d8b4fe';
+                tag = `<span style="background: #facc15; color: black; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 6px; margin-left: 8px;">[ĐẶT CƯỢC: ${betVal}đ]</span>`;
+              }
+
+              if (showAns) {
+                if (oneBased === correctIdx) {
+                  bg = '#facc15'; // Vàng
+                  color = '#000000'; // Chữ đen
+                  border = '3px solid #ffffff';
+                  tag += `<span style="background: #22c55e; color: white; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 6px; margin-left: 8px;">✓ ĐÁP ÁN ĐÚNG</span>`;
+                } else {
+                  bg = '#020617'; // Đen
+                  color = '#ffffff'; // Chữ trắng
+                  border = '2px solid #334155';
+                }
+              }
+
+              const optLabels = ['A', 'B', 'C', 'D'];
+              return `
+                <div style="background: ${bg}; color: ${color}; border: ${border}; border-radius: 12px; padding: 16px 20px; font-size: 16px; display: flex; align-items: center; justify-content: space-between; transition: all 0.3s ease;">
+                  <div>
+                    <b style="font-size: 18px; margin-right: 8px;">${optLabels[optIdx] || oneBased}.</b>
+                    <span>${optText}</span>
+                  </div>
+                  <div>${tag}</div>
+                </div>
+              `;
+            };
+
+            v2El.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="background: #7c3aed; color: white; padding: 4px 12px; border-radius: 6px; font-size: 13px;">CHỦ ĐỀ: ${activeQ.topicName || ''}</span>
+                  <span style="background: #0284c7; color: white; padding: 4px 12px; border-radius: 6px; font-size: 13px;">${opts.length} ĐÁP ÁN</span>
+                  <span style="background: #eab308; color: black; font-weight: bold; padding: 4px 12px; border-radius: 6px; font-size: 13px;">LƯỢT: PLAYER ${v2.activePlayerTurn || 1}</span>
+                </div>
+                <div style="background: #0f172a; border: 2px solid #f59e0b; padding: 6px 16px; border-radius: 8px; font-size: 20px; color: #facc15; font-weight: bold;">
+                  ⏱️ ${v2.timerSeconds ?? 60}s
+                </div>
+              </div>
+
+              <!-- Câu hỏi -->
+              <div style="background: #0f172a; border: 2px solid #f59e0b; border-radius: 12px; padding: 18px 22px; font-size: 20px; color: #ffffff; line-height: 1.4; margin-bottom: 16px;">
+                <b>CÂU HỎI:</b> ${activeQ.question}
+              </div>
+
+              <!-- Các đáp án -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                ${opts.map((o, idx) => renderOptionCard(o, idx)).join('')}
+              </div>
+
+              ${v2.scored ? `
+                <div style="margin-top: 14px; background: #064e3b; border: 2px solid #22c55e; border-radius: 10px; padding: 12px; font-size: 16px; color: #a7f3d0; text-align: center; font-weight: bold;">
+                  🎉 ĐÃ CHẤM ĐIỂM! Player ${v2.activePlayerTurn || 1} được cộng +${v2.awardedScore || 0} điểm từ đáp án đúng số ${correctIdx}.
+                </div>
+              ` : ''}
+            `;
+          }
+        }
+      }
+
+      // 4. HÀM HIỂN THỊ CHI TIẾT VÒNG 3 DÀNH CHO HOST
+      function renderHostVong3(state) {
+        const v3 = state.vong3State || {};
+        const v3El = document.getElementById('host-v3-content');
+        if (!v3El) return;
+
+        const activeQ = v3.activeQuestion;
+        const isVisible = v3.isBoxesVisible;
+        const stage = v3.revealedStage || 0;
+        const allowed = Array.isArray(v3.allowedBellPlayers) ? v3.allowedBellPlayers : [1, 2, 3, 4];
+        const rungList = Array.isArray(v3.rungPlayers) ? v3.rungPlayers : [];
+        const bellRungBy = v3.bellRungBy;
+        const players = state.players || [];
+
+        if (!activeQ || !isVisible) {
+          v3El.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; background: #0f172a; border-radius: 14px; border: 2px dashed #6d28d9;">
+              <span style="font-size: 40px;">🎯</span>
+              <h3 style="font-size: 20px; color: #c084fc; margin: 10px 0 6px 0;">VÒNG 3: SO TÀI (ĐANG CHỜ CONTROLLER MỞ CÂU HỎI)</h3>
+              <p style="color: #94a3b8; font-size: 14px; margin: 0;">Khi Controller nhấn "Hiện ô câu hỏi" hoặc "Chạy câu hỏi", 4 ô Chủ đề & Gợi ý và tín hiệu chuông sẽ xuất hiện tại đây.</p>
+            </div>
+          `;
+          return;
+        }
+
+        const renderBox = (title, content, isRevealed, borderCol, bgGrad, icon) => {
+          return `
+            <div style="background: ${isRevealed ? bgGrad : '#0f172a'}; border: 2px solid ${isRevealed ? borderCol : '#334155'}; border-radius: 12px; padding: 16px 20px; transition: all 0.3s ease; box-shadow: ${isRevealed ? '0 4px 15px rgba(0,0,0,0.4)' : 'none'};">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 12px; color: ${isRevealed ? '#facc15' : '#64748b'}; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">${icon} ${title}</span>
+                <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: ${isRevealed ? 'rgba(0,0,0,0.3)' : '#1e293b'}; color: ${isRevealed ? '#ffffff' : '#64748b'};">
+                  ${isRevealed ? 'ĐÃ HIỆN' : 'ĐANG ẨN'}
+                </span>
+              </div>
+              <div style="font-size: 18px; color: ${isRevealed ? '#ffffff' : '#64748b'}; font-weight: ${isRevealed ? 'bold' : 'normal'}; line-height: 1.4; min-height: 28px;">
+                ${isRevealed ? content : '<i style="color: #475569;">[Nội dung đang ẩn...]</i>'}
+              </div>
+            </div>
+          `;
+        };
+
+        const renderPlayerBellCard = (pId) => {
+          const pInfo = players[pId - 1] || { name: `Người chơi ${pId}`, score: 0 };
+          const isAllowed = allowed.includes(pId);
+          const hasRung = rungList.includes(pId);
+          const isCurrentRung = (bellRungBy === pId);
+
+          let bg = '#0f172a';
+          let border = '2px solid #334155';
+          let glow = 'none';
+          let bellStatusHtml = '<span style="color: #64748b; font-size: 13px;">🔒 ĐANG KHÓA</span>';
+
+          if (isCurrentRung) {
+            bg = 'linear-gradient(135deg, #b45309, #d97706)';
+            border = '3px solid #facc15';
+            glow = '0 0 25px rgba(250, 204, 21, 0.7)';
+            bellStatusHtml = `
+              <div style="background: #facc15; color: #000000; font-weight: 900; padding: 6px 12px; border-radius: 8px; font-size: 15px; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; animation: pulse 1s infinite;">
+                <span>🚨</span> ĐÃ BẤM CHUÔNG!
+              </div>
+            `;
+          } else if (hasRung) {
+            border = '2px solid #ef4444';
+            bellStatusHtml = '<span style="color: #f87171; font-size: 13px;">Đã bấm lượt trước</span>';
+          } else if (!v3.isBellLocked && isAllowed) {
+            border = '2px solid #22c55e';
+            glow = '0 0 12px rgba(34, 197, 94, 0.4)';
+            bellStatusHtml = '<span style="color: #4ade80; font-size: 14px; font-weight: bold;">🔔 CHUÔNG ĐANG MỞ</span>';
+          }
+
+          const playerColors = ['#38bdf8', '#f43f5e', '#eab308', '#22c55e'];
+
+          return `
+            <div style="background: ${bg}; border: ${border}; box-shadow: ${glow}; border-radius: 12px; padding: 14px; text-align: center; transition: all 0.3s ease;">
+              <div style="font-size: 11px; color: ${playerColors[pId - 1]}; font-weight: bold;">PLAYER ${pId}</div>
+              <div style="font-size: 16px; color: #ffffff; font-weight: bold; margin: 2px 0 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${pInfo.name}</div>
+              
+              <div style="margin: 6px 0;">
+                <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: ${isAllowed ? '#065f46' : '#1e293b'}; color: ${isAllowed ? '#6ee7b7' : '#94a3b8'};">
+                  ${isAllowed ? '✓ ĐƯỢC MỞ CHUÔNG' : '✕ KHÔNG MỞ CHUÔNG'}
+                </span>
+              </div>
+
+              <div style="margin-top: 8px;">
+                ${bellStatusHtml}
+              </div>
+            </div>
+          `;
+        };
+
+        v3El.innerHTML = `
+          <!-- Header thông tin câu hỏi & Đồng hồ đếm 7s -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="background: #7c3aed; color: white; padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: bold;">CÂU HỎI SỐ ${activeQ.index || 1}</span>
+              <span style="background: ${v3.isBellLocked ? '#475569' : '#15803d'}; color: white; padding: 6px 14px; border-radius: 8px; font-size: 14px;">
+                ${v3.isBellLocked ? '🔒 CHUÔNG ĐANG KHÓA' : '🔔 CHUÔNG ĐANG MỞ'}
+              </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="background: #0f172a; border: 2px solid #a855f7; padding: 6px 18px; border-radius: 8px; font-size: 20px; color: #c084fc; font-weight: bold;">
+                ⏱️ BƯỚC: ${v3.stepTimerSeconds ?? 7}s
+              </div>
+            </div>
+          </div>
+
+          <!-- 4 Ô: 1 Ô Chủ đề + 3 Ô Gợi ý -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+            ${renderBox('CHỦ ĐỀ', activeQ.topic, stage >= 1, '#c084fc', 'linear-gradient(135deg, #581c87, #3b0764)', '🏷️')}
+            ${renderBox('GỢI Ý 1', activeQ.clue1, stage >= 2, '#38bdf8', 'linear-gradient(135deg, #0369a1, #0c4a6e)', '💡')}
+            ${renderBox('GỢI Ý 2', activeQ.clue2, stage >= 3, '#f59e0b', 'linear-gradient(135deg, #b45309, #78350f)', '💡')}
+            ${renderBox('GỢI Ý 3', activeQ.clue3, stage >= 4, '#f43f5e', 'linear-gradient(135deg, #be123c, #881337)', '💡')}
+          </div>
+
+          <!-- Bảng 4 người chơi theo dõi tín hiệu chuông -->
+          <div style="background: #0f172a; border: 1.5px solid #334155; border-radius: 14px; padding: 14px; margin-bottom: 14px;">
+            <div style="font-size: 12px; color: #94a3b8; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+              <span>🔔</span> THEO DÕI TÍN HIỆU CHUÔNG 4 NGƯỜI CHƠI (HOST SCRIPT):
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+              ${renderPlayerBellCard(1)}
+              ${renderPlayerBellCard(2)}
+              ${renderPlayerBellCard(3)}
+              ${renderPlayerBellCard(4)}
+            </div>
+          </div>
+
+          <!-- Hộp đáp án dành riêng cho Host dẫn chương trình -->
+          <div style="background: linear-gradient(135deg, #064e3b, #022c22); border: 2px solid #10b981; border-radius: 12px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 11px; color: #6ee7b7; font-weight: bold; text-transform: uppercase;">ĐÁP ÁN DẪN CHƯƠNG TRÌNH CHO HOST:</span>
+              <div style="font-size: 20px; color: #ffffff; font-weight: bold; margin-top: 2px;">${activeQ.answer || '---'}</div>
+            </div>
+            <span style="background: #10b981; color: #000000; font-size: 12px; font-weight: bold; padding: 4px 12px; border-radius: 6px;">HOST ONLY</span>
+          </div>
+        `;
+      }
+
+      function renderHostVong4(state) {
+        const v4El = document.getElementById('host-v4-content');
+        if (!v4El) return;
+
+        const q = state.questions || {};
+        const v4Data = q.vong4 || {};
+        const gift = v4Data.gift || {};
+        const clues = v4Data.clues || [];
+        const v4 = state.vong4State || {};
+        const boxes = v4.boxes || [
+          { id: 1, name: 'Đỏ', color: '#ff0000', text: 'Ô SỐ 1', money: 0 },
+          { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true, money: 200000 },
+          { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', money: 300000 },
+          { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', money: 500000 },
+          { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', money: 0 },
+          { id: 6, name: 'Cam', color: '#ffa500', text: 'Ô SỐ 6', darkText: true, money: 1000000 }
+        ];
+        const totalMoney = typeof v4.totalMoney === 'number' ? v4.totalMoney : 8000000;
+        const selectedId = v4.selectedBoxId;
+
+        const renderHostBox = (box) => {
+          const isSelected = (box.id === selectedId);
+          const clueObj = clues.find(c => String(c.index) === String(box.id)) || { clue: `Gợi ý ô ${box.id}` };
+          const textColor = box.darkText ? '#000000' : '#ffffff';
+          const moneyFormatted = (box.money || 0).toLocaleString('vi-VN');
+
+          return `
+            <div style="background: ${box.color}; color: ${textColor}; border: ${isSelected ? '3px solid #ffffff' : '2px solid rgba(255,255,255,0.3)'}; box-shadow: ${isSelected ? '0 0 20px rgba(255,255,255,0.8)' : '0 4px 10px rgba(0,0,0,0.4)'}; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; min-height: 140px; transition: all 0.3s ease;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <b style="font-size: 15px;">${box.text} (${box.name})</b>
+                ${isSelected ? `<span style="background: #ffffff; color: #000000; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 6px;">ĐANG CHỌN</span>` : ''}
+              </div>
+
+              <!-- Tiền -->
+              <div style="background: rgba(0, 0, 0, 0.5); color: #ffffff; padding: 6px 10px; border-radius: 8px; margin: 6px 0;">
+                <div style="font-size: 10px; opacity: 0.85;">GIÁ TRỊ TIỀN:</div>
+                <div style="font-size: 15px; font-weight: bold; color: ${box.revealedMoney ? '#4ade80' : '#facc15'};">
+                  💰 ${moneyFormatted} VNĐ
+                  <span style="font-size: 10px; margin-left: 6px; color: ${box.revealedMoney ? '#4ade80' : '#94a3b8'};">
+                    (${box.revealedMoney ? '✓ ĐÃ HIỆN' : '🔒 ĐANG ẨN TRÊN SÂN KHẤU'})
+                  </span>
+                </div>
+              </div>
+
+              <!-- Gợi ý -->
+              <div style="background: rgba(0, 0, 0, 0.6); color: #ffffff; padding: 6px 10px; border-radius: 8px;">
+                <div style="font-size: 10px; opacity: 0.85;">NỘI DUNG GỢI Ý:</div>
+                <div style="font-size: 13px; font-weight: bold; margin-top: 2px; line-height: 1.3;">
+                  💡 ${clueObj.clue}
+                </div>
+                <div style="font-size: 10px; margin-top: 3px; color: ${box.revealedClue ? '#4ade80' : '#f87171'};">
+                  Trạng thái sân khấu: <b>${box.revealedClue ? '✓ ĐÃ MỞ CHO THÍ SINH XEM' : '🔒 ĐANG ẨN'}</b>
+                </div>
+              </div>
+            </div>
+          `;
+        };
+
+        v4El.innerHTML = `
+          <!-- Header thông tin Vòng 4 -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 14px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="background: #059669; color: white; padding: 8px 18px; border-radius: 10px; font-size: 16px; font-weight: bold;">
+                VÒNG 4: ẨN SỐ MAY MẮN
+              </span>
+              <span style="background: #0f172a; border: 2px solid #22c55e; padding: 6px 16px; border-radius: 10px; font-size: 18px; color: #4ade80; font-weight: bold;">
+                💵 TỔNG TIỀN HIỆN TẠI: ${totalMoney.toLocaleString('vi-VN')} VNĐ
+              </span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="background: #0f172a; border: 2px solid #eab308; padding: 6px 20px; border-radius: 10px; font-size: 22px; color: #facc15; font-weight: bold;">
+                ⏱️ 120s: ${v4.timerSeconds ?? 120}s
+              </div>
+            </div>
+          </div>
+
+          <!-- Gợi ý tặng -->
+          <div style="background: ${v4.showGiftClue ? 'linear-gradient(135deg, #713f12, #854d0e)' : '#0f172a'}; border: 2px solid ${v4.showGiftClue ? '#facc15' : '#475569'}; border-radius: 14px; padding: 14px 20px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease;">
+            <div>
+              <div style="font-size: 12px; color: #facc15; font-weight: bold;">🎁 GỢI Ý TẶNG (HOST SCRIPT):</div>
+              <div style="font-size: 16px; color: #ffffff; font-weight: bold; margin-top: 4px;">
+                "${gift.clue || 'Chưa nạp gợi ý tặng'}"
+              </div>
+              <div style="font-size: 13px; color: #6ee7b7; margin-top: 2px;">
+                Đáp án: <b>${gift.answer || '---'}</b>
+              </div>
+            </div>
+            <div>
+              <span style="background: ${v4.showGiftClue ? '#22c55e' : '#334155'}; color: white; font-size: 12px; font-weight: bold; padding: 6px 14px; border-radius: 8px;">
+                ${v4.showGiftClue ? '✓ SÂN KHẤU ĐANG HIỆN' : '🔒 SÂN KHẤU ĐANG ẨN'}
+              </span>
+            </div>
+          </div>
+
+          <!-- 6 Ô số có màu sắc tương ứng -->
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
+            ${boxes.map(b => renderHostBox(b)).join('')}
+          </div>
+
+          <!-- Kết quả Đúng / Sai nếu có -->
+          ${v4.showAnswer ? `
+            <div style="background: ${v4.resultStatus === 'correct' ? '#064e3b' : '#450a0a'}; border: 2px solid ${v4.resultStatus === 'correct' ? '#22c55e' : '#ef4444'}; border-radius: 14px; padding: 14px 20px; text-align: center; color: white; margin-bottom: 16px;">
+              <div style="font-size: 20px; font-weight: bold;">
+                ${v4.resultStatus === 'correct' ? '🎉 THÍ SINH TRẢ LỜI ĐÚNG - GIỮ NGUYÊN TIỀN THƯỞNG!' : '❌ THÍ SINH TRẢ LỜI SAI - TIỀN THƯỞNG TRỞ THÀNH 5.000.000 VNĐ!'}
+              </div>
+              <div style="font-size: 16px; margin-top: 4px; color: #facc15;">
+                Tổng tiền thưởng chung cuộc: <b>${totalMoney.toLocaleString('vi-VN')} VNĐ</b>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Hộp đáp án Host -->
+          <div style="background: linear-gradient(135deg, #064e3b, #022c22); border: 2px solid #10b981; border-radius: 12px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 11px; color: #6ee7b7; font-weight: bold; text-transform: uppercase;">ĐÁP ÁN CHỦ ĐỀ CHÍNH VÒNG 4 (HOST REFERENCE):</span>
+              <div style="font-size: 18px; color: #ffffff; font-weight: bold; margin-top: 2px;">${gift.answer || '---'}</div>
+            </div>
+            <span style="background: #10b981; color: #000000; font-size: 12px; font-weight: bold; padding: 4px 12px; border-radius: 6px;">HOST ONLY</span>
+          </div>
+        `;
+      }
     </script>
   </body>
 </html>

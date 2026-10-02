@@ -3,54 +3,63 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Viewer - An Số Vàng</title>
-    <meta name="description" content="Trang khán giả / màn hình hiển thị sân khấu của gameshow An Số Vàng" />
+    <title>Viewer</title>
+    <meta name="description" content="Màn hình sân khấu Viewer kết nối máy chủ An Số Vàng" />
 
-    <!-- 100% font-weight là bold cho tất cả các phần tử -->
-        <style>
+    <style>
       *, *::before, *::after {
         font-weight: bold !important;
         box-sizing: border-box;
       }
-      body {
+      html, body {
+        width: 100vw;
+        height: 100vh;
         margin: 0;
         padding: 0;
+        overflow: hidden;
+        box-sizing: border-box;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background-color: #0b1120;
+        background-color: linear-gradient(135deg, #0a192f, #020c1b);
+        background: linear-gradient(135deg, #0a192f, #020c1b);
         color: #f8fafc;
       }
-      /* Nút bấm và hiệu ứng hover cố định 1 màu duy nhất trên toàn bộ hệ thống - GPU accelerated */
-      button, .btn, a.btn, input[type='button'], input[type='submit'], input[type='reset'] {
-        cursor: pointer;
-        transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-        outline: none;
-        will-change: background-color, color, box-shadow;
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
       }
-      button:hover, .btn:hover, a.btn:hover, input[type='button']:hover, input[type='submit']:hover, input[type='reset']:hover {
-        background: #eab308 !important;
-        background-color: #eab308 !important;
-        background-image: none !important;
-        color: #000000 !important;
-        border-color: #eab308 !important;
-        box-shadow: 0 0 12px rgba(234, 179, 8, 0.5) !important;
-        filter: none !important;
+      ::-webkit-scrollbar-track {
+        background: #0f172a;
+        border-radius: 4px;
       }
-      button:active, .btn:active, a.btn:active {
-        opacity: 0.85;
+      ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
       }
       .view-container {
         display: none;
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-sizing: border-box;
+        border-radius: 14px;
+        padding: 12px;
       }
       .view-container.active {
-        display: flex;
+        display: flex !important;
         flex-direction: column;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.85; }
+      }
+      .timer-pulse {
+        animation: pulse 1s infinite;
       }
     </style>
 
-    <!-- Thư viện disable-devtool -->
-        <script>
+    <script>
       function disableDevTools() {
-        // Chặn phím tắt mở DevTools
         window.addEventListener('keydown', function (e) {
           if (e.key === 'F12' || e.keyCode === 123) {
             e.preventDefault(); e.stopPropagation(); return false;
@@ -63,7 +72,6 @@
             e.preventDefault(); e.stopPropagation(); return false;
           }
         }, true);
-        // Chặn chuột phải
         window.addEventListener('contextmenu', function (e) {
           e.preventDefault(); return false;
         }, true);
@@ -71,78 +79,76 @@
       disableDevTools();
       window.disableDevTools = disableDevTools;
     </script>
-    <script src="/sync-client.js"></script>
+    <script src="./sync-client.js"></script>
   </head>
-  <body class="min-h-screen p-4 md:p-8 bg-slate-950 text-slate-100 flex flex-col justify-between">
-    <div style="max-width: 1280px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; min-height: 90vh; justify-content: space-between;">
+  <body class="text-slate-100 flex flex-col p-2" style="height: 100vh; width: 100vw; overflow: hidden; box-sizing: border-box; background: linear-gradient(135deg, #0a192f, #020c1b);">
+    <div style="max-width: 1200px; width: 100%; height: 100%; margin: 0 auto; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;">
+      
+      <!-- KHU VỰC HIỂN THỊ CHÍNH -->
+      <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; overflow: hidden;">
 
-      <!-- Sân khấu Header: Tên 4 Người Chơi -->
-      <div id="viewer-players-header" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px;">
-        <!-- 4 Người chơi hiển thị nổi bật -->
-      </div>
+        <!-- 1. VIEW TRỐNG (Hoàn toàn không có bất kỳ cái gì) -->
+        <div id="view-blank" class="view-container active"></div>
 
-      <!-- KHU VỰC HIỂN THỊ CHÍNH (ĐỒNG BỘ THEO CONTROLLER) -->
-      <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
+        <!-- 2. VIEW VÒNG 1: THỬ SỨC (CHỈ CÓ Ô ĐỒNG HỒ TẠI HÀNG TRÊN, 3 Ô CÂU HỎI - ĐÚNG - SAI TẠI HÀNG DƯỚI) -->
+        <div id="view-vong1" class="view-container" style="background: transparent; border: none; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 60px; box-sizing: border-box; gap: 24px;">
+          
+            <!-- HÀNG TRÊN: Ô ĐỒNG HỒ (Bỏ chữ s, làm to ra, nằm hàng trên) -->
+            <div id="viewer-v1-timer-row" style="display: flex; justify-content: center; align-items: center; width: 100%;">
+              <div id="viewer-v1-timer-box" style="background: #000000; border: 3px solid #ffffff; padding: 10px 42px; border-radius: 18px; min-width: 140px; text-align: center; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
+                <span id="viewer-v1-timer-val" style="font-size: 52px; color: #ffffff; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; display: inline-block; min-width: 60px; text-align: center;">5</span>
+              </div>
+            </div>
 
-        <!-- 1. VIEW TRỐNG -->
-        <div id="view-blank" class="view-container active" style="align-items: center; justify-content: center; text-align: center; padding: 80px 20px;">
-          <div style="font-size: 72px; margin-bottom: 20px; animation: pulse 2s infinite;">✨</div>
-          <h1 style="font-size: 42px; margin: 0; background: linear-gradient(to right, #facc15, #f59e0b, #eab308); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 2px;">
-            ẨN SỐ VÀNG
-          </h1>
-          <p style="color: #64748b; font-size: 18px; margin-top: 12px;">Đang chuẩn bị vòng thi tiếp theo...</p>
+          <!-- HÀNG DƯỚI: Hàng ngang 3 ô: [ Ô CÂU HỎI ] - [ Ô ĐÚNG ] - [ Ô SAI ] -->
+          <div id="viewer-v1-content-row" style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 20px; width: 100%; max-width: 1100px; margin: 0 auto;">
+            
+            <!-- Ô 1: Ô CÂU HỎI CHÍNH (Nền đen, chữ trắng) -->
+            <div id="viewer-v1-box-q" style="background: #000000; border: 2px solid #334155; border-radius: 16px; padding: 22px 24px; flex: 1; min-height: 160px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; color: #ffffff;">
+              
+              <!-- Nội dung câu hỏi (chữ trắng) -->
+              <div id="viewer-v1-q-text" style="font-size: 24px; color: #ffffff; line-height: 1.4; display: flex; align-items: center; justify-content: center; flex: 1; font-weight: bold; width: 100%; min-height: 60px;">
+                Chờ bắt đầu câu hỏi...
+              </div>
+            </div>
+
+            <!-- Ô 2: Ô ĐÚNG (Nền đen, chữ trắng) -->
+            <div id="viewer-v1-box-dung" style="background: #000000; border: 2px solid #334155; border-radius: 16px; width: 170px; height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; color: #ffffff;">
+              <span id="viewer-v1-text-dung" style="font-size: 36px; color: #ffffff; letter-spacing: 2px; font-weight: bold;">ĐÚNG</span>
+            </div>
+
+            <!-- Ô 3: Ô SAI (Nền đen, chữ trắng) -->
+            <div id="viewer-v1-box-sai" style="background: #000000; border: 2px solid #334155; border-radius: 16px; width: 170px; height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; color: #ffffff;">
+              <span id="viewer-v1-text-sai" style="font-size: 36px; color: #ffffff; letter-spacing: 2px; font-weight: bold;">SAI</span>
+            </div>
+
+          </div>
+
         </div>
 
-        <!-- 2. VIEW VÒNG 1 -->
-        <div id="view-vong1" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 3px solid #38bdf8; border-radius: 24px; padding: 36px; box-shadow: 0 20px 40px -10px rgba(56, 189, 248, 0.2);">
-          <div style="text-align: center; margin-bottom: 24px;">
-            <span style="background: #0284c7; color: white; padding: 6px 18px; border-radius: 999px; font-size: 14px; letter-spacing: 1px;">VÒNG 1</span>
-            <h2 style="font-size: 36px; color: #38bdf8; margin: 10px 0 0 0;">THỬ SỨC</h2>
-          </div>
-          <div id="viewer-v1-stage" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <!-- Câu hỏi Vòng 1 -->
-          </div>
-        </div>
-
-        <!-- 3. VIEW VÒNG 2 -->
-        <div id="view-vong2" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 3px solid #f59e0b; border-radius: 24px; padding: 36px; box-shadow: 0 20px 40px -10px rgba(245, 158, 11, 0.2);">
-          <div style="text-align: center; margin-bottom: 24px;">
-            <span style="background: #d97706; color: white; padding: 6px 18px; border-radius: 999px; font-size: 14px; letter-spacing: 1px;">VÒNG 2</span>
-            <h2 style="font-size: 36px; color: #f59e0b; margin: 10px 0 0 0;">ĐẶT CƯỢC</h2>
-          </div>
-          <div id="viewer-v2-stage" style="display: flex; flex-direction: column; gap: 20px;">
-            <!-- Nội dung trắc nghiệm Vòng 2 -->
-          </div>
+        <!-- 3. VIEW VÒNG 2 (SÂN KHẤU ĐẶT CƯỢC THEO FORM TRUYỀN HÌNH) -->
+        <div id="view-vong2" class="view-container" style="background: transparent; border: none; border-radius: 16px; padding: 10px; display: none; width: 100%; height: 100%; box-sizing: border-box; justify-content: center; align-items: center;">
+          <div id="viewer-v2-stage" style="color: #cbd5e1; font-size: 14px; text-align: center; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box;">Đang chuẩn bị vòng 2...</div>
         </div>
 
         <!-- 4. VIEW VÒNG 3 -->
-        <div id="view-vong3" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 3px solid #a855f7; border-radius: 24px; padding: 36px; box-shadow: 0 20px 40px -10px rgba(168, 85, 247, 0.2);">
-          <div style="text-align: center; margin-bottom: 24px;">
-            <span style="background: #7c3aed; color: white; padding: 6px 18px; border-radius: 999px; font-size: 14px; letter-spacing: 1px;">VÒNG 3</span>
-            <h2 style="font-size: 36px; color: #c084fc; margin: 10px 0 0 0;">SO TÀI (3 GỢI Ý)</h2>
+        <div id="view-vong3" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid #a855f7; border-radius: 16px; padding: 16px; display: none;">
+          <div style="text-align: center; margin-bottom: 12px; flex-shrink: 0;">
+            <span style="background: #7c3aed; color: white; padding: 4px 14px; border-radius: 999px; font-size: 12px;">VÒNG 3</span>
+            <h2 style="font-size: 22px; color: #c084fc; margin: 4px 0 0 0;">SO TÀI (3 GỢI Ý)</h2>
           </div>
-          <div id="viewer-v3-stage" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-            <!-- Nội dung gợi ý Vòng 3 -->
-          </div>
+          <div id="viewer-v3-stage" style="color: #cbd5e1; font-size: 14px; text-align: center; flex: 1; min-height: 0; overflow-y: auto;">Đang chuẩn bị vòng 3...</div>
         </div>
 
         <!-- 5. VIEW VÒNG 4 -->
-        <div id="view-vong4" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 3px solid #22c55e; border-radius: 24px; padding: 36px; box-shadow: 0 20px 40px -10px rgba(34, 197, 94, 0.2);">
-          <div style="text-align: center; margin-bottom: 24px;">
-            <span style="background: #059669; color: white; padding: 6px 18px; border-radius: 999px; font-size: 14px; letter-spacing: 1px;">VÒNG 4</span>
-            <h2 style="font-size: 36px; color: #4ade80; margin: 10px 0 0 0;">ẨN SỐ MAY MẮN</h2>
+        <div id="view-vong4" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid #22c55e; border-radius: 16px; padding: 16px; display: none;">
+          <div style="text-align: center; margin-bottom: 12px; flex-shrink: 0;">
+            <span style="background: #059669; color: white; padding: 4px 14px; border-radius: 999px; font-size: 12px;">VÒNG 4</span>
+            <h2 style="font-size: 22px; color: #4ade80; margin: 4px 0 0 0;">ẨN SỐ MAY MẮN</h2>
           </div>
-          <div id="viewer-v4-stage" style="display: flex; flex-direction: column; gap: 20px;">
-            <!-- Mảnh ghép và ô tặng Vòng 4 -->
-          </div>
+          <div id="viewer-v4-stage" style="color: #cbd5e1; font-size: 14px; text-align: center; flex: 1; min-height: 0; overflow-y: auto;">Đang chuẩn bị vòng 4...</div>
         </div>
 
-      </div>
-
-      <!-- Footer hiển thị nguồn cấp dữ liệu kết nối OnRender -->
-      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1e293b; padding-top: 16px; margin-top: 24px; color: #64748b; font-size: 13px;">
-        <div>Gameshow Ẩn Số Vàng | Màn hình Viewer Sân Khấu</div>
-        <div>Đồng bộ từ Controller qua OnRender: ansovang.onrender.com</div>
       </div>
 
     </div>
@@ -157,127 +163,654 @@
       };
 
       let currentRenderedView = null;
-      let lastRenderedPlayers = '';
-      let lastRenderedQuestions = null;
 
       window.onGameStateChange(function(state, changes) {
-        // Chỉ chuyển container View khi view thực sự thay đổi
+        // 1. Chuyển đổi View & Xử lý View Trống hoàn toàn
+        const isBlank = (state.currentView === 'blank');
+
         if (state.currentView !== currentRenderedView) {
           currentRenderedView = state.currentView;
-          document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+          document.querySelectorAll('.view-container').forEach(el => {
+            el.style.display = 'none';
+            el.classList.remove('active');
+          });
           const activeContainerId = viewMap[state.currentView] || 'view-blank';
           const targetEl = document.getElementById(activeContainerId);
-          if (targetEl) targetEl.classList.add('active');
-        }
-
-        // Chỉ vẽ lại Header người chơi nếu có sự thay đổi
-        const playersJson = JSON.stringify(state.players);
-        if (playersJson !== lastRenderedPlayers) {
-          lastRenderedPlayers = playersJson;
-          const pHeader = document.getElementById('viewer-players-header');
-          if (pHeader && state.players) {
-            const colors = [
-              { border: '#38bdf8', bg: 'rgba(56, 189, 248, 0.1)', tag: 'P1' },
-              { border: '#f43f5e', bg: 'rgba(244, 63, 94, 0.1)', tag: 'P2' },
-              { border: '#eab308', bg: 'rgba(234, 179, 8, 0.1)', tag: 'P3' },
-              { border: '#22c55e', bg: 'rgba(34, 197, 94, 0.1)', tag: 'P4' }
-            ];
-            pHeader.innerHTML = state.players.map((p, idx) => `
-              <div style="background: ${colors[idx].bg}; border: 2px solid ${colors[idx].border}; border-radius: 16px; padding: 14px; text-align: center;">
-                <span style="font-size: 12px; color: ${colors[idx].border}; text-transform: uppercase;">NGƯỜI CHƠI ${p.id}</span>
-                <div style="font-size: 18px; color: white; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</div>
-              </div>
-            `).join('');
+          if (targetEl) {
+            targetEl.style.display = isBlank ? 'none' : 'flex';
+            targetEl.classList.add('active');
           }
         }
 
-        // Chỉ đổ lại nội dung câu hỏi khi questions thực sự thay đổi
-        const q = state.questions;
-        if (!q || q === lastRenderedQuestions) return;
-        lastRenderedQuestions = q;
+        // 2. Cập nhật chi tiết Vòng 1 trên sân khấu
+        renderViewerVong1(state);
 
-        // Vòng 1
-        const v1Stage = document.getElementById('viewer-v1-stage');
-        if (v1Stage) {
-          const l1 = q.vong1?.luot1 || [];
-          const l2 = q.vong1?.luot2 || [];
-          v1Stage.innerHTML = `
-            <div style="background: #0f172a; padding: 20px; border-radius: 16px; border: 1px solid #334155;">
-              <h4 style="color: #facc15; font-size: 20px; margin: 0 0 14px 0; text-align: center;">LƯỢT 1</h4>
-              <div style="display: flex; flex-direction: column; gap: 10px;">
-                ${l1.map((item, i) => `
-                  <div style="background: #1e293b; padding: 12px; border-radius: 10px; font-size: 16px;">
-                    <span style="color: #38bdf8;">${i+1}.</span> ${item.q}
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-            <div style="background: #0f172a; padding: 20px; border-radius: 16px; border: 1px solid #334155;">
-              <h4 style="color: #facc15; font-size: 20px; margin: 0 0 14px 0; text-align: center;">LƯỢT 2</h4>
-              <div style="display: flex; flex-direction: column; gap: 10px;">
-                ${l2.map((item, i) => `
-                  <div style="background: #1e293b; padding: 12px; border-radius: 10px; font-size: 16px;">
-                    <span style="color: #38bdf8;">${i+1}.</span> ${item.q}
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          `;
-        }
+        // 3. Cập nhật chi tiết Vòng 2 trên sân khấu
+        renderViewerVong2(state);
 
-        // Vòng 2
-        const v2Stage = document.getElementById('viewer-v2-stage');
-        if (v2Stage && q.vong2) {
-          v2Stage.innerHTML = `
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
-              ${q.vong2.map((t, idx) => `
-                <div style="background: #0f172a; border: 2px solid #f59e0b; padding: 16px; border-radius: 14px; text-align: center;">
-                  <span style="font-size: 12px; color: #94a3b8;">CHỦ ĐỀ ${idx+1}</span>
-                  <div style="font-size: 18px; color: #fde68a; margin-top: 4px;">${t.topic}</div>
-                </div>
-              `).join('')}
-            </div>
-          `;
-        }
+        // 4. Cập nhật chi tiết Vòng 3 trên sân khấu
+        renderViewerVong3(state);
 
-        // Vòng 3
-        const v3Stage = document.getElementById('viewer-v3-stage');
-        if (v3Stage && q.vong3) {
-          v3Stage.innerHTML = q.vong3.map((it, idx) => `
-            <div style="background: #0f172a; border-radius: 16px; padding: 18px; border: 2px solid #a855f7; display: flex; flex-direction: column; justify-content: space-between;">
-              <div>
-                <span style="color: #facc15; font-size: 13px;">BỘ CÂU ${idx+1}</span>
-                <h4 style="color: #e2e8f0; font-size: 20px; margin: 6px 0 12px 0;">${it.topic}</h4>
-                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #cbd5e1;">
-                  <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px;">💡 Gợi ý 1: ${it.clue1}</div>
-                  <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px;">💡 Gợi ý 2: ${it.clue2}</div>
-                  <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px;">💡 Gợi ý 3: ${it.clue3}</div>
-                </div>
-              </div>
-            </div>
-          `).join('');
-        }
-
-        // Vòng 4
-        const v4Stage = document.getElementById('viewer-v4-stage');
-        if (v4Stage && q.vong4) {
-          const v4 = q.vong4;
-          v4Stage.innerHTML = `
-            <div style="background: #0f172a; border: 2px dashed #eab308; border-radius: 16px; padding: 20px; text-align: center;">
-              <span style="color: #eab308; font-size: 16px;">🎁 Ô TẶNG ĐẶC BIỆT</span>
-              <div style="font-size: 24px; color: #fef08a; margin-top: 6px;">"${v4.gift?.clue}"</div>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-              ${(v4.clues || []).map(c => `
-                <div style="background: #0f172a; border: 2px solid #22c55e; border-radius: 14px; padding: 20px; text-align: center;">
-                  <span style="font-size: 14px; color: #4ade80;">MẢNH GHÉP SỐ ${c.index}</span>
-                  <div style="font-size: 20px; color: white; margin-top: 8px;">${c.clue}</div>
-                </div>
-              `).join('')}
-            </div>
-          `;
-        }
+        // 5. Cập nhật chi tiết Vòng 4 trên sân khấu
+        renderViewerVong4(state);
       });
+
+      function renderViewerVong1(state) {
+        const v1 = state.vong1State || {};
+        const contentRow = document.getElementById('viewer-v1-content-row');
+        const qTurnTitle = document.getElementById('viewer-v1-turn-title');
+        const qText = document.getElementById('viewer-v1-q-text');
+        const timerVal = document.getElementById('viewer-v1-timer-val');
+        const timerBox = document.getElementById('viewer-v1-timer-box');
+        const ansBanner = document.getElementById('viewer-v1-answer-banner');
+        const ansVal = document.getElementById('viewer-v1-answer-val');
+        const boxDung = document.getElementById('viewer-v1-box-dung');
+        const textDung = document.getElementById('viewer-v1-text-dung');
+        const boxSai = document.getElementById('viewer-v1-box-sai');
+        const textSai = document.getElementById('viewer-v1-text-sai');
+
+        // Nút Ẩn/Hiện trên Viewer từ Controller
+        const timerRow = document.getElementById('viewer-v1-timer-row');
+        if (v1.showOnViewer === false) {
+          if (contentRow) contentRow.style.display = 'none';
+          if (timerRow) timerRow.style.display = 'none';
+        } else {
+          if (contentRow) contentRow.style.display = 'flex';
+          if (timerRow) timerRow.style.display = 'flex';
+        }
+
+        if (timerVal && timerBox) {
+          timerVal.textContent = `${typeof v1.timerSeconds === 'number' ? v1.timerSeconds : 5}`;
+          if (v1.timerRunning) {
+            timerVal.style.color = '#ef4444';
+            timerBox.style.borderColor = '#ef4444';
+            timerBox.classList.add('timer-pulse');
+          } else {
+            timerVal.style.color = '#ffffff';
+            timerBox.style.borderColor = '#ffffff';
+            timerBox.classList.remove('timer-pulse');
+          }
+        }
+
+        if (v1.activeQuestion) {
+          if (qText) qText.textContent = v1.activeQuestion.q;
+
+          if (v1.showAnswer) {
+            // Nền đen, chữ vàng cho đáp án khi hiện ra
+            if (ansBanner && ansVal) {
+              ansBanner.style.display = 'flex';
+              ansVal.textContent = v1.activeQuestion.a;
+              ansVal.style.color = '#facc15';
+              ansVal.style.background = '#000000';
+              ansVal.style.borderColor = '#facc15';
+            }
+
+            // Nền đen, chữ vàng cho ô Đúng / Sai tương ứng đáp án
+            if (v1.activeQuestion.a === 'Đúng') {
+              if (boxDung && textDung) {
+                boxDung.style.background = '#000000';
+                boxDung.style.borderColor = '#facc15';
+                boxDung.style.boxShadow = '0 0 30px rgba(250, 204, 21, 0.6)';
+                boxDung.style.transform = 'scale(1.06)';
+                boxDung.style.opacity = '1';
+                textDung.style.color = '#facc15';
+              }
+              if (boxSai && textSai) {
+                boxSai.style.background = '#000000';
+                boxSai.style.borderColor = '#1e293b';
+                boxSai.style.opacity = '0.35';
+                boxSai.style.boxShadow = 'none';
+                boxSai.style.transform = 'scale(0.95)';
+                textSai.style.color = '#64748b';
+              }
+            } else {
+              if (boxSai && textSai) {
+                boxSai.style.background = '#000000';
+                boxSai.style.borderColor = '#facc15';
+                boxSai.style.boxShadow = '0 0 30px rgba(250, 204, 21, 0.6)';
+                boxSai.style.transform = 'scale(1.06)';
+                boxSai.style.opacity = '1';
+                textSai.style.color = '#facc15';
+              }
+              if (boxDung && textDung) {
+                boxDung.style.background = '#000000';
+                boxDung.style.borderColor = '#1e293b';
+                boxDung.style.opacity = '0.35';
+                boxDung.style.boxShadow = 'none';
+                boxDung.style.transform = 'scale(0.95)';
+                textDung.style.color = '#64748b';
+              }
+            }
+          } else {
+            if (ansBanner) ansBanner.style.display = 'none';
+            if (boxDung && textDung) {
+              boxDung.style.background = '#000000';
+              boxDung.style.borderColor = '#334155';
+              boxDung.style.opacity = '1';
+              boxDung.style.boxShadow = 'none';
+              boxDung.style.transform = 'scale(1)';
+              textDung.style.color = '#ffffff';
+            }
+            if (boxSai && textSai) {
+              boxSai.style.background = '#000000';
+              boxSai.style.borderColor = '#334155';
+              boxSai.style.opacity = '1';
+              boxSai.style.boxShadow = 'none';
+              boxSai.style.transform = 'scale(1)';
+              textSai.style.color = '#ffffff';
+            }
+          }
+        } else {
+          if (qText) qText.textContent = 'Chờ bắt đầu câu hỏi...';
+          if (ansBanner) ansBanner.style.display = 'none';
+          if (boxDung && textDung) {
+            boxDung.style.background = '#000000';
+            boxDung.style.borderColor = '#334155';
+            boxDung.style.opacity = '1';
+            boxDung.style.boxShadow = 'none';
+            boxDung.style.transform = 'scale(1)';
+            textDung.style.color = '#ffffff';
+          }
+          if (boxSai && textSai) {
+            boxSai.style.background = '#000000';
+            boxSai.style.borderColor = '#334155';
+            boxSai.style.opacity = '1';
+            boxSai.style.boxShadow = 'none';
+            boxSai.style.transform = 'scale(1)';
+            textSai.style.color = '#ffffff';
+          }
+        }
+      }
+
+      function renderViewerVong2(state) {
+        const v2 = state.vong2State || {};
+        const q = state.questions;
+        const stageEl = document.getElementById('viewer-v2-stage');
+        if (!stageEl) return;
+
+        // Ẩn / Hiện Vòng 2 trên Viewer từ Controller
+        if (v2.showOnViewer === false) {
+          stageEl.style.display = 'none';
+          return;
+        } else {
+          stageEl.style.display = 'flex';
+        }
+
+        if (!q || !q.vong2 || q.vong2.length === 0) {
+          stageEl.style.justifyContent = 'center';
+          stageEl.style.alignItems = 'center';
+          stageEl.innerHTML = '<div style="color: #94a3b8; padding: 40px 0; font-size: 18px;">Chưa có dữ liệu câu hỏi Vòng 2. Hãy nạp từ Controller.</div>';
+          return;
+        }
+
+        const topics = q.vong2;
+        const scene = v2.scene || 'topics_board';
+        const chosen = Array.isArray(v2.chosenTopics) ? v2.chosenTopics : [];
+
+        if (scene === 'topics_board') {
+          // Căn giữa toàn bộ bảng chủ đề theo cả chiều ngang và chiều dọc màn hình
+          stageEl.style.display = 'flex';
+          stageEl.style.flexDirection = 'column';
+          stageEl.style.justifyContent = 'center';
+          stageEl.style.alignItems = 'center';
+          stageEl.style.width = '100%';
+          stageEl.style.height = '100%';
+
+          // BẢNG 10 CHỦ ĐỀ SÂN KHẤU (2 - 3 - 3 - 2)
+          const row1 = topics.slice(0, 2);
+          const row2 = topics.slice(2, 5);
+          const row3 = topics.slice(5, 8);
+          const row4 = topics.slice(8, 10);
+
+          const renderTopicTile = (t, globalIdx) => {
+            if (!t) return '';
+            const isChosen = chosen.includes(globalIdx);
+            const isCurrent = (v2.selectedTopicIndex === globalIdx);
+            const bg = isChosen
+              ? 'linear-gradient(135deg, #7c3aed, #581c87)'
+              : 'linear-gradient(135deg, #0284c7, #0369a1)';
+            const border = isCurrent
+              ? '3.5px solid #facc15'
+              : (isChosen ? '2.5px solid #c084fc' : '2.5px solid #38bdf8');
+            const shadow = isCurrent
+              ? '0 0 30px rgba(250,204,21,0.9)'
+              : (isChosen ? '0 0 16px rgba(168,85,247,0.4)' : '0 4px 16px rgba(0,0,0,0.35)');
+            const scale = isCurrent ? 'transform: scale(1.04);' : '';
+
+            // Chỉ hiện DUY NHẤT tên chủ đề, ẩn hết các nhãn "Chủ đề 1...", "Chưa chọn", "Đã chọn"
+            return `
+              <div style="background: ${bg}; border: ${border}; box-shadow: ${shadow}; color: #ffffff; padding: 20px 24px; border-radius: 14px; text-align: center; flex: 1; min-width: 170px; min-height: 76px; display: flex; align-items: center; justify-content: center; ${scale} transition: all 0.3s ease; box-sizing: border-box;">
+                <div style="font-size: 22px; font-weight: 800; letter-spacing: 0.5px; line-height: 1.35; text-transform: uppercase;">
+                  ${t.topic || ''}
+                </div>
+              </div>
+            `;
+          };
+
+          stageEl.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 18px; width: 100%; max-width: 1000px; margin: auto; justify-content: center; align-items: center; box-sizing: border-box;">
+              <!-- Hàng 1: 2 chủ đề -->
+              <div style="display: flex; gap: 18px; justify-content: center; width: 100%; max-width: 660px;">
+                ${row1.map((t, idx) => renderTopicTile(t, idx)).join('')}
+              </div>
+              <!-- Hàng 2: 3 chủ đề -->
+              <div style="display: flex; gap: 18px; justify-content: center; width: 100%;">
+                ${row2.map((t, idx) => renderTopicTile(t, idx + 2)).join('')}
+              </div>
+              <!-- Hàng 3: 3 chủ đề -->
+              <div style="display: flex; gap: 18px; justify-content: center; width: 100%;">
+                ${row3.map((t, idx) => renderTopicTile(t, idx + 5)).join('')}
+              </div>
+              <!-- Hàng 4: 2 chủ đề -->
+              <div style="display: flex; gap: 18px; justify-content: center; width: 100%; max-width: 660px;">
+                ${row4.map((t, idx) => renderTopicTile(t, idx + 8)).join('')}
+              </div>
+            </div>
+          `;
+        } else {
+          // BẢNG CÂU HỎI SÂN KHẤU (question_board)
+          stageEl.style.display = 'flex';
+          stageEl.style.flexDirection = 'column';
+          stageEl.style.justifyContent = 'flex-end';
+          stageEl.style.alignItems = 'stretch';
+          stageEl.style.width = '100%';
+          stageEl.style.height = '100%';
+          const activeQ = v2.activeQuestion || {};
+          const questionText = activeQ.question || 'Chờ bắt đầu câu hỏi Vòng 2...';
+          const opts = (activeQ.options && activeQ.options.length > 0) ? activeQ.options : ['', '', '', ''];
+          const bets = v2.bets || {};
+          const showAns = v2.showAnswer;
+          const correctIdx = activeQ.correct;
+
+          // Tính tổng số điểm cược đã đặt trên câu hỏi này
+          const totalBetPlaced = (bets[1] || 0) + (bets[2] || 0) + (bets[3] || 0) + (bets[4] || 0);
+          // Default 100 điểm, trừ đi tổng cược
+          const remainingPoints = Math.max(0, 100 - totalBetPlaced);
+
+          const optLetters = ['A', 'B', 'C', 'D'];
+
+          const existingTimer = document.getElementById('viewer-v2-timer-val');
+          const existingBoard = document.getElementById('viewer-v2-question-board');
+          const boardKey = `${activeQ.topicIndex}_${activeQ.questionIndex}_${showAns}_${v2.scored}_${JSON.stringify(bets)}_${questionText}`;
+          if (existingBoard && existingBoard.getAttribute('data-key') === boardKey && existingTimer) {
+            existingTimer.textContent = `${v2.timerSeconds ?? 60}`;
+            existingTimer.style.color = v2.timerRunning ? '#ef4444' : '#facc15';
+            const existingPoints = document.getElementById('viewer-v2-points-val');
+            if (existingPoints) existingPoints.textContent = `${remainingPoints}`;
+            return;
+          }
+
+          const renderStageOption = (optText, optIdx) => {
+            const oneBased = optIdx + 1;
+            const betVal = bets[oneBased] || 0;
+            
+            // 1. Mặc định: Màu xanh dương
+            let bg = 'linear-gradient(90deg, #0284c7 0%, #0369a1 100%)';
+            let color = '#ffffff';
+            let border = '1.5px solid #38bdf8';
+            let shadow = '0 4px 15px rgba(2,132,199,0.3)';
+
+            // 2. Đáp án có đặt cược: Màu tím
+            if (betVal > 0) {
+              bg = 'linear-gradient(90deg, #6d28d9 0%, #4c1d95 100%)';
+              border = '1.5px solid #c084fc';
+              shadow = '0 0 20px rgba(168,85,247,0.5)';
+            }
+
+            // 3. Đáp án đúng & sai khi hiện đáp án (showAns = true)
+            if (showAns) {
+              if (oneBased === correctIdx) {
+                // Đáp án ĐÚNG: Màu vàng
+                bg = 'linear-gradient(90deg, #facc15 0%, #eab308 100%)';
+                color = '#000000';
+                border = '2px solid #ffffff';
+                shadow = '0 0 30px rgba(250,204,21,0.9)';
+              } else {
+                // Đáp án SAI: Màu đen
+                bg = 'linear-gradient(90deg, #0f172a 0%, #000000 100%)';
+                color = '#475569';
+                border = '1.5px solid #334155';
+                shadow = 'none';
+              }
+            }
+
+            // Ô hiển thị cược ở góc dưới bên phải (nếu betVal > 0)
+            const betBadge = (betVal > 0) ? `
+              <div style="position: absolute; right: 14px; bottom: -8px; background: #0f172a; border: 1.5px solid #a855f7; color: #ffffff; padding: 2px 18px; border-radius: 4px; font-size: 15px; font-weight: 900; box-shadow: 0 4px 12px rgba(0,0,0,0.8);">
+                ${betVal}
+              </div>
+            ` : '';
+
+            return `
+              <div style="position: relative; background: ${bg}; color: ${color}; border: ${border}; box-shadow: ${shadow}; border-radius: 8px; padding: 12px 16px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: flex-start; gap: 14px; transition: all 0.4s ease; min-height: 48px;">
+                <div style="background: rgba(0,0,0,0.35); border-radius: 4px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; color: ${showAns && oneBased === correctIdx ? '#000000' : '#ffffff'}; flex-shrink: 0;">
+                  ${optLetters[optIdx] || oneBased}
+                </div>
+                <div style="letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">
+                  ${optText || '&nbsp;'}
+                </div>
+                ${betBadge}
+              </div>
+            `;
+          };
+
+          stageEl.innerHTML = `
+            <div id="viewer-v2-question-board" data-key="${boardKey}" style="display: flex; flex-direction: row; gap: 24px; width: 100%; height: 100%; min-height: 460px; align-items: flex-end; position: relative;">
+
+              <!-- CỘT BÊN TRÁI: Ô CÂU HỎI NẰM Ở GÓC DƯỚI CỘT BÊN TRÁI -->
+              <div style="flex: 1.2; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; padding-bottom: 8px;">
+                <div style="background: linear-gradient(180deg, #111827, #030712); border: 2.5px solid #64748b; border-radius: 10px; padding: 18px 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.9); text-align: left;">
+                  <div style="font-size: 20px; color: #ffffff; line-height: 1.45; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
+                    ${questionText}
+                  </div>
+                </div>
+              </div>
+
+              <!-- CỘT BÊN PHẢI: CÁC Ô ĐÁP ÁN + HÀNG THỜI GIAN & ĐIỂM CÒN LẠI -->
+              <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 16px; background: rgba(5, 8, 16, 0.85); padding: 20px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 35px rgba(0,0,0,0.8);">
+
+                <!-- DANH SÁCH Ô ĐÁP ÁN (A, B, C, D) -->
+                <div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+                  ${opts.map((o, idx) => renderStageOption(o, idx)).join('')}
+                </div>
+
+                <!-- HÀNG Ở DƯỚI Ô ĐÁP ÁN THỨ 4: 1 HÀNG CHỨA 2 Ô (ĐỒNG HỒ & ĐIỂM CÒN LẠI) -->
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 10px; width: 100%;">
+                  
+                  <!-- Ô 1: Ô ĐẾM THỜI GIAN -->
+                  <div style="background: #020617; border: 2.5px solid #94a3b8; border-radius: 6px; padding: 6px 20px; min-width: 100px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.6);">
+                    <span id="viewer-v2-timer-val" style="font-size: 30px; font-weight: 900; color: ${v2.timerRunning ? '#ef4444' : '#facc15'}; line-height: 1; font-variant-numeric: tabular-nums; display: inline-block; min-width: 44px; text-align: center;">
+                      ${v2.timerSeconds ?? 60}
+                    </span>
+                  </div>
+
+                  <!-- Ô 2: Ô CHỨA SỐ ĐIỂM CÒN LẠI SAU KHU CƯỢC (TÍNH TỰ ĐỘNG, DEFAULT 100) -->
+                  <div style="background: #020617; border: 2.5px solid #94a3b8; border-radius: 6px; padding: 6px 28px; min-width: 120px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.6);">
+                    <span id="viewer-v2-points-val" style="font-size: 30px; font-weight: 900; color: #ffffff; line-height: 1;">
+                      ${remainingPoints}
+                    </span>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            ${v2.scored ? `
+              <div style="margin-top: 16px; background: linear-gradient(135deg, #064e3b, #047857); border: 2.5px solid #22c55e; border-radius: 12px; padding: 12px; font-size: 20px; color: #ffffff; text-align: center; font-weight: bold; box-shadow: 0 0 25px rgba(34,197,94,0.6);">
+                KẾT QUẢ CHẤM ĐIỂM: Player ${v2.activePlayerTurn || 1} đã chọn chính xác Đáp án đúng: ${optLetters[correctIdx - 1] || correctIdx}!
+              </div>
+            ` : ''}
+          `;
+        }
+      }
+
+      // 5. CƠ CHẾ SÂN KHẤU VÒNG 3 (SO TÀI - 3 GỢI Ý & TÍN HIỆU CHUÔNG SÂN KHẤU)
+      function renderViewerVong3(state) {
+        const v3 = state.vong3State || {};
+        const v3Stage = document.getElementById('viewer-v3-stage');
+        if (!v3Stage) return;
+
+        const activeQ = v3.activeQuestion;
+        const isVisible = v3.isBoxesVisible;
+        const stage = v3.revealedStage || 0;
+        const allowed = Array.isArray(v3.allowedBellPlayers) ? v3.allowedBellPlayers : [1, 2, 3, 4];
+        const rungList = Array.isArray(v3.rungPlayers) ? v3.rungPlayers : [];
+        const bellRungBy = v3.bellRungBy;
+        const players = state.players || [];
+
+        if (!activeQ || !isVisible) {
+          v3Stage.innerHTML = `
+            <div style="text-align: center; padding: 60px 20px;">
+              <h2 style="font-size: 28px; color: #c084fc; margin: 16px 0 8px 0; font-weight: 800;">VÒNG 3: SO TÀI</h2>
+              <p style="color: #94a3b8; font-size: 16px; margin: 0;">Đang chuẩn bị câu hỏi và hệ thống chuông so tài...</p>
+            </div>
+          `;
+          return;
+        }
+
+        const renderStageBox = (title, content, isRevealed, borderCol, bgGrad) => {
+          return `
+            <div style="background: ${isRevealed ? bgGrad : 'linear-gradient(135deg, #0f172a, #020617)'}; border: 3px solid ${isRevealed ? borderCol : '#334155'}; border-radius: 18px; padding: 22px 28px; transition: all 0.4s ease; box-shadow: ${isRevealed ? '0 10px 30px rgba(0,0,0,0.6)' : 'none'}; text-align: left;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 14px; color: ${isRevealed ? '#facc15' : '#64748b'}; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">${title}</span>
+                <span style="font-size: 12px; font-weight: bold; padding: 3px 12px; border-radius: 999px; background: ${isRevealed ? 'rgba(0,0,0,0.4)' : '#1e293b'}; color: ${isRevealed ? '#ffffff' : '#64748b'};">
+                  ${isRevealed ? 'ĐÃ MỞ' : 'CHƯA MỞ'}
+                </span>
+              </div>
+              <div style="font-size: 22px; color: ${isRevealed ? '#ffffff' : '#475569'}; font-weight: ${isRevealed ? 'bold' : 'normal'}; line-height: 1.4; min-height: 48px; display: flex; align-items: center;">
+                ${isRevealed ? content : '<span style="color: #334155; font-style: italic;">[Đang ẩn nội dung...]</span>'}
+              </div>
+            </div>
+          `;
+        };
+
+        const renderPlayerBuzzerBeacon = (pId) => {
+          const pInfo = players[pId - 1] || { name: `Người chơi ${pId}` };
+          const isAllowed = allowed.includes(pId);
+          const hasRung = rungList.includes(pId);
+          const isCurrentRung = (bellRungBy === pId);
+
+          let bg = 'rgba(15, 23, 42, 0.8)';
+          let border = '2px solid #334155';
+          let glow = 'none';
+          let textStatus = isAllowed ? '<span style="color: #64748b; font-size: 12px;">Sẵn sàng</span>' : '<span style="color: #475569; font-size: 12px;">Khóa</span>';
+
+          if (isCurrentRung) {
+            bg = 'linear-gradient(135deg, #b45309, #ea580c)';
+            border = '3px solid #facc15';
+            glow = '0 0 35px rgba(250, 204, 21, 0.8)';
+            textStatus = '<b style="color: #ffffff; font-size: 14px;">ĐÃ BẤM CHUÔNG!</b>';
+          } else if (hasRung) {
+            textStatus = '<span style="color: #f87171; font-size: 12px;">Đã bấm</span>';
+          } else if (!v3.isBellLocked && isAllowed) {
+            border = '2px solid #22c55e';
+            glow = '0 0 15px rgba(34, 197, 94, 0.4)';
+            textStatus = '<b style="color: #4ade80; font-size: 13px;">Chuông mở</b>';
+          }
+
+          const colors = ['#38bdf8', '#f43f5e', '#eab308', '#22c55e'];
+
+          return `
+            <div style="background: ${bg}; border: ${border}; box-shadow: ${glow}; border-radius: 14px; padding: 12px 16px; text-align: center; transition: all 0.3s ease;">
+              <span style="font-size: 11px; color: ${colors[pId - 1]}; font-weight: bold;">PLAYER ${pId}</span>
+              <div style="font-size: 18px; color: #ffffff; font-weight: bold; margin: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${pInfo.name}</div>
+              <div style="margin-top: 4px;">${textStatus}</div>
+            </div>
+          `;
+        };
+
+        let buzzerHeroBanner = '';
+        if (bellRungBy) {
+          const rungPlayerName = players[bellRungBy - 1]?.name || `Player ${bellRungBy}`;
+          buzzerHeroBanner = `
+            <div style="margin-bottom: 20px; background: linear-gradient(135deg, #b45309, #d97706); border: 3px solid #facc15; box-shadow: 0 0 40px rgba(250, 204, 21, 0.8); border-radius: 18px; padding: 18px 24px; text-align: center; animation: pulse 1s infinite;">
+              <div style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <span>${rungPlayerName.toUpperCase()} ĐÃ BẤM CHUÔNG GIÀNH QUYỀN TRẢ LỜI!</span>
+              </div>
+            </div>
+          `;
+        }
+
+        v3Stage.innerHTML = `
+          ${buzzerHeroBanner}
+
+          <!-- Thanh tiêu đề câu hỏi & Đồng hồ 7s -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="background: #7c3aed; color: white; padding: 6px 20px; border-radius: 999px; font-size: 16px; font-weight: bold;">
+                CÂU HỎI SỐ ${activeQ.index || 1}
+              </span>
+              <span style="background: ${v3.isBellLocked ? '#334155' : '#15803d'}; color: white; padding: 6px 18px; border-radius: 999px; font-size: 14px;">
+                ${v3.isBellLocked ? 'CHUÔNG KHÓA' : 'CHUÔNG ĐANG MỞ'}
+              </span>
+            </div>
+
+            <!-- Đồng hồ 7s -->
+            <div style="background: #020617; border: 3px solid #a855f7; padding: 8px 26px; border-radius: 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 0 20px rgba(168,85,247,0.5);">
+              <span style="font-size: 32px; font-weight: bold; color: ${v3.isRunning ? '#ef4444' : '#c084fc'}; line-height: 1;">
+                ${v3.stepTimerSeconds ?? 7}s
+              </span>
+            </div>
+          </div>
+
+          <!-- 4 Ô: 1 Ô Chủ đề + 3 Ô Gợi ý -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            ${renderStageBox('CHỦ ĐỀ', activeQ.topic, stage >= 1, '#c084fc', 'linear-gradient(135deg, #581c87, #3b0764)')}
+            ${renderStageBox('GỢI Ý 1', activeQ.clue1, stage >= 2, '#38bdf8', 'linear-gradient(135deg, #0369a1, #0c4a6e)')}
+            ${renderStageBox('GỢI Ý 2', activeQ.clue2, stage >= 3, '#f59e0b', 'linear-gradient(135deg, #b45309, #78350f)')}
+            ${renderStageBox('GỢI Ý 3', activeQ.clue3, stage >= 4, '#f43f5e', 'linear-gradient(135deg, #be123c, #881337)')}
+          </div>
+
+          <!-- Tín hiệu chuông 4 người chơi trên sân khấu -->
+          <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid #334155; border-radius: 18px; padding: 16px;">
+            <div style="font-size: 13px; color: #94a3b8; font-weight: bold; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+              TÍN HIỆU CHUÔNG THÍ SINH SÂN KHẤU:
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+              ${renderPlayerBuzzerBeacon(1)}
+              ${renderPlayerBuzzerBeacon(2)}
+              ${renderPlayerBuzzerBeacon(3)}
+              ${renderPlayerBuzzerBeacon(4)}
+            </div>
+          </div>
+        `;
+      }
+
+      function renderViewerVong4(state) {
+        const v4Stage = document.getElementById('viewer-v4-stage');
+        if (!v4Stage) return;
+
+        const q = state.questions || {};
+        const v4Data = q.vong4 || {};
+        const gift = v4Data.gift || {};
+        const clues = v4Data.clues || [];
+        const v4 = state.vong4State || {};
+        const boxes = v4.boxes || [
+          { id: 1, name: 'Đỏ', color: '#ff0000', text: 'Ô SỐ 1', money: 0 },
+          { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true, money: 200000 },
+          { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', money: 300000 },
+          { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', money: 500000 },
+          { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', money: 0 },
+          { id: 6, name: 'Cam', color: '#ffa500', text: 'Ô SỐ 6', darkText: true, money: 1000000 }
+        ];
+        const totalMoney = typeof v4.totalMoney === 'number' ? v4.totalMoney : 8000000;
+        const selectedId = v4.selectedBoxId;
+
+        const renderStageBox = (box) => {
+          const isSelected = (box.id === selectedId);
+          const clueObj = clues.find(c => String(c.index) === String(box.id)) || { clue: `Gợi ý ô ${box.id}` };
+          const textColor = box.darkText ? '#000000' : '#ffffff';
+          const moneyFormatted = (box.money || 0).toLocaleString('vi-VN');
+
+          return `
+            <div style="background: ${box.color}; color: ${textColor}; border: ${isSelected ? '4px solid #ffffff' : '2px solid rgba(255,255,255,0.3)'}; box-shadow: ${isSelected ? '0 0 35px rgba(255,255,255,0.9), 0 0 15px ' + box.color : '0 8px 20px rgba(0,0,0,0.5)'}; border-radius: 16px; padding: 18px 16px; display: flex; flex-direction: column; justify-content: space-between; min-height: 180px; transition: all 0.3s ease; transform: ${isSelected ? 'scale(1.03)' : 'scale(1)'};">
+              
+              <!-- Tiêu đề ô -->
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 18px; font-weight: 900; letter-spacing: 0.5px;">${box.text} (${box.name.toUpperCase()})</span>
+                ${isSelected ? `<span style="background: #ffffff; color: #000000; font-size: 11px; font-weight: 900; padding: 3px 10px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,0.4); animation: pulse 1s infinite;">ĐANG CHỌN</span>` : ''}
+              </div>
+
+              <!-- Hộp tiền -->
+              <div style="background: rgba(0, 0, 0, 0.6); color: #ffffff; border-radius: 10px; padding: 10px 14px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.2);">
+                <div style="font-size: 11px; color: #cbd5e1; text-transform: uppercase;">GIÁ TRỊ TIỀN:</div>
+                <div style="font-size: 20px; font-weight: 900; color: ${box.revealedMoney ? '#facc15' : '#94a3b8'}; margin-top: 2px;">
+                  ${box.revealedMoney ? `${moneyFormatted} VNĐ` : '[??? VNĐ]'}
+                </div>
+              </div>
+
+              <!-- Hộp nội dung gợi ý -->
+              <div style="background: rgba(0, 0, 0, 0.75); color: #ffffff; border-radius: 10px; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.2); min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 11px; color: #38bdf8; text-transform: uppercase; font-weight: bold;">GỢI Ý MẢNH GHÉP:</div>
+                <div style="font-size: 15px; font-weight: bold; margin-top: 3px; line-height: 1.3;">
+                  ${box.revealedClue ? `${clueObj.clue}` : '<i style="color: #64748b; font-weight: normal;">[Mảnh ghép đang đóng]</i>'}
+                </div>
+              </div>
+
+            </div>
+          `;
+        };
+
+        let resultBannerHtml = '';
+        if (v4.showAnswer) {
+          if (v4.resultStatus === 'correct') {
+            resultBannerHtml = `
+              <div style="margin-bottom: 24px; background: linear-gradient(135deg, #15803d, #047857); border: 4px solid #facc15; box-shadow: 0 0 45px rgba(250, 204, 21, 0.9); border-radius: 20px; padding: 22px 30px; text-align: center; animation: pulse 1s infinite;">
+                <div style="font-size: 32px; font-weight: 900; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 14px;">
+                  <span>XUẤT SẮC! THÍ SINH TRẢ LỜI ĐÚNG!</span>
+                </div>
+                <div style="font-size: 20px; color: #fef08a; margin-top: 6px; font-weight: bold;">
+                  GIỮ NGUYÊN TOÀN BỘ TIỀN THƯỞNG: <span style="color: #ffffff; font-size: 26px; text-decoration: underline;">${totalMoney.toLocaleString('vi-VN')} VNĐ</span>
+                </div>
+              </div>
+            `;
+          } else if (v4.resultStatus === 'wrong') {
+            resultBannerHtml = `
+              <div style="margin-bottom: 24px; background: linear-gradient(135deg, #991b1b, #7f1d1d); border: 4px solid #f87171; box-shadow: 0 0 40px rgba(239, 68, 68, 0.7); border-radius: 20px; padding: 22px 30px; text-align: center;">
+                <div style="font-size: 28px; font-weight: 900; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 14px;">
+                  <span>RẤT TIẾC! CÂU TRẢ LỜI CHƯA CHÍNH XÁC!</span>
+                </div>
+                <div style="font-size: 20px; color: #fecaca; margin-top: 6px; font-weight: bold;">
+                  TIỀN THƯỞNG NHẬN ĐƯỢC: <span style="color: #facc15; font-size: 26px;">5.000.000 VNĐ</span>
+                </div>
+              </div>
+            `;
+          }
+        }
+
+        v4Stage.innerHTML = `
+          ${resultBannerHtml}
+
+          <!-- Header sân khấu: Tổng tiền & Đồng hồ 120s -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+            
+            <!-- Banner tổng tiền thưởng -->
+            <div style="background: linear-gradient(135deg, #064e3b, #022c22); border: 3px solid #22c55e; box-shadow: 0 0 30px rgba(34, 197, 94, 0.5); padding: 14px 28px; border-radius: 18px; display: flex; align-items: center; gap: 16px;">
+              <div>
+                <div style="font-size: 13px; color: #6ee7b7; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">TỔNG TIỀN THƯỞNG ẨN SỐ VÀNG:</div>
+                <div style="font-size: 32px; font-weight: 900; color: #facc15; line-height: 1.1; margin-top: 2px;">
+                  ${totalMoney.toLocaleString('vi-VN')} VNĐ
+                </div>
+              </div>
+            </div>
+
+            <!-- Đồng hồ 120s -->
+            <div style="background: #020617; border: 3px solid #eab308; padding: 10px 30px; border-radius: 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 0 25px rgba(234,179,8,0.5);">
+              <div>
+                <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: bold;">THỜI GIAN:</div>
+                <div style="font-size: 36px; font-weight: 900; color: ${v4.timerRunning ? '#ef4444' : '#facc15'}; line-height: 1;">
+                  ${v4.timerSeconds ?? 120}s
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Banner Gợi ý tặng -->
+          <div style="background: ${v4.showGiftClue ? 'linear-gradient(135deg, #854d0e, #713f12)' : 'rgba(15, 23, 42, 0.8)'}; border: 3px solid ${v4.showGiftClue ? '#facc15' : '#334155'}; box-shadow: ${v4.showGiftClue ? '0 0 30px rgba(250, 204, 21, 0.6)' : 'none'}; border-radius: 18px; padding: 18px 24px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; transition: all 0.4s ease;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <div>
+                <div style="font-size: 13px; color: #fde047; font-weight: 900; letter-spacing: 0.5px;">GỢI Ý TẶNG:</div>
+                <div style="font-size: 20px; color: #ffffff; font-weight: bold; margin-top: 2px;">
+                  ${v4.showGiftClue ? `"${gift.clue || 'Nội dung gợi ý tặng'}"` : '<i style="color: #64748b; font-weight: normal;">[Gợi ý tặng đang đóng - Chưa mở]</i>'}
+                </div>
+              </div>
+            </div>
+            <div>
+              <span style="background: ${v4.showGiftClue ? '#22c55e' : '#1e293b'}; color: white; font-size: 13px; font-weight: bold; padding: 6px 16px; border-radius: 999px;">
+                ${v4.showGiftClue ? 'ĐÃ MỞ' : 'ĐANG ĐÓNG'}
+              </span>
+            </div>
+          </div>
+
+          <!-- 6 Ô số màu sắc (1 - 6) -->
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+            ${boxes.map(b => renderStageBox(b)).join('')}
+          </div>
+        `;
+      }
     </script>
   </body>
 </html>
