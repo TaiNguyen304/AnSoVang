@@ -11,7 +11,239 @@
     viewer: "Viewer.html"
   };
 
-  const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('anso_gold_sync') : null;
+  // Bộ mã hóa / giải mã 256-bit độc lập bảo vệ toàn bộ dữ liệu gói tin
+  const GameCipher = (function() {
+    const SECRET_KEY = 'ASV_2026_SECRET_SECURE_KEY_@#918273645';
+
+    function stringToUtf8ByteArray(str) {
+      if (typeof TextEncoder !== 'undefined') {
+        return new TextEncoder().encode(str);
+      }
+      const utf8 = [];
+      for (let i = 0; i < str.length; i++) {
+        let charcode = str.charCodeAt(i);
+        if (charcode < 0x80) utf8.push(charcode);
+        else if (charcode < 0x800) {
+          utf8.push(0xc0 | (charcode >> 6), 0x80 | (charcode & 0x3f));
+        } else if (charcode < 0xd800 || charcode >= 0xe000) {
+          utf8.push(0xe0 | (charcode >> 12), 0x80 | ((charcode >> 6) & 0x3f), 0x80 | (charcode & 0x3f));
+        } else {
+          i++;
+          charcode = 0x10000 + (((charcode & 0x3ff) << 10) | (str.charCodeAt(i) & 0x3ff));
+          utf8.push(
+            0xf0 | (charcode >> 18),
+            0x80 | ((charcode >> 12) & 0x3f),
+            0x80 | ((charcode >> 6) & 0x3f),
+            0x80 | (charcode & 0x3f)
+          );
+        }
+      }
+      return new Uint8Array(utf8);
+    }
+
+    function utf8ByteArrayToString(bytes) {
+      if (typeof TextDecoder !== 'undefined') {
+        return new TextDecoder().decode(bytes);
+      }
+      let out = '';
+      let i = 0;
+      const len = bytes.length;
+      while (i < len) {
+        const c = bytes[i++];
+        if (c < 128) {
+          out += String.fromCharCode(c);
+        } else if (c > 191 && c < 224) {
+          out += String.fromCharCode(((c & 31) << 6) | (bytes[i++] & 63));
+        } else if (c > 223 && c < 240) {
+          out += String.fromCharCode(((c & 15) << 12) | ((bytes[i++] & 63) << 6) | (bytes[i++] & 63));
+        } else {
+          const c2 = bytes[i++];
+          const c3 = bytes[i++];
+          const c4 = bytes[i++];
+          let codePoint = ((c & 7) << 18) | ((c2 & 63) << 12) | ((c3 & 63) << 6) | (c4 & 63);
+          codePoint -= 0x10000;
+          out += String.fromCharCode(0xd800 + (codePoint >> 10), 0xdc00 + (codePoint & 0x3ff));
+        }
+      }
+      return out;
+    }
+
+    function bytesToBase64(bytes) {
+      let binary = '';
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+
+    function base64ToBytes(base64) {
+      const binary = atob(base64);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+    function deriveKey(secret) {
+      const key = new Uint32Array(8);
+      const utf = stringToUtf8ByteArray(secret);
+      for (let i = 0; i < 8; i++) {
+        key[i] = 0x6a09e667 ^ (i * 0xbb67ae85);
+      }
+      for (let i = 0; i < utf.length; i++) {
+        const idx = i % 8;
+        key[idx] = (key[idx] * 31 + utf[i] + ((key[(idx + 1) % 8] << 5) | (key[(idx + 1) % 8] >>> 27))) >>> 0;
+      }
+      return key;
+    }
+
+    const MASTER_KEY = deriveKey(SECRET_KEY);
+
+    function quarterRound(x, a, b, c, d) {
+      x[a] = (x[a] + x[b]) >>> 0; x[d] = ((x[d] ^ x[a]) << 16 | (x[d] ^ x[a]) >>> 16) >>> 0;
+      x[c] = (x[c] + x[d]) >>> 0; x[b] = ((x[b] ^ x[c]) << 12 | (x[b] ^ x[c]) >>> 20) >>> 0;
+      x[a] = (x[a] + x[b]) >>> 0; x[d] = ((x[d] ^ x[a]) << 8  | (x[d] ^ x[a]) >>> 24) >>> 0;
+      x[c] = (x[c] + x[d]) >>> 0; x[b] = ((x[b] ^ x[c]) << 7  | (x[b] ^ x[c]) >>> 25) >>> 0;
+    }
+
+    function chacha20Block(key, counter, nonce) {
+      const state = new Uint32Array(16);
+      state[0] = 0x61707865; state[1] = 0x3320646e; state[2] = 0x79622d32; state[3] = 0x6b206574;
+      for (let i = 0; i < 8; i++) state[4 + i] = key[i];
+      state[12] = counter;
+      state[13] = nonce[0]; state[14] = nonce[1]; state[15] = nonce[2];
+
+      const working = new Uint32Array(state);
+      for (let i = 0; i < 10; i++) {
+        quarterRound(working, 0, 4, 8, 12);
+        quarterRound(working, 1, 5, 9, 13);
+        quarterRound(working, 2, 6, 10, 14);
+        quarterRound(working, 3, 7, 11, 15);
+        quarterRound(working, 0, 5, 10, 15);
+        quarterRound(working, 1, 6, 11, 12);
+        quarterRound(working, 2, 7, 8, 13);
+        quarterRound(working, 3, 4, 9, 14);
+      }
+
+      const output = new Uint8Array(64);
+      for (let i = 0; i < 16; i++) {
+        const val = (working[i] + state[i]) >>> 0;
+        output[i * 4] = val & 0xff;
+        output[i * 4 + 1] = (val >>> 8) & 0xff;
+        output[i * 4 + 2] = (val >>> 16) & 0xff;
+        output[i * 4 + 3] = (val >>> 24) & 0xff;
+      }
+      return output;
+    }
+
+    function processChaCha20(bytes, nonceWords) {
+      const out = new Uint8Array(bytes.length);
+      let counter = 1;
+      let offset = 0;
+      while (offset < bytes.length) {
+        const block = chacha20Block(MASTER_KEY, counter++, nonceWords);
+        const chunkSize = Math.min(64, bytes.length - offset);
+        for (let i = 0; i < chunkSize; i++) {
+          out[offset + i] = bytes[offset + i] ^ block[i];
+        }
+        offset += chunkSize;
+      }
+      return out;
+    }
+
+    function generateRandomNonce() {
+      const nonce = new Uint8Array(12);
+      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        crypto.getRandomValues(nonce);
+      } else {
+        for (let i = 0; i < 12; i++) nonce[i] = Math.floor(Math.random() * 256);
+      }
+      const words = new Uint32Array(3);
+      words[0] = (nonce[0] | (nonce[1] << 8) | (nonce[2] << 16) | (nonce[3] << 24)) >>> 0;
+      words[1] = (nonce[4] | (nonce[5] << 8) | (nonce[6] << 16) | (nonce[7] << 24)) >>> 0;
+      words[2] = (nonce[8] | (nonce[9] << 8) | (nonce[10] << 16) | (nonce[11] << 24)) >>> 0;
+      return { bytes: nonce, words: words };
+    }
+
+    function encrypt(data) {
+      try {
+        const plaintext = typeof data === 'string' ? data : JSON.stringify(data);
+        const plainBytes = stringToUtf8ByteArray(plaintext);
+        const nonceObj = generateRandomNonce();
+        const encryptedBytes = processChaCha20(plainBytes, nonceObj.words);
+        const combined = new Uint8Array(12 + encryptedBytes.length);
+        combined.set(nonceObj.bytes, 0);
+        combined.set(encryptedBytes, 12);
+        return bytesToBase64(combined);
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function decrypt(ciphertext) {
+      try {
+        if (!ciphertext || typeof ciphertext !== 'string') return null;
+        const combined = base64ToBytes(ciphertext);
+        if (combined.length < 12) return null;
+        const nonceBytes = combined.slice(0, 12);
+        const encryptedBytes = combined.slice(12);
+        const nonceWords = new Uint32Array(3);
+        nonceWords[0] = (nonceBytes[0] | (nonceBytes[1] << 8) | (nonceBytes[2] << 16) | (nonceBytes[3] << 24)) >>> 0;
+        nonceWords[1] = (nonceBytes[4] | (nonceBytes[5] << 8) | (nonceBytes[6] << 16) | (nonceBytes[7] << 24)) >>> 0;
+        nonceWords[2] = (nonceBytes[8] | (nonceBytes[9] << 8) | (nonceBytes[10] << 16) | (nonceBytes[11] << 24)) >>> 0;
+        const decryptedBytes = processChaCha20(encryptedBytes, nonceWords);
+        const jsonStr = utf8ByteArrayToString(decryptedBytes);
+        return JSON.parse(jsonStr);
+      } catch (err) {
+        return null;
+      }
+    }
+
+    return { encrypt, decrypt };
+  })();
+
+  window.GameCipher = GameCipher;
+
+  function getCurrentRoomId() {
+    try {
+      if (typeof window !== 'undefined' && window.location && window.location.search) {
+        const p = new URLSearchParams(window.location.search);
+        const r = p.get('roomid');
+        if (r && r.trim()) return r.trim();
+      }
+    } catch (e) {}
+    return window.currentGameState?.roomAuth?.roomId || '123456';
+  }
+
+  let currentRoomId = getCurrentRoomId();
+  let channel = null;
+
+  function initRoomBroadcastChannel(rid) {
+    if (typeof BroadcastChannel === 'undefined') return null;
+    if (channel) {
+      try { channel.close(); } catch (e) {}
+    }
+    try {
+      channel = new BroadcastChannel('anso_gold_sync_' + rid);
+      channel.onmessage = (event) => {
+        if (event.data && event.data.type === 'GAME_STATE_UPDATE') {
+          let stateObj = event.data.state;
+          if (event.data.payload) {
+            stateObj = GameCipher.decrypt(event.data.payload);
+          }
+          if (stateObj) {
+            window.applyState(stateObj);
+          }
+        }
+      };
+    } catch (e) {}
+    return channel;
+  }
+  channel = initRoomBroadcastChannel(currentRoomId);
+
   let lastSyncTime = 0;
   let isFetching = false;
 
@@ -49,6 +281,15 @@
   // Trạng thái cục bộ mặc định
   window.currentGameState = {
     currentView: 'blank',
+    roomAuth: {
+      roomId: '123456',
+      passwords: {
+        1: '1111',
+        2: '2222',
+        3: '3333',
+        4: '4444'
+      }
+    },
     players: [
       { id: 1, name: 'Người chơi 1', score: 0 },
       { id: 2, name: 'Người chơi 2', score: 0 },
@@ -115,6 +356,12 @@
       ],
       showAnswer: false,
       resultStatus: null
+    },
+    chpState: {
+      locked: true,
+      buzzerWinner: null,
+      allowedPlayerIds: [1, 2, 3, 4],
+      allowedPlayerId: 'all'
     },
     audioState: {
       soundboard: {
@@ -303,7 +550,7 @@
       sbAudio.muted = isMutedOnController;
       if (sb.playing && sb.track) {
         const targetSrc = resolveAudioUrl(sb.track);
-        if (sbAudio.getAttribute('data-track') !== sb.track || sbAudio.src !== targetSrc) {
+        if (sbAudio.getAttribute('data-track') !== sb.track) {
           sbAudio.src = targetSrc;
           sbAudio.setAttribute('data-track', sb.track);
         }
@@ -318,8 +565,10 @@
               const banner = document.getElementById('audio-unlock-banner');
               if (banner) banner.remove();
               audioUnlocked = true;
-            }).catch(() => {
-              showAutoplayNotice(sb.track);
+            }).catch((err) => {
+              if (err && err.name === 'NotAllowedError') {
+                showAutoplayNotice(sb.track);
+              }
             });
           }
         } else {
@@ -339,7 +588,7 @@
       fxAudio.muted = isMutedOnController;
       if (fx.playing && fx.track) {
         const targetSrc = resolveAudioUrl(fx.track);
-        if (fxAudio.getAttribute('data-track') !== fx.track || fxAudio.src !== targetSrc) {
+        if (fxAudio.getAttribute('data-track') !== fx.track) {
           fxAudio.src = targetSrc;
           fxAudio.setAttribute('data-track', fx.track);
         }
@@ -354,8 +603,10 @@
               const banner = document.getElementById('audio-unlock-banner');
               if (banner) banner.remove();
               audioUnlocked = true;
-            }).catch(() => {
-              showAutoplayNotice(fx.track);
+            }).catch((err) => {
+              if (err && err.name === 'NotAllowedError') {
+                showAutoplayNotice(fx.track);
+              }
             });
           }
         }
@@ -368,37 +619,47 @@
   }
 
   let audioUnlocked = false;
+  const SILENCE_SRC = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+
   function unlockAudioElements() {
     if (audioUnlocked) return;
     
     const isMutedOnController = window.isController && !isLocalAudioEnabled();
     
-    // Unlock Soundboard Audio
+    // Unlock Soundboard Audio using guaranteed valid silent source
     const sbAudio = getOrCreateSoundboardAudio();
     if (sbAudio) {
       sbAudio.muted = isMutedOnController;
-      sbAudio.play().then(() => {
-        const sb = (window.currentGameState && window.currentGameState.audioState) ? window.currentGameState.audioState.soundboard : null;
-        if (!sb || !sb.playing || !sb.track) {
+      
+      const sb = (window.currentGameState && window.currentGameState.audioState) ? window.currentGameState.audioState.soundboard : null;
+      if (sb && sb.playing && sb.track) {
+        sbAudio.play().catch(() => {});
+      } else {
+        const originalSrc = sbAudio.src;
+        sbAudio.src = SILENCE_SRC;
+        sbAudio.play().then(() => {
           sbAudio.pause();
-        } else {
-          console.log('[Audio] Soundboard unlocked & playing successfully.');
-        }
-      }).catch(() => {});
+          sbAudio.src = originalSrc;
+        }).catch(() => {});
+      }
     }
 
-    // Unlock Effects Audio
+    // Unlock Effects Audio using guaranteed valid silent source
     const fxAudio = getOrCreateEffectsAudio();
     if (fxAudio) {
       fxAudio.muted = isMutedOnController;
-      fxAudio.play().then(() => {
-        const fx = (window.currentGameState && window.currentGameState.audioState) ? window.currentGameState.audioState.effects : null;
-        if (!fx || !fx.playing || !fx.track) {
+      
+      const fx = (window.currentGameState && window.currentGameState.audioState) ? window.currentGameState.audioState.effects : null;
+      if (fx && fx.playing && fx.track) {
+        fxAudio.play().catch(() => {});
+      } else {
+        const originalSrc = fxAudio.src;
+        fxAudio.src = SILENCE_SRC;
+        fxAudio.play().then(() => {
           fxAudio.pause();
-        } else {
-          console.log('[Audio] Effects unlocked & playing successfully.');
-        }
-      }).catch(() => {});
+          fxAudio.src = originalSrc;
+        }).catch(() => {});
+      }
     }
 
     audioUnlocked = true;
@@ -449,10 +710,12 @@
     const vong2Changed = JSON.stringify(oldState.vong2State) !== JSON.stringify(newState.vong2State);
     const vong3Changed = JSON.stringify(oldState.vong3State) !== JSON.stringify(newState.vong3State);
     const vong4Changed = JSON.stringify(oldState.vong4State) !== JSON.stringify(newState.vong4State);
+    const chpChanged = JSON.stringify(oldState.chpState) !== JSON.stringify(newState.chpState);
     const audioChanged = JSON.stringify(oldState.audioState) !== JSON.stringify(newState.audioState);
+    const roomAuthChanged = JSON.stringify(oldState.roomAuth) !== JSON.stringify(newState.roomAuth);
 
     // Nếu không có gì thay đổi thì bỏ qua
-    if (!viewChanged && !playersChanged && !questionsChanged && !vong1Changed && !vong2Changed && !vong3Changed && !vong4Changed && !audioChanged && oldState.lastUpdated === newState.lastUpdated) {
+    if (!viewChanged && !playersChanged && !questionsChanged && !vong1Changed && !vong2Changed && !vong3Changed && !vong4Changed && !chpChanged && !audioChanged && !roomAuthChanged && oldState.lastUpdated === newState.lastUpdated) {
       return;
     }
 
@@ -460,6 +723,14 @@
     window.currentGameState = {
       ...window.currentGameState,
       ...newState,
+      roomAuth: {
+        ...(window.currentGameState.roomAuth || {}),
+        ...(newState.roomAuth || {}),
+        passwords: {
+          ...(window.currentGameState.roomAuth?.passwords || {}),
+          ...(newState.roomAuth?.passwords || {})
+        }
+      },
       vong1State: {
         ...(window.currentGameState.vong1State || {}),
         ...(newState.vong1State || {})
@@ -475,6 +746,10 @@
       vong4State: {
         ...(window.currentGameState.vong4State || {}),
         ...(newState.vong4State || {})
+      },
+      chpState: {
+        ...(window.currentGameState.chpState || {}),
+        ...(newState.chpState || {})
       },
       audioState: {
         ...(window.currentGameState.audioState || {}),
@@ -500,7 +775,9 @@
       vong2Changed,
       vong3Changed,
       vong4Changed,
-      audioChanged
+      chpChanged,
+      audioChanged,
+      roomAuthChanged
     });
   };
 
@@ -508,7 +785,13 @@
   if (channel) {
     channel.onmessage = (event) => {
       if (event.data && event.data.type === 'GAME_STATE_UPDATE') {
-        window.applyState(event.data.state);
+        let stateObj = event.data.state;
+        if (event.data.payload) {
+          stateObj = GameCipher.decrypt(event.data.payload);
+        }
+        if (stateObj) {
+          window.applyState(stateObj);
+        }
       }
     };
   }
@@ -521,11 +804,18 @@
       if (eventSource) {
         try { eventSource.close(); } catch (e) {}
       }
-      eventSource = new EventSource('/api/game/events');
+      const rid = getCurrentRoomId();
+      eventSource = new EventSource('/api/game/events?roomid=' + encodeURIComponent(rid));
       eventSource.onmessage = function(event) {
         try {
           if (event.data) {
-            const serverState = JSON.parse(event.data);
+            const raw = JSON.parse(event.data);
+            let serverState = null;
+            if (raw && raw.payload) {
+              serverState = GameCipher.decrypt(raw.payload);
+            } else {
+              serverState = raw;
+            }
             if (serverState && (serverState.lastUpdated || 0) > (window.currentGameState.lastUpdated || 0)) {
               window.applyState(serverState);
             }
@@ -548,10 +838,17 @@
     if (isFetching) return;
     isFetching = true;
     try {
-      const res = await fetch('/api/game/state');
+      const rid = getCurrentRoomId();
+      const res = await fetch('/api/game/state?roomid=' + encodeURIComponent(rid));
       if (res.ok) {
-        const serverState = await res.json();
-        if (serverState.lastUpdated > (window.currentGameState.lastUpdated || 0)) {
+        const raw = await res.json();
+        let serverState = null;
+        if (raw && raw.payload) {
+          serverState = GameCipher.decrypt(raw.payload);
+        } else {
+          serverState = raw;
+        }
+        if (serverState && serverState.lastUpdated > (window.currentGameState.lastUpdated || 0)) {
           window.applyState(serverState);
         }
       }
@@ -628,22 +925,48 @@
         ...updatedFields.vong4State
       };
     }
+    if (updatedFields.chpState) {
+      updatedState.chpState = {
+        ...(window.currentGameState.chpState || {}),
+        ...updatedFields.chpState
+      };
+    }
+    if (updatedFields.roomAuth) {
+      updatedState.roomAuth = {
+        ...(window.currentGameState.roomAuth || {}),
+        ...updatedFields.roomAuth,
+        passwords: {
+          ...(window.currentGameState.roomAuth?.passwords || {}),
+          ...(updatedFields.roomAuth.passwords || {})
+        }
+      };
+    }
     window.applyState(updatedState);
 
-    // Broadcast tức thời tới mọi tab khác qua BroadcastChannel (0ms)
-    if (channel) {
-      channel.postMessage({ type: 'GAME_STATE_UPDATE', state: updatedState });
+    const rid = updatedFields.roomAuth?.roomId || getCurrentRoomId();
+    if (rid !== currentRoomId) {
+      currentRoomId = rid;
+      initRoomBroadcastChannel(rid);
+      initEventSource();
     }
 
-    // Gửi lên server nền
-    const payload = {
+    // Broadcast tức thời tới mọi tab khác trong cùng phòng qua BroadcastChannel với payload đã mã hóa
+    if (channel) {
+      const encBroadcast = GameCipher.encrypt(updatedState);
+      channel.postMessage({ type: 'GAME_STATE_UPDATE', payload: encBroadcast });
+    }
+
+    // Gửi lên server nền theo đúng phòng
+    const payloadData = {
       ...updatedFields,
+      roomId: rid,
       lastUpdated: updatedState.lastUpdated
     };
-    fetch('/api/game/state', {
+    const encryptedPayload = GameCipher.encrypt(payloadData);
+    fetch('/api/game/state?roomid=' + encodeURIComponent(rid), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ payload: encryptedPayload })
     }).catch(() => {});
   };
 
@@ -671,14 +994,73 @@
 
     if (!v3.isBellLocked && isAllowed && !hasRung && !v3.bellRungBy) {
       const newRungList = [...(v3.rungPlayers || []), playerId];
+      const payload = {
+        ...v3,
+        bellRungBy: playerId,
+        bellRungTime: Date.now(),
+        rungPlayers: newRungList,
+        isBellLocked: true,
+        isRunning: false // Dừng chạy câu hỏi khi có 1 người bấm chuông
+      };
+
+      // Cập nhật ngay trạng thái địa phương để giao diện đổi lập tức trên cú bấm đầu tiên
+      window.currentGameState.vong3State = payload;
+      if (typeof window.renderCurrentView === 'function') {
+        try { window.renderCurrentView(); } catch(e) {}
+      }
+
       await window.broadcastStateUpdate({
-        vong3State: {
-          ...v3,
-          bellRungBy: playerId,
-          bellRungTime: Date.now(),
-          rungPlayers: newRungList,
-          isBellLocked: true,
-          isRunning: false // Dừng chạy câu hỏi khi có 1 người bấm chuông
+        vong3State: payload
+      });
+      return true;
+    }
+    return false;
+  };
+
+  // Hàm người chơi bấm chuông Câu hỏi phụ (CHP)
+  window.ringCHPBuzzer = async function(playerId) {
+    const chp = window.currentGameState.chpState || {};
+    let allowedList = [1, 2, 3, 4];
+    if (Array.isArray(chp.allowedPlayerIds)) {
+      allowedList = chp.allowedPlayerIds.map(Number);
+    } else if (chp.allowedPlayerId && chp.allowedPlayerId !== 'all') {
+      allowedList = [Number(chp.allowedPlayerId)];
+    }
+
+    const isAllowed = allowedList.includes(Number(playerId));
+    const isLocked = (chp.locked === true || chp.locked === undefined);
+
+    if (!isLocked && isAllowed && !chp.buzzerWinner) {
+      const players = window.currentGameState.players || [];
+      const p = players.find(x => Number(x.id) === Number(playerId)) || { name: `Player ${playerId}` };
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('vi-VN') + '.' + String(Date.now() % 1000).padStart(3, '0');
+      
+      const payload = {
+        ...chp,
+        locked: true,
+        buzzerWinner: {
+          playerId: Number(playerId),
+          name: p.name,
+          time: timeStr,
+          timestamp: Date.now()
+        }
+      };
+
+      // Cập nhật ngay local state
+      window.currentGameState.chpState = payload;
+      notifyListeners(window.currentGameState, { chpChanged: true });
+
+      await window.broadcastStateUpdate({
+        chpState: payload,
+        audioState: {
+          ...(window.currentGameState.audioState || {}),
+          effects: {
+            track: '5s.mp3',
+            playing: true,
+            loop: false,
+            timestamp: Date.now()
+          }
         }
       });
       return true;

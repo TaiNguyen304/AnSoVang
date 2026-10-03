@@ -23,6 +23,22 @@
         background: linear-gradient(135deg, #0a192f, #020c1b);
         color: #f8fafc;
       }
+      button, .btn, a.btn, input[type='button'], input[type='submit'], input[type='reset'] {
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        outline: none;
+        will-change: background-color, color, box-shadow;
+      }
+      button:hover, .btn:hover, a.btn:hover, input[type='button']:hover, input[type='submit']:hover, input[type='reset']:hover,
+      button:hover *, .btn:hover *, a.btn:hover * {
+        background: #eab308 !important;
+        background-color: #eab308 !important;
+        background-image: none !important;
+        color: #000000 !important;
+        border-color: #eab308 !important;
+        box-shadow: 0 0 12px rgba(234, 179, 8, 0.6) !important;
+        filter: none !important;
+      }
       ::-webkit-scrollbar {
         width: 6px;
         height: 6px;
@@ -82,10 +98,19 @@
     <script src="./sync-client.js"></script>
   </head>
   <body class="text-slate-100 flex flex-col p-2" style="height: 100vh; width: 100vw; overflow: hidden; box-sizing: border-box; background: linear-gradient(135deg, #0a192f, #020c1b);">
-    <div style="max-width: 1200px; width: 100%; height: 100%; margin: 0 auto; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;">
+    
+    <!-- Màn hình thông báo khi thiếu tham số roomid -->
+    <div id="auth-error-overlay" style="display: none; position: fixed; inset: 0; background: #0b1120; z-index: 999999; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center;">
+      <div style="background: #1e293b; border: 2px solid #ef4444; border-radius: 12px; padding: 24px 32px; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.7);">
+        <h2 style="color: #ef4444; margin: 0 0 12px 0; font-size: 18px;">KHÔNG THỂ TRUY CẬP</h2>
+        <p id="auth-error-message" style="color: #f8fafc; font-size: 14px; margin: 0 0 16px 0; line-height: 1.5;">Vui lòng nhập tham số ?roomid=Mãphòng trên URL</p>
+      </div>
+    </div>
+
+    <div id="main-app-container" style="max-width: 1200px; width: 100%; height: 100%; margin: 0 auto; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;">
       
       <!-- KHU VỰC HIỂN THỊ CHÍNH -->
-      <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; overflow: hidden;">
+      <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; overflow: hidden; width: 100%; height: 100%;">
 
         <!-- 1. VIEW TRỐNG (Hoàn toàn không có bất kỳ cái gì) -->
         <div id="view-blank" class="view-container active"></div>
@@ -132,67 +157,109 @@
         </div>
 
         <!-- 4. VIEW VÒNG 3 -->
-        <div id="view-vong3" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid #a855f7; border-radius: 16px; padding: 16px; display: none;">
-          <div style="text-align: center; margin-bottom: 12px; flex-shrink: 0;">
-            <span style="background: #7c3aed; color: white; padding: 4px 14px; border-radius: 999px; font-size: 12px;">VÒNG 3</span>
-            <h2 style="font-size: 22px; color: #c084fc; margin: 4px 0 0 0;">SO TÀI (3 GỢI Ý)</h2>
-          </div>
-          <div id="viewer-v3-stage" style="color: #cbd5e1; font-size: 14px; text-align: center; flex: 1; min-height: 0; overflow-y: auto;">Đang chuẩn bị vòng 3...</div>
+        <div id="view-vong3" class="view-container" style="background: transparent; border: none; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; padding: 20px;">
+          <div id="viewer-v3-stage" style="color: #cbd5e1; font-size: 14px; text-align: center; flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; min-height: 0;">Đang chuẩn bị vòng 3...</div>
         </div>
 
         <!-- 5. VIEW VÒNG 4 -->
-        <div id="view-vong4" class="view-container" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid #22c55e; border-radius: 16px; padding: 16px; display: none;">
-          <div style="text-align: center; margin-bottom: 12px; flex-shrink: 0;">
-            <span style="background: #059669; color: white; padding: 4px 14px; border-radius: 999px; font-size: 12px;">VÒNG 4</span>
-            <h2 style="font-size: 22px; color: #4ade80; margin: 4px 0 0 0;">ẨN SỐ MAY MẮN</h2>
-          </div>
-          <div id="viewer-v4-stage" style="color: #cbd5e1; font-size: 14px; text-align: center; flex: 1; min-height: 0; overflow-y: auto;">Đang chuẩn bị vòng 4...</div>
+        <div id="view-vong4" class="view-container" style="background: transparent; border: none; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; padding: 16px;">
+          <div id="viewer-v4-stage" style="color: #cbd5e1; font-size: 14px; text-align: center; width: 100%; max-width: 1100px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; margin: auto;">Đang chuẩn bị vòng 4...</div>
         </div>
+
+        <!-- 6. VIEW CÂU HỎI PHỤ (CHP) - VIEW TRỐNG -->
+        <div id="view-chp" class="view-container" style="background: transparent; border: none; width: 100%; height: 100%; display: none;"></div>
 
       </div>
 
     </div>
 
     <script>
+      function checkRoomAccess() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('roomid');
+        const overlay = document.getElementById('auth-error-overlay');
+        const mainContent = document.getElementById('main-app-container');
+
+        if (!roomId) {
+          if (overlay) {
+            overlay.style.display = 'flex';
+            document.getElementById('auth-error-message').textContent = 'Vui lòng nhập tham số ?roomid=Mãphòng trên URL';
+          }
+          if (mainContent) mainContent.style.display = 'none';
+          return false;
+        }
+
+        const serverRoom = window.currentGameState?.roomAuth?.roomId;
+        if (serverRoom && roomId !== serverRoom) {
+          if (overlay) {
+            overlay.style.display = 'flex';
+            document.getElementById('auth-error-message').textContent = 'Vui lòng nhập tham số ?roomid=Mãphòng trên URL (Mã phòng không chính xác)';
+          }
+          if (mainContent) mainContent.style.display = 'none';
+          return false;
+        }
+
+        if (overlay) overlay.style.display = 'none';
+        if (mainContent) mainContent.style.display = 'flex';
+        return true;
+      }
+
+      checkRoomAccess();
+
+      var lastV3RenderKey = '';
+      var lastV4MainStateKey = '';
+      var maxStageForCurrentQ = 0;
+      var currentQIndex = -1;
+
       const viewMap = {
         blank: 'view-blank',
         vong1: 'view-vong1',
         vong2: 'view-vong2',
         vong3: 'view-vong3',
-        vong4: 'view-vong4'
+        vong4: 'view-vong4',
+        chp: 'view-chp'
       };
 
-      let currentRenderedView = null;
+      window.switchViewerTo = async function(viewKey) {
+        await window.broadcastStateUpdate({ currentView: viewKey });
+      };
+
+      const viewDisplayNames = {
+        blank: 'MÀN HÌNH TRỐNG',
+        vong1: 'VÒNG 1: THỬ SỨC',
+        vong2: 'VÒNG 2: ĐẶT CƯỢC',
+        vong3: 'VÒNG 3: SO TÀI',
+        vong4: 'VÒNG 4: ẨN SỐ MAY MẮN',
+        chp: 'CÂU HỎI PHỤ'
+      };
 
       window.onGameStateChange(function(state, changes) {
-        // 1. Chuyển đổi View & Xử lý View Trống hoàn toàn
-        const isBlank = (state.currentView === 'blank');
-
-        if (state.currentView !== currentRenderedView) {
-          currentRenderedView = state.currentView;
-          document.querySelectorAll('.view-container').forEach(el => {
-            el.style.display = 'none';
-            el.classList.remove('active');
-          });
-          const activeContainerId = viewMap[state.currentView] || 'view-blank';
-          const targetEl = document.getElementById(activeContainerId);
-          if (targetEl) {
-            targetEl.style.display = isBlank ? 'none' : 'flex';
-            targetEl.classList.add('active');
-          }
+        if (!checkRoomAccess()) return;
+        // Cập nhật Badge trên thanh điều hướng top của Viewer
+        const badge = document.getElementById('viewer-active-view-badge');
+        if (badge) {
+          badge.textContent = `ĐANG CHIẾU: ${viewDisplayNames[state.currentView] || state.currentView?.toUpperCase() || 'MÀN HÌNH TRỐNG'}`;
         }
 
-        // 2. Cập nhật chi tiết Vòng 1 trên sân khấu
-        renderViewerVong1(state);
+        // 1. Chuyển đổi View hiển thị
+        document.querySelectorAll('.view-container').forEach(el => {
+          el.style.display = 'none';
+          el.classList.remove('active');
+        });
 
-        // 3. Cập nhật chi tiết Vòng 2 trên sân khấu
-        renderViewerVong2(state);
+        const activeContainerId = viewMap[state.currentView] || 'view-blank';
+        const targetEl = document.getElementById(activeContainerId);
+        if (targetEl) {
+          targetEl.style.display = 'flex';
+          targetEl.classList.add('active');
+        }
 
-        // 4. Cập nhật chi tiết Vòng 3 trên sân khấu
-        renderViewerVong3(state);
-
-        // 5. Cập nhật chi tiết Vòng 4 trên sân khấu
-        renderViewerVong4(state);
+        // 2. Cập nhật chi tiết các vòng thi độc lập
+        try { renderViewerVong1(state); } catch (e) { console.error('Render V1 Error:', e); }
+        try { renderViewerVong2(state); } catch (e) { console.error('Render V2 Error:', e); }
+        try { renderViewerVong3(state); } catch (e) { console.error('Render V3 Error:', e); }
+        try { renderViewerVong4(state); } catch (e) { console.error('Render V4 Error:', e); }
+        try { renderViewerCHP(state); } catch (e) { console.error('Render CHP Error:', e); }
       });
 
       function renderViewerVong1(state) {
@@ -554,69 +621,47 @@
 
         const activeQ = v3.activeQuestion;
         const isVisible = v3.isBoxesVisible;
-        const stage = v3.revealedStage || 0;
-        const allowed = Array.isArray(v3.allowedBellPlayers) ? v3.allowedBellPlayers : [1, 2, 3, 4];
-        const rungList = Array.isArray(v3.rungPlayers) ? v3.rungPlayers : [];
         const bellRungBy = v3.bellRungBy;
+        const showAns = !!v3.showAnswer;
         const players = state.players || [];
 
         if (!activeQ || !isVisible) {
-          v3Stage.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px;">
-              <h2 style="font-size: 28px; color: #c084fc; margin: 16px 0 8px 0; font-weight: 800;">VÒNG 3: SO TÀI</h2>
-              <p style="color: #94a3b8; font-size: 16px; margin: 0;">Đang chuẩn bị câu hỏi và hệ thống chuông so tài...</p>
-            </div>
-          `;
+          v3Stage.innerHTML = ``;
+          maxStageForCurrentQ = 0;
+          currentQIndex = -1;
+          lastV3RenderKey = '';
           return;
         }
 
-        const renderStageBox = (title, content, isRevealed, borderCol, bgGrad) => {
+        const qIdx = activeQ.index || 1;
+        if (qIdx !== currentQIndex) {
+          currentQIndex = qIdx;
+          maxStageForCurrentQ = v3.revealedStage || 0;
+        } else {
+          maxStageForCurrentQ = Math.max(maxStageForCurrentQ, v3.revealedStage || 0);
+        }
+
+        const stage = maxStageForCurrentQ;
+
+        const currentRenderKey = [
+          qIdx,
+          isVisible,
+          stage,
+          bellRungBy,
+          showAns
+        ].join('|');
+
+        if (currentRenderKey === lastV3RenderKey) {
+          return;
+        }
+        lastV3RenderKey = currentRenderKey;
+
+        const renderStageBox = (content, isRevealed, borderCol = '#ffffff', bgCol = '#000000', fullWidth = false) => {
           return `
-            <div style="background: ${isRevealed ? bgGrad : 'linear-gradient(135deg, #0f172a, #020617)'}; border: 3px solid ${isRevealed ? borderCol : '#334155'}; border-radius: 18px; padding: 22px 28px; transition: all 0.4s ease; box-shadow: ${isRevealed ? '0 10px 30px rgba(0,0,0,0.6)' : 'none'}; text-align: left;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="font-size: 14px; color: ${isRevealed ? '#facc15' : '#64748b'}; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">${title}</span>
-                <span style="font-size: 12px; font-weight: bold; padding: 3px 12px; border-radius: 999px; background: ${isRevealed ? 'rgba(0,0,0,0.4)' : '#1e293b'}; color: ${isRevealed ? '#ffffff' : '#64748b'};">
-                  ${isRevealed ? 'ĐÃ MỞ' : 'CHƯA MỞ'}
-                </span>
+            <div style="background: ${bgCol}; border: 3px solid ${borderCol}; border-radius: 18px; padding: 22px 28px; transition: all 0.4s ease; box-shadow: 0 4px 20px rgba(0,0,0,0.6); text-align: center; ${fullWidth ? 'grid-column: span 3;' : ''}">
+              <div style="font-size: 24px; color: #ffffff; font-weight: bold; line-height: 1.4; min-height: 48px; display: flex; align-items: center; justify-content: center; text-align: center;">
+                ${isRevealed ? content : ''}
               </div>
-              <div style="font-size: 22px; color: ${isRevealed ? '#ffffff' : '#475569'}; font-weight: ${isRevealed ? 'bold' : 'normal'}; line-height: 1.4; min-height: 48px; display: flex; align-items: center;">
-                ${isRevealed ? content : '<span style="color: #334155; font-style: italic;">[Đang ẩn nội dung...]</span>'}
-              </div>
-            </div>
-          `;
-        };
-
-        const renderPlayerBuzzerBeacon = (pId) => {
-          const pInfo = players[pId - 1] || { name: `Người chơi ${pId}` };
-          const isAllowed = allowed.includes(pId);
-          const hasRung = rungList.includes(pId);
-          const isCurrentRung = (bellRungBy === pId);
-
-          let bg = 'rgba(15, 23, 42, 0.8)';
-          let border = '2px solid #334155';
-          let glow = 'none';
-          let textStatus = isAllowed ? '<span style="color: #64748b; font-size: 12px;">Sẵn sàng</span>' : '<span style="color: #475569; font-size: 12px;">Khóa</span>';
-
-          if (isCurrentRung) {
-            bg = 'linear-gradient(135deg, #b45309, #ea580c)';
-            border = '3px solid #facc15';
-            glow = '0 0 35px rgba(250, 204, 21, 0.8)';
-            textStatus = '<b style="color: #ffffff; font-size: 14px;">ĐÃ BẤM CHUÔNG!</b>';
-          } else if (hasRung) {
-            textStatus = '<span style="color: #f87171; font-size: 12px;">Đã bấm</span>';
-          } else if (!v3.isBellLocked && isAllowed) {
-            border = '2px solid #22c55e';
-            glow = '0 0 15px rgba(34, 197, 94, 0.4)';
-            textStatus = '<b style="color: #4ade80; font-size: 13px;">Chuông mở</b>';
-          }
-
-          const colors = ['#38bdf8', '#f43f5e', '#eab308', '#22c55e'];
-
-          return `
-            <div style="background: ${bg}; border: ${border}; box-shadow: ${glow}; border-radius: 14px; padding: 12px 16px; text-align: center; transition: all 0.3s ease;">
-              <span style="font-size: 11px; color: ${colors[pId - 1]}; font-weight: bold;">PLAYER ${pId}</span>
-              <div style="font-size: 18px; color: #ffffff; font-weight: bold; margin: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${pInfo.name}</div>
-              <div style="margin-top: 4px;">${textStatus}</div>
             </div>
           `;
         };
@@ -633,46 +678,28 @@
           `;
         }
 
+        const isTopicRevealed = showAns || (stage >= 1);
+
+        let topicContent = activeQ.topic;
+        let topicBorderColor = '#ffffff';
+        let topicBgColor = '#000000';
+
+        if (showAns) {
+          topicContent = activeQ.answer;
+          topicBorderColor = '#eab308';
+          topicBgColor = '#854d0e';
+        }
+
         v3Stage.innerHTML = `
           ${buzzerHeroBanner}
 
-          <!-- Thanh tiêu đề câu hỏi & Đồng hồ 7s -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="background: #7c3aed; color: white; padding: 6px 20px; border-radius: 999px; font-size: 16px; font-weight: bold;">
-                CÂU HỎI SỐ ${activeQ.index || 1}
-              </span>
-              <span style="background: ${v3.isBellLocked ? '#334155' : '#15803d'}; color: white; padding: 6px 18px; border-radius: 999px; font-size: 14px;">
-                ${v3.isBellLocked ? 'CHUÔNG KHÓA' : 'CHUÔNG ĐANG MỞ'}
-              </span>
-            </div>
-
-            <!-- Đồng hồ 7s -->
-            <div style="background: #020617; border: 3px solid #a855f7; padding: 8px 26px; border-radius: 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 0 20px rgba(168,85,247,0.5);">
-              <span style="font-size: 32px; font-weight: bold; color: ${v3.isRunning ? '#ef4444' : '#c084fc'}; line-height: 1;">
-                ${v3.stepTimerSeconds ?? 7}s
-              </span>
-            </div>
-          </div>
-
-          <!-- 4 Ô: 1 Ô Chủ đề + 3 Ô Gợi ý -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-            ${renderStageBox('CHỦ ĐỀ', activeQ.topic, stage >= 1, '#c084fc', 'linear-gradient(135deg, #581c87, #3b0764)')}
-            ${renderStageBox('GỢI Ý 1', activeQ.clue1, stage >= 2, '#38bdf8', 'linear-gradient(135deg, #0369a1, #0c4a6e)')}
-            ${renderStageBox('GỢI Ý 2', activeQ.clue2, stage >= 3, '#f59e0b', 'linear-gradient(135deg, #b45309, #78350f)')}
-            ${renderStageBox('GỢI Ý 3', activeQ.clue3, stage >= 4, '#f43f5e', 'linear-gradient(135deg, #be123c, #881337)')}
-          </div>
-
-          <!-- Tín hiệu chuông 4 người chơi trên sân khấu -->
-          <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid #334155; border-radius: 18px; padding: 16px;">
-            <div style="font-size: 13px; color: #94a3b8; font-weight: bold; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-              TÍN HIỆU CHUÔNG THÍ SINH SÂN KHẤU:
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-              ${renderPlayerBuzzerBeacon(1)}
-              ${renderPlayerBuzzerBeacon(2)}
-              ${renderPlayerBuzzerBeacon(3)}
-              ${renderPlayerBuzzerBeacon(4)}
+          <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; max-width: 1100px; margin: 0 auto; box-sizing: border-box; min-height: 0;">
+            <!-- 4 Ô: Hàng 1 (Chủ đề / Đáp án full-width), Hàng 2 (3 Ô Gợi ý) -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; width: 100%;">
+              ${renderStageBox(topicContent, isTopicRevealed, topicBorderColor, topicBgColor, true)}
+              ${renderStageBox(activeQ.clue1, stage >= 2, '#ffffff', '#000000', false)}
+              ${renderStageBox(activeQ.clue2, stage >= 3, '#ffffff', '#000000', false)}
+              ${renderStageBox(activeQ.clue3, stage >= 4, '#ffffff', '#000000', false)}
             </div>
           </div>
         `;
@@ -685,131 +712,174 @@
         const q = state.questions || {};
         const v4Data = q.vong4 || {};
         const gift = v4Data.gift || {};
-        const clues = v4Data.clues || [];
+        const clues = Array.isArray(v4Data.clues) ? v4Data.clues : [];
         const v4 = state.vong4State || {};
-        const boxes = v4.boxes || [
+
+        const defaultBoxes = [
           { id: 1, name: 'Đỏ', color: '#ff0000', text: 'Ô SỐ 1', money: 0 },
-          { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true, money: 200000 },
-          { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', money: 300000 },
-          { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', money: 500000 },
-          { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', money: 0 },
-          { id: 6, name: 'Cam', color: '#ffa500', text: 'Ô SỐ 6', darkText: true, money: 1000000 }
+          { id: 2, name: 'Vàng', color: '#facc15', text: 'Ô SỐ 2', darkText: true, money: 200000 },
+          { id: 3, name: 'Xanh dương', color: '#0088ff', text: 'Ô SỐ 3', money: 300000 },
+          { id: 4, name: 'Tím', color: '#a855f7', text: 'Ô SỐ 4', money: 500000 },
+          { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', darkText: true, money: 0 },
+          { id: 6, name: 'Cam', color: '#ff7700', text: 'Ô SỐ 6', darkText: true, money: 1000000 }
         ];
+
+        const boxes = (Array.isArray(v4.boxes) && v4.boxes.length === 6) ? v4.boxes : defaultBoxes;
         const totalMoney = typeof v4.totalMoney === 'number' ? v4.totalMoney : 8000000;
         const selectedId = v4.selectedBoxId;
 
-        const renderStageBox = (box) => {
-          const isSelected = (box.id === selectedId);
-          const clueObj = clues.find(c => String(c.index) === String(box.id)) || { clue: `Gợi ý ô ${box.id}` };
-          const textColor = box.darkText ? '#000000' : '#ffffff';
-          const moneyFormatted = (box.money || 0).toLocaleString('vi-VN');
+        const giftClueText = v4.showGiftClue
+          ? (gift.clue || gift.topic || v4Data.topic || 'Nội dung gợi ý tặng')
+          : 'Gợi ý tặng';
+
+        const answerText = v4.showAnswer
+          ? (v4Data.answer || gift.answer || 'ĐÁP ÁN')
+          : 'Đáp Án';
+
+        // 0. KIỂM TRA CẤU TRÚC ĐỂ TRÁNH RE-RENDER DOM GÂY "GIẬT NGƯỢC" KHI ĐỒNG HỒ ĐẾM LỢI
+        const mainStateKey = `${JSON.stringify(boxes)}_${totalMoney}_${v4.showGiftClue}_${v4.showAnswer}_${selectedId}_${giftClueText}_${answerText}`;
+        const timerValEl = document.getElementById('viewer-v4-timer-val');
+
+        if (mainStateKey === lastV4MainStateKey && timerValEl) {
+          // Chỉ cập nhật text của đồng hồ khi duy nhất giây đếm nhảy, giữ nguyên DOM để mọi tương tác mượt mà
+          timerValEl.textContent = v4.timerSeconds ?? 120;
+          return;
+        }
+
+        lastV4MainStateKey = mainStateKey;
+
+        // 1. Lấy danh sách các giá trị tiền đã bị trừ/hiện ra để làm xám mờ cột bên trái
+        const revealedMoneyValues = boxes.filter(b => b.revealedMoney).map(b => b.money);
+        const usedMoneyTracker = [...revealedMoneyValues];
+
+        // 6 Mức tiền tương ứng 6 gợi ý theo thứ tự hiển thị cột bên trái: 0, 0, 200.000, 300.000, 500.000, 1.000.000
+        const prizeLadder = [0, 0, 200000, 300000, 500000, 1000000];
+
+        const renderLadderItem = (val) => {
+          const valFormatted = val.toLocaleString('vi-VN');
+          // Kiểm tra xem mức tiền này đã bị trừ chưa
+          const matchedIdx = usedMoneyTracker.indexOf(val);
+          let isDeducted = false;
+          if (matchedIdx !== -1) {
+            isDeducted = true;
+            usedMoneyTracker.splice(matchedIdx, 1);
+          }
+
+          let bg = 'linear-gradient(180deg, #0284c7 0%, #0369a1 100%)';
+          let border = '2px solid #38bdf8';
+          let color = '#facc15';
+          let textShadow = '0 0 10px rgba(250, 204, 21, 0.7)';
+          let opacity = '1';
+
+          if (isDeducted) {
+            bg = '#1e293b';
+            border = '2px solid #475569';
+            color = '#64748b';
+            textShadow = 'none';
+            opacity = '0.55';
+          }
 
           return `
-            <div style="background: ${box.color}; color: ${textColor}; border: ${isSelected ? '4px solid #ffffff' : '2px solid rgba(255,255,255,0.3)'}; box-shadow: ${isSelected ? '0 0 35px rgba(255,255,255,0.9), 0 0 15px ' + box.color : '0 8px 20px rgba(0,0,0,0.5)'}; border-radius: 16px; padding: 18px 16px; display: flex; flex-direction: column; justify-content: space-between; min-height: 180px; transition: all 0.3s ease; transform: ${isSelected ? 'scale(1.03)' : 'scale(1)'};">
+            <div style="background: ${bg}; border: ${border}; border-radius: 8px; padding: 0 12px; text-align: center; font-size: 20px; font-weight: 900; color: ${color}; text-shadow: ${textShadow}; opacity: ${opacity}; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 10px rgba(0,0,0,0.5); height: 46px; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+              ${valFormatted}
+            </div>
+          `;
+        };
+
+        // Render từng hàng gợi ý bên phải
+        const renderClueRow = (box) => {
+          const isSelected = (box.id === selectedId);
+          const clueObj = clues.find(c => String(c.index) === String(box.id)) || { clue: `Gợi ý ô ${box.id}` };
+          const isClueRevealed = box.revealedClue;
+          const isMoneyRevealed = box.revealedMoney;
+          const moneyFormatted = (box.money || 0).toLocaleString('vi-VN');
+
+          // Cột bên phải: Nếu ô được chọn hoặc đã mở tiền/gợi ý -> Kéo dài full width về bên trái!
+          const isExtended = isSelected || isClueRevealed || isMoneyRevealed;
+
+          // Xử lý màu chữ theo yêu cầu:
+          // Đỏ (1), Xanh dương (3), Tím (4) -> Chữ TRẮNG (#ffffff)
+          // Vàng (2), Xám (5), Cam (6) -> Chữ ĐEN (#000000)
+          const isDarkBg = (box.id === 1 || box.id === 3 || box.id === 4);
+          const textColor = isDarkBg ? '#ffffff' : '#000000';
+          const textShadow = isDarkBg ? '0 2px 8px rgba(0,0,0,0.9)' : 'none';
+
+          let innerText = '';
+          if (isClueRevealed) {
+            innerText = `<span style="font-size: 18px; font-weight: 900; color: ${textColor}; text-shadow: ${textShadow}; letter-spacing: 0.5px;">${clueObj.clue}</span>`;
+          } else if (isMoneyRevealed) {
+            innerText = `<span style="font-size: 24px; font-weight: 900; color: ${textColor}; text-shadow: ${textShadow}; letter-spacing: 1px;">${moneyFormatted}</span>`;
+          } else if (isSelected) {
+            innerText = ''; // Ô kéo dài sẵn sàng
+          }
+
+          return `
+            <div style="position: relative; width: 100%; height: 46px; display: flex; align-items: center; justify-content: flex-end;">
               
-              <!-- Tiêu đề ô -->
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 18px; font-weight: 900; letter-spacing: 0.5px;">${box.text} (${box.name.toUpperCase()})</span>
-                ${isSelected ? `<span style="background: #ffffff; color: #000000; font-size: 11px; font-weight: 900; padding: 3px 10px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,0.4); animation: pulse 1s infinite;">ĐANG CHỌN</span>` : ''}
-              </div>
-
-              <!-- Hộp tiền -->
-              <div style="background: rgba(0, 0, 0, 0.6); color: #ffffff; border-radius: 10px; padding: 10px 14px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.2);">
-                <div style="font-size: 11px; color: #cbd5e1; text-transform: uppercase;">GIÁ TRỊ TIỀN:</div>
-                <div style="font-size: 20px; font-weight: 900; color: ${box.revealedMoney ? '#facc15' : '#94a3b8'}; margin-top: 2px;">
-                  ${box.revealedMoney ? `${moneyFormatted} VNĐ` : '[??? VNĐ]'}
-                </div>
-              </div>
-
-              <!-- Hộp nội dung gợi ý -->
-              <div style="background: rgba(0, 0, 0, 0.75); color: #ffffff; border-radius: 10px; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.2); min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 11px; color: #38bdf8; text-transform: uppercase; font-weight: bold;">GỢI Ý MẢNH GHÉP:</div>
-                <div style="font-size: 15px; font-weight: bold; margin-top: 3px; line-height: 1.3;">
-                  ${box.revealedClue ? `${clueObj.clue}` : '<i style="color: #64748b; font-weight: normal;">[Mảnh ghép đang đóng]</i>'}
-                </div>
+              <!-- Ô màu sắc: Co giãn theo trạng thái chọn -->
+              <div style="position: absolute; right: 0; top: 0; bottom: 0; width: ${isExtended ? '100%' : '110px'}; background: ${box.color}; border: ${isSelected ? '3px solid #ffffff' : '2px solid rgba(255,255,255,0.4)'}; box-shadow: ${isSelected ? '0 0 25px rgba(255,255,255,0.8), inset 0 0 10px rgba(0,0,0,0.3)' : '0 4px 10px rgba(0,0,0,0.4)'}; border-radius: 8px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); display: flex; align-items: center; justify-content: center; padding: 0 16px; box-sizing: border-box; overflow: hidden; z-index: ${isSelected ? '10' : '1'};">
+                ${innerText}
               </div>
 
             </div>
           `;
         };
 
-        let resultBannerHtml = '';
-        if (v4.showAnswer) {
-          if (v4.resultStatus === 'correct') {
-            resultBannerHtml = `
-              <div style="margin-bottom: 24px; background: linear-gradient(135deg, #15803d, #047857); border: 4px solid #facc15; box-shadow: 0 0 45px rgba(250, 204, 21, 0.9); border-radius: 20px; padding: 22px 30px; text-align: center; animation: pulse 1s infinite;">
-                <div style="font-size: 32px; font-weight: 900; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 14px;">
-                  <span>XUẤT SẮC! THÍ SINH TRẢ LỜI ĐÚNG!</span>
-                </div>
-                <div style="font-size: 20px; color: #fef08a; margin-top: 6px; font-weight: bold;">
-                  GIỮ NGUYÊN TOÀN BỘ TIỀN THƯỞNG: <span style="color: #ffffff; font-size: 26px; text-decoration: underline;">${totalMoney.toLocaleString('vi-VN')} VNĐ</span>
-                </div>
-              </div>
-            `;
-          } else if (v4.resultStatus === 'wrong') {
-            resultBannerHtml = `
-              <div style="margin-bottom: 24px; background: linear-gradient(135deg, #991b1b, #7f1d1d); border: 4px solid #f87171; box-shadow: 0 0 40px rgba(239, 68, 68, 0.7); border-radius: 20px; padding: 22px 30px; text-align: center;">
-                <div style="font-size: 28px; font-weight: 900; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 14px;">
-                  <span>RẤT TIẾC! CÂU TRẢ LỜI CHƯA CHÍNH XÁC!</span>
-                </div>
-                <div style="font-size: 20px; color: #fecaca; margin-top: 6px; font-weight: bold;">
-                  TIỀN THƯỞNG NHẬN ĐƯỢC: <span style="color: #facc15; font-size: 26px;">5.000.000 VNĐ</span>
-                </div>
-              </div>
-            `;
-          }
-        }
-
         v4Stage.innerHTML = `
-          ${resultBannerHtml}
-
-          <!-- Header sân khấu: Tổng tiền & Đồng hồ 120s -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+          <div style="display: flex; width: 100%; max-width: 1100px; gap: 24px; box-sizing: border-box; align-items: flex-start; justify-content: center; margin: auto;">
             
-            <!-- Banner tổng tiền thưởng -->
-            <div style="background: linear-gradient(135deg, #064e3b, #022c22); border: 3px solid #22c55e; box-shadow: 0 0 30px rgba(34, 197, 94, 0.5); padding: 14px 28px; border-radius: 18px; display: flex; align-items: center; gap: 16px;">
-              <div>
-                <div style="font-size: 13px; color: #6ee7b7; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">TỔNG TIỀN THƯỞNG ẨN SỐ VÀNG:</div>
-                <div style="font-size: 32px; font-weight: 900; color: #facc15; line-height: 1.1; margin-top: 2px;">
-                  ${totalMoney.toLocaleString('vi-VN')} VNĐ
-                </div>
+            <!-- CỘT BÊN TRÁI: 6 MỨC TIỀN THƯỞNG + Ô ĐÁP ÁN BÊN DƯỚI (Mỗi ô liền kề cách nhau đúng 5px) -->
+            <div style="width: 28%; display: flex; flex-direction: column; gap: 5px;">
+              ${prizeLadder.map(val => renderLadderItem(val)).join('')}
+
+              <!-- Ô ĐÁP ÁN BÊN DƯỚI CỘT TIỀN (Ô THỨ 7, CÁCH Ô TRÊN ĐÚNG 5PX) -->
+              <div style="background: linear-gradient(180deg, #1e293b, #0f172a); border: 2px solid #94a3b8; border-radius: 8px; padding: 0 16px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.6); height: 46px; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+                <span style="font-size: 20px; font-weight: 900; color: ${v4.showAnswer ? '#4ade80' : '#ffffff'}; text-shadow: ${v4.showAnswer ? '0 0 10px rgba(74, 222, 128, 0.8)' : 'none'}; letter-spacing: 0.5px;">
+                  ${answerText}
+                </span>
               </div>
             </div>
 
-            <!-- Đồng hồ 120s -->
-            <div style="background: #020617; border: 3px solid #eab308; padding: 10px 30px; border-radius: 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 0 25px rgba(234,179,8,0.5);">
-              <div>
-                <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: bold;">THỜI GIAN:</div>
-                <div style="font-size: 36px; font-weight: 900; color: ${v4.timerRunning ? '#ef4444' : '#facc15'}; line-height: 1;">
-                  ${v4.timerSeconds ?? 120}s
-                </div>
+            <!-- CỘT BÊN PHẢI: GỢI Ý TẶNG + 6 GỢI Ý SỐ MÀU SẮC + CỤM ĐỒNG HỒ & TỔNG TIỀN (Mỗi ô liền kề cách nhau đúng 5px) -->
+            <div style="width: 68%; display: flex; flex-direction: column; gap: 5px;">
+              
+              <!-- Ô 1: GỢI Ý TẶNG -->
+              <div style="background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%); border: 2px solid #38bdf8; border-radius: 8px; height: 46px; display: flex; align-items: center; justify-content: center; padding: 0 20px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4), inset 0 2px 4px rgba(255,255,255,0.3); box-sizing: border-box;">
+                <span style="font-size: 20px; font-weight: 900; color: #ffffff; text-shadow: 0 2px 8px rgba(0,0,0,0.9); letter-spacing: 0.5px;">
+                  ${giftClueText}
+                </span>
               </div>
-            </div>
 
-          </div>
+              <!-- Ô 2 ĐẾN Ô 7: 6 CÂU/GỢI Ý MÀU SẮC -->
+              ${boxes.map(box => renderClueRow(box)).join('')}
 
-          <!-- Banner Gợi ý tặng -->
-          <div style="background: ${v4.showGiftClue ? 'linear-gradient(135deg, #854d0e, #713f12)' : 'rgba(15, 23, 42, 0.8)'}; border: 3px solid ${v4.showGiftClue ? '#facc15' : '#334155'}; box-shadow: ${v4.showGiftClue ? '0 0 30px rgba(250, 204, 21, 0.6)' : 'none'}; border-radius: 18px; padding: 18px 24px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; transition: all 0.4s ease;">
-            <div style="display: flex; align-items: center; gap: 16px;">
-              <div>
-                <div style="font-size: 13px; color: #fde047; font-weight: 900; letter-spacing: 0.5px;">GỢI Ý TẶNG:</div>
-                <div style="font-size: 20px; color: #ffffff; font-weight: bold; margin-top: 2px;">
-                  ${v4.showGiftClue ? `"${gift.clue || 'Nội dung gợi ý tặng'}"` : '<i style="color: #64748b; font-weight: normal;">[Gợi ý tặng đang đóng - Chưa mở]</i>'}
+              <!-- Ô 8: CỤM DƯỚI CỘT PHẢI: ĐỒNG HỒ THỜI GIAN VÀ TỔNG TIỀN THƯỞNG -->
+              <div style="display: flex; justify-content: flex-end; align-items: center; gap: 16px; height: 46px; box-sizing: border-box;">
+                
+                <!-- HỘP ĐỒNG HỒ 120S -->
+                <div style="background: #000000; border: 3px solid #94a3b8; border-radius: 8px; height: 46px; padding: 0 20px; min-width: 90px; text-align: center; box-shadow: inset 0 0 10px rgba(255,255,255,0.2), 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+                  <div id="viewer-v4-timer-val" style="font-size: 26px; font-weight: 900; color: #ffffff; font-family: monospace; letter-spacing: 2px; line-height: 1;">
+                    ${v4.timerSeconds ?? 120}
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div>
-              <span style="background: ${v4.showGiftClue ? '#22c55e' : '#1e293b'}; color: white; font-size: 13px; font-weight: bold; padding: 6px 16px; border-radius: 999px;">
-                ${v4.showGiftClue ? 'ĐÃ MỞ' : 'ĐANG ĐÓNG'}
-              </span>
-            </div>
-          </div>
 
-          <!-- 6 Ô số màu sắc (1 - 6) -->
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-            ${boxes.map(b => renderStageBox(b)).join('')}
+                <!-- HỘP TỔNG TIỀN THƯỞNG -->
+                <div style="background: #000000; border: 3px solid #facc15; border-radius: 8px; height: 46px; padding: 0 28px; min-width: 220px; text-align: center; box-shadow: 0 0 20px rgba(250, 204, 21, 0.4), inset 0 0 10px rgba(250,204,21,0.2); display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+                  <div id="viewer-v4-money-val" style="font-size: 32px; font-weight: 900; color: #facc15; text-shadow: 0 0 12px rgba(250, 204, 21, 0.9); letter-spacing: 1px; line-height: 1;">
+                    ${totalMoney.toLocaleString('vi-VN')}
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
           </div>
         `;
+      }
+
+      function renderViewerCHP(state) {
+        // View CHP trên Viewer là View trống
       }
     </script>
   </body>

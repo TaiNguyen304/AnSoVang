@@ -28,13 +28,14 @@
         outline: none;
         will-change: background-color, color, box-shadow;
       }
-      button:hover, .btn:hover, a.btn:hover, input[type='button']:hover, input[type='submit']:hover, input[type='reset']:hover {
+      button:hover, .btn:hover, a.btn:hover, input[type='button']:hover, input[type='submit']:hover, input[type='reset']:hover,
+      button:hover *, .btn:hover *, a.btn:hover * {
         background: #eab308 !important;
         background-color: #eab308 !important;
         background-image: none !important;
         color: #000000 !important;
         border-color: #eab308 !important;
-        box-shadow: 0 0 10px rgba(234, 179, 8, 0.5) !important;
+        box-shadow: 0 0 12px rgba(234, 179, 8, 0.6) !important;
         filter: none !important;
       }
       button:active, .btn:active, a.btn:active {
@@ -133,20 +134,50 @@
     <!-- Khung chính toàn màn hình (Vừa khít 100vh không cuộn) -->
     <div style="width: 100vw; height: 100vh; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; box-sizing: border-box; overflow: hidden;">
 
-      <!-- Header gọn gàng chứa thông tin & các nút mở nhanh màn hình -->
-      <header style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 1.5px solid #eab308; border-radius: 10px; padding: 5px 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3); min-height: 44px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <h1 style="font-size: 15px; margin: 0; color: #facc15; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;">CONTROLLER - ẨN SỐ VÀNG</h1>
+      <!-- Header chứa Khu vực Tạo/Quản lý Mã phòng & Mật khẩu + Nút mở trang -->
+      <header style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 1.5px solid #eab308; border-radius: 10px; padding: 5px 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3); min-height: 44px; gap: 8px; flex-wrap: wrap;">
+        
+        <!-- Mục Quản lý Mã phòng & Mật khẩu (Thay thế dòng chữ CONTROLLER - ẨN SỐ VÀNG) -->
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <!-- Mã phòng 6 số -->
+          <div style="display: flex; align-items: center; gap: 4px; background: #0f172a; padding: 3px 6px; border-radius: 6px; border: 1px solid #eab308;">
+            <span style="font-size: 10px; color: #facc15; text-transform: uppercase;">MÃ PHÒNG:</span>
+            <input id="ctrl-room-id" type="text" maxlength="6" value="123456" style="width: 60px; background: #1e293b; color: #facc15; border: 1px solid #475569; border-radius: 4px; padding: 2px 4px; font-size: 11px; text-align: center; letter-spacing: 0.5px;" title="Mã phòng (6 chữ số)" />
+          </div>
+
+          <!-- Mật khẩu 4 Player -->
+          <div style="display: flex; align-items: center; gap: 3px; background: #0f172a; padding: 3px 6px; border-radius: 6px; border: 1px solid #475569;">
+            <span style="font-size: 9px; color: #94a3b8;">PASS P1:</span>
+            <input id="ctrl-p1-pass" type="text" maxlength="4" value="1111" style="width: 38px; background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; border-radius: 4px; padding: 2px 2px; font-size: 11px; text-align: center;" title="Mật khẩu P1 (4 số)" />
+            
+            <span style="font-size: 9px; color: #94a3b8; margin-left: 2px;">P2:</span>
+            <input id="ctrl-p2-pass" type="text" maxlength="4" value="2222" style="width: 38px; background: #1e293b; color: #f43f5e; border: 1px solid #e11d48; border-radius: 4px; padding: 2px 2px; font-size: 11px; text-align: center;" title="Mật khẩu P2 (4 số)" />
+            
+            <span style="font-size: 9px; color: #94a3b8; margin-left: 2px;">P3:</span>
+            <input id="ctrl-p3-pass" type="text" maxlength="4" value="3333" style="width: 38px; background: #1e293b; color: #eab308; border: 1px solid #ca8a04; border-radius: 4px; padding: 2px 2px; font-size: 11px; text-align: center;" title="Mật khẩu P3 (4 số)" />
+            
+            <span style="font-size: 9px; color: #94a3b8; margin-left: 2px;">P4:</span>
+            <input id="ctrl-p4-pass" type="text" maxlength="4" value="4444" style="width: 38px; background: #1e293b; color: #22c55e; border: 1px solid #16a34a; border-radius: 4px; padding: 2px 2px; font-size: 11px; text-align: center;" title="Mật khẩu P4 (4 số)" />
+          </div>
+
+          <!-- Nút Tạo mới ngẫu nhiên & Nút Lưu mã -->
+          <button id="btn-random-room-auth" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; padding: 3px 7px; border-radius: 5px; font-size: 10px; white-space: nowrap;">
+            TẠO MÃ MỚI
+          </button>
+          <button id="btn-save-room-auth" class="btn" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 3px 7px; border-radius: 5px; font-size: 10px; white-space: nowrap;">
+            LƯU MÃ
+          </button>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 5px;">
+        <!-- Các nút mở nhanh kèm URL parameters (?roomid=...&auth=...) -->
+        <div style="display: flex; align-items: center; gap: 4px;">
           <span style="font-size: 11px; color: #94a3b8; margin-right: 2px;">Mở trang:</span>
-          <a href="/Host.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f8fafc; padding: 4px 8px; border-radius: 6px; font-size: 11px;">Host</a>
-          <a href="/Viewer.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f8fafc; padding: 4px 8px; border-radius: 6px; font-size: 11px;">Viewer</a>
-          <a href="/Player1.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #38bdf8; padding: 4px 8px; border-radius: 6px; font-size: 11px;">P1</a>
-          <a href="/Player2.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f43f5e; padding: 4px 8px; border-radius: 6px; font-size: 11px;">P2</a>
-          <a href="/Player3.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #eab308; padding: 4px 8px; border-radius: 6px; font-size: 11px;">P3</a>
-          <a href="/Player4.html" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #22c55e; padding: 4px 8px; border-radius: 6px; font-size: 11px;">P4</a>
+          <a id="link-open-host" href="/Host.html?roomid=123456" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f8fafc; padding: 4px 7px; border-radius: 6px; font-size: 11px;">Host</a>
+          <a id="link-open-viewer" href="/Viewer.html?roomid=123456" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f8fafc; padding: 4px 7px; border-radius: 6px; font-size: 11px;">Viewer</a>
+          <a id="link-open-p1" href="/Player1.html?roomid=123456&auth=1111" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #38bdf8; padding: 4px 7px; border-radius: 6px; font-size: 11px;">P1</a>
+          <a id="link-open-p2" href="/Player2.html?roomid=123456&auth=2222" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f43f5e; padding: 4px 7px; border-radius: 6px; font-size: 11px;">P2</a>
+          <a id="link-open-p3" href="/Player3.html?roomid=123456&auth=3333" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #eab308; padding: 4px 7px; border-radius: 6px; font-size: 11px;">P3</a>
+          <a id="link-open-p4" href="/Player4.html?roomid=123456&auth=4444" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #22c55e; padding: 4px 7px; border-radius: 6px; font-size: 11px;">P4</a>
         </div>
       </header>
 
@@ -170,7 +201,7 @@
 
             <!-- Nút Set điểm thủ công cho 4 người chơi -->
             <button id="btn-open-manual-scores" class="btn" style="background: linear-gradient(135deg, #059669, #0d9488); color: white; padding: 6px 8px; border-radius: 7px; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; margin-bottom: 6px; border: 1px solid #14b8a6; font-weight: bold; cursor: pointer;">
-              <span>✏️ SET ĐIỂM THỦ CÔNG</span>
+              <span>️ SET ĐIỂM THỦ CÔNG</span>
             </button>
 
             <!-- Tên & Điểm 4 người chơi -->
@@ -213,8 +244,12 @@
                 <span>View Vòng 3</span>
               </button>
 
-              <button id="btn-switch-v4" class="btn btn-switch" data-view="vong4" style="background: linear-gradient(135deg, #059669, #047857); color: white; padding: 5px 6px; border-radius: 5px; font-size: 10px; border-left: 3px solid #4ade80; border: 1.5px solid transparent; grid-column: span 2; display: flex; align-items: center; justify-content: center;">
+              <button id="btn-switch-v4" class="btn btn-switch" data-view="vong4" style="background: linear-gradient(135deg, #059669, #047857); color: white; padding: 5px 6px; border-radius: 5px; font-size: 10px; border-left: 3px solid #4ade80; border: 1.5px solid transparent; display: flex; align-items: center; justify-content: center;">
                 <span>View Vòng 4</span>
+              </button>
+
+              <button id="btn-switch-chp" class="btn btn-switch" data-view="chp" style="background: linear-gradient(135deg, #d97706, #b45309); color: white; padding: 5px 6px; border-radius: 5px; font-size: 10px; border-left: 3px solid #fbbf24; border: 1.5px solid transparent; display: flex; align-items: center; justify-content: center;">
+                <span>View CHP</span>
               </button>
             </div>
           </div>
@@ -232,7 +267,7 @@
             <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(15, 23, 42, 0.6); border-radius: 4px; padding: 2px 6px; border: 1px solid #334155;">
               <span style="font-size: 9px; color: #94a3b8;">Loa Controller:</span>
               <button id="btn-toggle-controller-sound" class="btn" title="Bật/Tắt nghe âm thanh ngay trên máy Controller" style="background: #10b981; color: white; border: none; padding: 1px 6px; border-radius: 3px; font-size: 8.5px; font-weight: bold;">
-                🔊 BẬT
+                 BẬT
               </button>
             </div>
 
@@ -263,7 +298,7 @@
               </button>
 
               <button id="btn-sound-congrat" class="btn btn-sound" data-track="Congrat.mp3" style="background: #0f172a; color: #f43f5e; border: 1px solid #e11d48; padding: 5px 4px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; grid-column: span 2;">
-                🎉 Congrat
+                 Congrat
               </button>
             </div>
 
@@ -300,6 +335,9 @@
               <button class="btn btn-preview-view" data-view="vong4" style="background: #334155; color: white; padding: 4px 8px; border-radius: 5px; font-size: 11px; border-bottom: 2px solid #22c55e;">
                 Vòng 4
               </button>
+              <button class="btn btn-preview-view" data-view="chp" style="background: #334155; color: white; padding: 4px 8px; border-radius: 5px; font-size: 11px; border-bottom: 2px solid #fbbf24;">
+                Câu hỏi phụ
+              </button>
             </div>
           </div>
 
@@ -313,7 +351,7 @@
               <button id="btn-v1-timer-1" class="btn" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; padding: 8px 6px; border-radius: 6px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 2px 8px rgba(14,165,233,0.3);">
                 5 giây Lượt 1
               </button>
-              <button id="btn-v1-show-ans" class="btn" style="background: linear-gradient(135deg, #eab308, #ca8a04); color: black; padding: 8px 6px; border-radius: 6px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 2px 8px rgba(234,179,8,0.3);">
+              <button id="btn-v1-show-ans" class="btn" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: white; padding: 8px 6px; border-radius: 6px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 2px 8px rgba(13,148,136,0.3);">
                 Hiện đáp án đúng
               </button>
 
@@ -413,7 +451,7 @@
                 Dừng
               </button>
 
-              <button id="btn-v2-show-ans" class="btn" style="background: linear-gradient(135deg, #eab308, #ca8a04); color: black; padding: 5px 7px; border-radius: 5px; font-size: 11px;">
+              <button id="btn-v2-show-ans" class="btn" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: white; padding: 5px 7px; border-radius: 5px; font-size: 11px;">
                 Hiện đáp án
               </button>
 
@@ -468,7 +506,7 @@
           <!-- KHU VỰC ĐIỀU KHIỂN CHI TIẾT VÒNG 3 -->
           <div id="controller-vong3-control-panel" style="background: #0f172a; border-radius: 8px; padding: 8px 10px; border: 1.5px solid #a855f7; display: none; flex-direction: column; gap: 6px; flex-shrink: 0;">
             
-            <div style="display: grid; grid-template-columns: auto auto 1fr auto auto auto; gap: 4px; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
               <button id="btn-v3-select-players" class="btn" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; padding: 5px 8px; border-radius: 5px; font-size: 11px; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(124,58,237,0.3);">
                 Mở chuông Player...
               </button>
@@ -483,6 +521,10 @@
 
               <button id="btn-v3-resume-q" class="btn" style="background: linear-gradient(135deg, #d97706, #b45309); color: white; padding: 5px 8px; border-radius: 5px; font-size: 11px; display: flex; align-items: center; gap: 3px;">
                 Tiếp tục chạy
+              </button>
+
+              <button id="btn-v3-show-ans" class="btn" style="background: linear-gradient(135deg, #a855f7, #ec4899); color: white; padding: 5px 8px; border-radius: 5px; font-size: 11px; display: flex; align-items: center; gap: 3px; font-weight: bold;">
+                 Hiện đáp án
               </button>
 
               <button id="btn-v3-close-q" class="btn" style="background: #334155; color: #f87171; padding: 5px 8px; border-radius: 5px; font-size: 11px; display: flex; align-items: center; gap: 3px;">
@@ -524,7 +566,7 @@
           <div id="controller-vong4-control-panel" style="background: #0f172a; border-radius: 8px; padding: 8px 10px; border: 1.5px solid #22c55e; display: none; flex-direction: column; gap: 6px; flex-shrink: 0;">
             
             <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap; justify-content: space-between;">
-              <button id="btn-v4-show-gift" class="btn" style="background: linear-gradient(135deg, #eab308, #ca8a04); color: black; font-weight: bold; padding: 5px 8px; border-radius: 5px; font-size: 11px; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(234,179,8,0.3);">
+              <button id="btn-v4-show-gift" class="btn" style="background: linear-gradient(135deg, #ea580c, #c2410c); color: white; font-weight: bold; padding: 5px 8px; border-radius: 5px; font-size: 11px; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(234,88,12,0.3);">
                 Hiện gợi ý tặng
               </button>
 
@@ -578,6 +620,10 @@
               <button id="btn-v4-shuffle-money" class="btn" style="background: #1e293b; color: #cbd5e1; border: 1px solid #475569; padding: 5px 7px; border-radius: 5px; font-size: 10px;">
                 Xáo tiền
               </button>
+
+              <button id="btn-v4-reset-default" class="btn" style="background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; font-weight: bold; padding: 5px 10px; border-radius: 5px; font-size: 11px; box-shadow: 0 2px 8px rgba(220,38,38,0.4); border: 1px solid #f87171; display: flex; align-items: center; gap: 4px;">
+                Reset Vòng 4
+              </button>
             </div>
 
             <div style="background: #1e293b; padding: 4px 8px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 6px; border-left: 3px solid #22c55e; font-size: 10px;">
@@ -607,6 +653,78 @@
                 </div>
               </div>
             </div>
+
+          </div>
+
+          <!-- KHU VỰC ĐIỀU KHIỂN CHI TIẾT CÂU HỎI PHỤ (CHP) -->
+          <div id="controller-chp-control-panel" style="background: #0f172a; border-radius: 8px; padding: 8px 10px; border: 1.5px solid #fbbf24; display: none; flex-direction: column; gap: 6px; flex-shrink: 0;">
+            
+            <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+              
+              <!-- Nút 1: Chọn Player được mở chuông bằng tick box -->
+              <div style="display: flex; align-items: center; gap: 8px; background: #1e293b; padding: 4px 10px; border-radius: 6px; border: 1px solid #475569;">
+                <span style="font-size: 10px; color: #fbbf24; font-weight: bold;">CHO PHÉP BẤM:</span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <label style="display: flex; align-items: center; gap: 3px; font-size: 11px; color: #ffffff; font-weight: bold; cursor: pointer; user-select: none;">
+                    <input type="checkbox" class="chk-chp-player" value="1" checked style="accent-color: #fbbf24; width: 14px; height: 14px; cursor: pointer;"> P1
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 3px; font-size: 11px; color: #ffffff; font-weight: bold; cursor: pointer; user-select: none;">
+                    <input type="checkbox" class="chk-chp-player" value="2" checked style="accent-color: #fbbf24; width: 14px; height: 14px; cursor: pointer;"> P2
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 3px; font-size: 11px; color: #ffffff; font-weight: bold; cursor: pointer; user-select: none;">
+                    <input type="checkbox" class="chk-chp-player" value="3" checked style="accent-color: #fbbf24; width: 14px; height: 14px; cursor: pointer;"> P3
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 3px; font-size: 11px; color: #ffffff; font-weight: bold; cursor: pointer; user-select: none;">
+                    <input type="checkbox" class="chk-chp-player" value="4" checked style="accent-color: #fbbf24; width: 14px; height: 14px; cursor: pointer;"> P4
+                  </label>
+                </div>
+              </div>
+
+              <!-- 4 Nút điều khiển chuông còn lại -->
+              <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                <!-- Nút 2: Mở chuông -->
+                <button id="btn-chp-unlock" class="btn" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; font-weight: bold; padding: 5px 10px; border-radius: 5px; font-size: 11px; box-shadow: 0 2px 6px rgba(34,197,94,0.3);">
+                  Mở chuông
+                </button>
+
+                <!-- Nút 3: Khóa chuông -->
+                <button id="btn-chp-lock" class="btn" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-weight: bold; padding: 5px 10px; border-radius: 5px; font-size: 11px; box-shadow: 0 2px 6px rgba(239,68,68,0.3);">
+                  Khóa chuông
+                </button>
+
+                <!-- Nút 4: Reset và Mở -->
+                <button id="btn-chp-reset-unlock" class="btn" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; font-weight: bold; padding: 5px 10px; border-radius: 5px; font-size: 11px; box-shadow: 0 2px 6px rgba(14,165,233,0.3);">
+                  Reset & Mở
+                </button>
+
+                <!-- Nút 5: Reset và Khóa -->
+                <button id="btn-chp-reset-lock" class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-weight: bold; padding: 5px 10px; border-radius: 5px; font-size: 11px; box-shadow: 0 2px 6px rgba(245,158,11,0.3);">
+                  Reset & Khóa
+                </button>
+              </div>
+
+            </div>
+
+            <!-- Thanh thông báo trạng thái chuông CHP -->
+            <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 6px; border-left: 3px solid #fbbf24; font-size: 11px;">
+              <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                <div>
+                  <span style="color: #94a3b8;">TRẠNG THÁI:</span>
+                  <b id="ctrl-chp-status" style="color: #ef4444;">Đang khóa</b>
+                </div>
+                <div>
+                  <span style="color: #94a3b8;">ĐƯỢC PHÉP BẤM:</span>
+                  <b id="ctrl-chp-allowed-label" style="color: #fbbf24;">Tất cả Player</b>
+                </div>
+                <div>
+                  <span style="color: #94a3b8;">NGƯỜI BẤM SỚM NHẤT:</span>
+                  <span id="ctrl-chp-winner-label" style="font-weight: bold; color: #cbd5e1;">Chưa có</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Banner thông báo thí sinh bấm chuông CHP to, rõ ràng -->
+            <div id="ctrl-chp-winner-banner" style="display: none; background: linear-gradient(135deg, #15803d, #166534); border: 2px solid #facc15; box-shadow: 0 0 15px rgba(250, 204, 21, 0.4); border-radius: 6px; padding: 8px 12px; align-items: center; justify-content: space-between;"></div>
 
           </div>
 
@@ -779,7 +897,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
           <div>
             <h3 style="font-size: 16px; margin: 0; color: #2dd4bf; display: flex; align-items: center; gap: 8px;">
-              ✏️ SET ĐIỂM THỦ CÔNG (4 NGƯỜI CHƠI)
+              ️ SET ĐIỂM THỦ CÔNG (4 NGƯỜI CHƠI)
             </h3>
             <p style="margin: 3px 0 0 0; color: #94a3b8; font-size: 11px;">Nhập số điểm vào ô và bấm <b>Set</b> (gán bằng), <b>+</b> (cộng vào), hoặc <b>-</b> (trừ đi).</p>
           </div>
@@ -847,7 +965,7 @@
         <!-- Nút Đóng ở dưới cùng: Có 1 nút đóng để đóng popup và lưu các thay đổi điểm số -->
         <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #334155; padding-top: 12px;">
           <button type="button" id="btn-save-close-manual-scores" class="btn" style="background: linear-gradient(135deg, #059669, #0d9488); color: white; padding: 9px 24px; border-radius: 8px; font-size: 13px; font-weight: bold; border: 1px solid #14b8a6; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-            <span>💾 Đóng & Lưu các thay đổi điểm số</span>
+            <span> Đóng & Lưu các thay đổi điểm số</span>
           </button>
         </div>
       </div>
@@ -1001,7 +1119,7 @@
 
       function updateExcelUIStatus(fileName, fileSize, statusText, isSuccess, isError) {
         if (fileNameEl) {
-          const icon = isError ? '❌' : (isSuccess ? '✅' : '⏳');
+          const icon = isError ? '' : (isSuccess ? '' : '');
           const nameColor = isError ? '#f87171' : (isSuccess ? '#4ade80' : '#facc15');
           fileNameEl.innerHTML = `
             <span style="font-size: 15px;">${icon}</span>
@@ -1039,7 +1157,7 @@
             updateExcelUIStatus(
               file.name,
               sizeStr,
-              `✓ Đã nạp thành công: V1 (${v1Count} câu), V2 (${v2Count} chủ đề), V3 (${v3Count} câu), V4 (sẵn sàng)`,
+              `Đã nạp thành công: V1 (${v1Count} câu), V2 (${v2Count} chủ đề), V3 (${v3Count} câu), V4 (sẵn sàng)`,
               true,
               false
             );
@@ -1128,7 +1246,7 @@
             updateExcelUIStatus(
               'Ẩn số vàng.xlsx',
               formatFileSize(arrayBuffer.byteLength),
-              `✓ Đã nạp thành công từ server: V1 (${v1Count} câu), V2 (${v2Count} chủ đề), V3 (${v3Count} câu), V4 (sẵn sàng)`,
+              `Đã nạp thành công từ server: V1 (${v1Count} câu), V2 (${v2Count} chủ đề), V3 (${v3Count} câu), V4 (sẵn sàng)`,
               true,
               false
             );
@@ -1140,8 +1258,61 @@
         });
       }
 
+      // Xử lý Tạo ngẫu nhiên Mã phòng (6 số) & Mật khẩu 4 Player (4 số)
+      const btnRandomRoom = document.getElementById('btn-random-room-auth');
+      if (btnRandomRoom) {
+        btnRandomRoom.addEventListener('click', async () => {
+          const newRoomId = String(Math.floor(100000 + Math.random() * 900000));
+          const p1 = String(Math.floor(1000 + Math.random() * 9000));
+          const p2 = String(Math.floor(1000 + Math.random() * 9000));
+          const p3 = String(Math.floor(1000 + Math.random() * 9000));
+          const p4 = String(Math.floor(1000 + Math.random() * 9000));
+          
+          await window.broadcastStateUpdate({
+            roomAuth: {
+              roomId: newRoomId,
+              passwords: { 1: p1, 2: p2, 3: p3, 4: p4 }
+            }
+          });
+          showPopup(`Đã tạo mã phòng mới: ${newRoomId}`);
+        });
+      }
+
+      // Xử lý Lưu Mã phòng & Mật khẩu tùy chỉnh
+      const btnSaveRoom = document.getElementById('btn-save-room-auth');
+      if (btnSaveRoom) {
+        btnSaveRoom.addEventListener('click', async () => {
+          const roomId = (document.getElementById('ctrl-room-id')?.value || '123456').trim();
+          const p1 = (document.getElementById('ctrl-p1-pass')?.value || '1111').trim();
+          const p2 = (document.getElementById('ctrl-p2-pass')?.value || '2222').trim();
+          const p3 = (document.getElementById('ctrl-p3-pass')?.value || '3333').trim();
+          const p4 = (document.getElementById('ctrl-p4-pass')?.value || '4444').trim();
+
+          if (roomId.length !== 6 || !/^\d{6}$/.test(roomId)) {
+            showPopup('Mã phòng phải gồm đúng 6 chữ số');
+            return;
+          }
+          if ([p1, p2, p3, p4].some(p => p.length !== 4 || !/^\d{4}$/.test(p))) {
+            showPopup('Mật khẩu Player phải gồm đúng 4 chữ số');
+            return;
+          }
+
+          await window.broadcastStateUpdate({
+            roomAuth: {
+              roomId,
+              passwords: { 1: p1, 2: p2, 3: p3, 4: p4 }
+            }
+          });
+          showPopup(`Đã lưu mã phòng ${roomId} và mật khẩu 4 Player!`);
+        });
+      }
+
       // Cập nhật giao diện khi có thay đổi trạng thái
       window.onGameStateChange(function(state, changes) {
+        if (!currentPreviewingView) {
+          currentPreviewingView = state.currentView || 'blank';
+        }
+
         const badge = document.getElementById('current-view-badge');
         if (badge) {
           badge.textContent = viewNames[state.currentView] || state.currentView.toUpperCase();
@@ -1155,7 +1326,7 @@
             btn.style.boxShadow = '0 0 14px rgba(239, 68, 68, 0.7)';
             btn.style.borderColor = '#f87171';
             const statusSub = btn.querySelector('.switch-status');
-            if (statusSub) statusSub.textContent = '🔴 ĐANG CHIẾU';
+            if (statusSub) statusSub.textContent = ' ĐANG CHIẾU';
           } else {
             btn.style.boxShadow = 'none';
             btn.style.borderColor = 'transparent';
@@ -1205,12 +1376,53 @@
         // Cập nhật Vòng 4 UI
         updateVong4ControllerUI(state);
 
+        // Cập nhật Câu hỏi phụ (CHP) UI
+        updateCHPControllerUI(state);
+
         // Cập nhật Soundboard UI
         updateSoundboardControllerUI(state);
+
+        // Cập nhật Mã phòng & Mật khẩu các trang
+        updateRoomAuthControllerUI(state);
 
         // Cập nhật Preview
         renderPreview(currentPreviewingView);
       });
+
+      function updateRoomAuthControllerUI(state) {
+        const r = state.roomAuth || { roomId: '123456', passwords: { 1: '1111', 2: '2222', 3: '3333', 4: '4444' } };
+        const roomId = r.roomId || '123456';
+        const p1 = r.passwords?.[1] || '1111';
+        const p2 = r.passwords?.[2] || '2222';
+        const p3 = r.passwords?.[3] || '3333';
+        const p4 = r.passwords?.[4] || '4444';
+
+        const ctrlRoomId = document.getElementById('ctrl-room-id');
+        const ctrlP1 = document.getElementById('ctrl-p1-pass');
+        const ctrlP2 = document.getElementById('ctrl-p2-pass');
+        const ctrlP3 = document.getElementById('ctrl-p3-pass');
+        const ctrlP4 = document.getElementById('ctrl-p4-pass');
+
+        if (ctrlRoomId && document.activeElement !== ctrlRoomId) ctrlRoomId.value = roomId;
+        if (ctrlP1 && document.activeElement !== ctrlP1) ctrlP1.value = p1;
+        if (ctrlP2 && document.activeElement !== ctrlP2) ctrlP2.value = p2;
+        if (ctrlP3 && document.activeElement !== ctrlP3) ctrlP3.value = p3;
+        if (ctrlP4 && document.activeElement !== ctrlP4) ctrlP4.value = p4;
+
+        const linkHost = document.getElementById('link-open-host');
+        const linkViewer = document.getElementById('link-open-viewer');
+        const linkP1 = document.getElementById('link-open-p1');
+        const linkP2 = document.getElementById('link-open-p2');
+        const linkP3 = document.getElementById('link-open-p3');
+        const linkP4 = document.getElementById('link-open-p4');
+
+        if (linkHost) linkHost.href = `/Host.html?roomid=${roomId}`;
+        if (linkViewer) linkViewer.href = `/Viewer.html?roomid=${roomId}`;
+        if (linkP1) linkP1.href = `/Player1.html?roomid=${roomId}&auth=${p1}`;
+        if (linkP2) linkP2.href = `/Player2.html?roomid=${roomId}&auth=${p2}`;
+        if (linkP3) linkP3.href = `/Player3.html?roomid=${roomId}&auth=${p3}`;
+        if (linkP4) linkP4.href = `/Player4.html?roomid=${roomId}&auth=${p4}`;
+      }
 
       function updateSoundboardControllerUI(state) {
         const audioState = state.audioState || {};
@@ -1219,7 +1431,7 @@
         
         if (toggleBtn && typeof window.isControllerAudioEnabled === 'function') {
           const isEnabled = window.isControllerAudioEnabled();
-          toggleBtn.textContent = isEnabled ? '🔊 BẬT' : '🔇 TẮT';
+          toggleBtn.textContent = isEnabled ? ' BẬT' : ' TẮT';
           toggleBtn.style.background = isEnabled ? '#10b981' : '#64748b';
         }
 
@@ -1321,11 +1533,11 @@
         if (bellBadge) {
           if (v3.bellRungBy) {
             const pName = state.players[v3.bellRungBy - 1]?.name || `Player ${v3.bellRungBy}`;
-            bellBadge.innerHTML = `<b style="color: #facc15; font-size: 11px;">🚨 ${pName} ĐÃ BẤM CHUÔNG!</b>`;
+            bellBadge.innerHTML = `<b style="color: #facc15; font-size: 11px;"> ${pName} ĐÃ BẤM CHUÔNG!</b>`;
           } else if (!v3.isBellLocked) {
-            bellBadge.innerHTML = `<span style="color: #22c55e;">🔔 CHUÔNG ĐANG MỞ</span>`;
+            bellBadge.innerHTML = `<span style="color: #22c55e;"> CHUÔNG ĐANG MỞ</span>`;
           } else {
-            bellBadge.innerHTML = `<span style="color: #94a3b8;">🔒 Chuông đang khóa</span>`;
+            bellBadge.innerHTML = `<span style="color: #94a3b8;"> Chuông đang khóa</span>`;
           }
         }
       }
@@ -1373,7 +1585,7 @@
         const giftBadge = document.getElementById('ctrl-v4-gift-badge');
         if (giftBadge) {
           if (v4.showGiftClue) {
-            giftBadge.innerHTML = `<b style="color: #eab308;">🎁 ĐÃ HIỆN</b>`;
+            giftBadge.innerHTML = `<b style="color: #eab308;"> ĐÃ HIỆN</b>`;
           } else {
             giftBadge.innerHTML = `<span style="color: #94a3b8;">Chưa mở</span>`;
           }
@@ -1383,9 +1595,9 @@
         const resultStatusEl = document.getElementById('ctrl-v4-result-status');
         if (resultStatusEl) {
           if (v4.resultStatus === 'correct') {
-            resultStatusEl.innerHTML = `<b style="color: #4ade80;">✅ ĐÚNG (Giữ ${ (v4.totalMoney || 0).toLocaleString('vi-VN') }đ)</b>`;
+            resultStatusEl.innerHTML = `<b style="color: #4ade80;"> ĐÚNG (Giữ ${ (v4.totalMoney || 0).toLocaleString('vi-VN') }đ)</b>`;
           } else if (v4.resultStatus === 'wrong') {
-            resultStatusEl.innerHTML = `<b style="color: #ef4444;">❌ SAI (5.000.000đ)</b>`;
+            resultStatusEl.innerHTML = `<b style="color: #ef4444;"> SAI (5.000.000đ)</b>`;
           } else {
             resultStatusEl.innerHTML = `<span style="color: #cbd5e1;">---</span>`;
           }
@@ -1399,6 +1611,67 @@
             timerV4El.style.color = '#ef4444';
           } else {
             timerV4El.style.color = '#facc15';
+          }
+        }
+      }
+
+      function updateCHPControllerUI(state) {
+        const chp = state.chpState || {};
+        const isLocked = (chp.locked === true || chp.locked === undefined);
+        const winner = chp.buzzerWinner;
+
+        let allowedList = [1, 2, 3, 4];
+        if (Array.isArray(chp.allowedPlayerIds)) {
+          allowedList = chp.allowedPlayerIds.map(Number);
+        } else if (chp.allowedPlayerId && chp.allowedPlayerId !== 'all') {
+          allowedList = [Number(chp.allowedPlayerId)];
+        }
+
+        const statusEl = document.getElementById('ctrl-chp-status');
+        if (statusEl) {
+          statusEl.textContent = isLocked ? 'Đang khóa' : 'Đang mở';
+          statusEl.style.color = isLocked ? '#ef4444' : '#22c55e';
+        }
+
+        document.querySelectorAll('.chk-chp-player').forEach(cb => {
+          cb.checked = allowedList.includes(Number(cb.value));
+        });
+
+        const allowedEl = document.getElementById('ctrl-chp-allowed-label');
+        if (allowedEl) {
+          if (allowedList.length === 4) {
+            allowedEl.textContent = 'Tất cả Player';
+          } else if (allowedList.length === 0) {
+            allowedEl.textContent = 'Không có Player nào';
+          } else {
+            allowedEl.textContent = `Player ${allowedList.join(', ')}`;
+          }
+        }
+
+        const winnerEl = document.getElementById('ctrl-chp-winner-label');
+        const winnerBanner = document.getElementById('ctrl-chp-winner-banner');
+
+        if (winnerEl) {
+          if (winner) {
+            winnerEl.innerHTML = `<span style="background: #15803d; color: #facc15; padding: 2px 8px; border-radius: 4px; font-weight: 900; font-size: 12px; border: 1px solid #22c55e;">${winner.name} (Player ${winner.playerId}) - ${winner.time || ''}</span>`;
+          } else {
+            winnerEl.innerHTML = `<span style="color: #94a3b8;">Chưa có ai bấm</span>`;
+          }
+        }
+
+        if (winnerBanner) {
+          if (winner) {
+            winnerBanner.style.display = 'flex';
+            winnerBanner.innerHTML = `
+              <div style="font-size: 13px; font-weight: 900; color: #facc15; display: flex; align-items: center; gap: 8px;">
+                <span><b>${winner.name.toUpperCase()} (PLAYER ${winner.playerId})</b> ĐÃ BẤM CHUÔNG LÚC <b>${winner.time || ''}</b></span>
+              </div>
+              <button onclick="document.getElementById('btn-chp-reset-unlock').click()" class="btn" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+                Reset & Mở lại
+              </button>
+            `;
+          } else {
+            winnerBanner.style.display = 'none';
           }
         }
       }
@@ -1531,7 +1804,7 @@
         }
 
         if (v1.activeQuestion) {
-          if (qTurnEl) qTurnEl.textContent = `⚡ LƯỢT ${v1.activeQuestion.turn || 1} - CÂU ${v1.activeQuestion.index || 1}`;
+          if (qTurnEl) qTurnEl.textContent = ` LƯỢT ${v1.activeQuestion.turn || 1} - CÂU ${v1.activeQuestion.index || 1}`;
           if (qTextEl) qTextEl.textContent = v1.activeQuestion.q;
           if (qAnsEl) {
             if (v1.showAnswer) {
@@ -1573,11 +1846,11 @@
                 if (isTurnParticipant) {
                   if (isCorrect) {
                     boxEl.style.background = '#064e3b';
-                    ansEl.textContent = `${playerAns} (+10đ 🎉)`;
+                    ansEl.textContent = `${playerAns} (+10đ )`;
                     ansEl.style.color = '#4ade80';
                   } else {
                     boxEl.style.background = '#4c0519';
-                    ansEl.textContent = `${playerAns} (Sai ❌)`;
+                    ansEl.textContent = `${playerAns} (Sai )`;
                     ansEl.style.color = '#f87171';
                   }
                 } else {
@@ -1606,6 +1879,17 @@
         btn.addEventListener('click', async () => {
           const targetView = btn.getAttribute('data-view');
           btn.style.opacity = '0.7';
+          currentPreviewingView = targetView;
+          document.querySelectorAll('.btn-preview-view').forEach(b => {
+            if (b.getAttribute('data-view') === targetView) {
+              b.style.background = '#eab308';
+              b.style.color = '#000000';
+            } else {
+              b.style.background = '#334155';
+              b.style.color = '#ffffff';
+            }
+          });
+          renderPreview(targetView);
           await window.broadcastStateUpdate({ currentView: targetView });
           setTimeout(() => { btn.style.opacity = '1'; }, 200);
           showNotification(`Đã chuyển sang ${viewNames[targetView] || targetView} trên tất cả màn hình khác!`);
@@ -1621,7 +1905,7 @@
           if (typeof window.setControllerAudioEnabled === 'function') {
             window.setControllerAudioEnabled(nextState);
           }
-          btnToggleCtrlSound.textContent = nextState ? '🔊 BẬT' : '🔇 TẮT';
+          btnToggleCtrlSound.textContent = nextState ? ' BẬT' : ' TẮT';
           btnToggleCtrlSound.style.background = nextState ? '#10b981' : '#64748b';
           showPopup(nextState ? 'Đã BẬT loa tại Controller (nghe kiểm tra trực tiếp)' : 'Đã TẮT loa tại Controller (chỉ phát tới Host, Viewer & Thí sinh)');
         });
@@ -1742,9 +2026,9 @@
         return timerInterval;
       }
 
-      // 2. XỬ LÝ CÁC NÚT VIEW XEM TRƯỚC RIÊNG TẠI CONTROLLER
+      // 2. XỬ LÝ CÁC NÚT VIEW XEM TRƯỚC TẠI CONTROLLER (ĐỒNG BỘ CẢ SÂN KHẤU)
       document.querySelectorAll('.btn-preview-view').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
           const targetView = btn.getAttribute('data-view');
           currentPreviewingView = targetView;
           document.querySelectorAll('.btn-preview-view').forEach(b => {
@@ -1754,6 +2038,10 @@
           btn.style.background = '#eab308';
           btn.style.color = '#000000';
           renderPreview(targetView);
+
+          // Phát tín hiệu chuyển view đồng bộ đến toàn bộ màn hình khác (Viewer, Host, Player)
+          await window.broadcastStateUpdate({ currentView: targetView });
+          showNotification(`Đã phát tín hiệu chiếu ${viewNames[targetView] || targetView} lên tất cả màn hình!`);
         });
       });
 
@@ -2045,9 +2333,9 @@
         });
 
         if (winners.length > 0) {
-          showNotification(`🎉 Đã cộng +10 điểm cho: ${winners.join(', ')}!`);
+          showNotification(` Đã cộng +10 điểm cho: ${winners.join(', ')}!`);
         } else {
-          showNotification('❌ Không có người chơi nào trả lời đúng ở câu này.');
+          showNotification(' Không có người chơi nào trả lời đúng ở câu này.');
         }
       });
 
@@ -2064,7 +2352,7 @@
             scene: 'topics_board'
           }
         });
-        showNotification('📋 Đã chuyển sang BẢNG CHỦ ĐỀ VÒNG 2 trên tất cả màn hình!');
+        showNotification(' Đã chuyển sang BẢNG CHỦ ĐỀ VÒNG 2 trên tất cả màn hình!');
       });
 
       // 2. Chuyển cảnh Bảng câu hỏi
@@ -2076,7 +2364,7 @@
             scene: 'question_board'
           }
         });
-        showNotification('❓ Đã chuyển sang BẢNG CÂU HỎI VÒNG 2 trên tất cả màn hình!');
+        showNotification(' Đã chuyển sang BẢNG CÂU HỎI VÒNG 2 trên tất cả màn hình!');
       });
 
       // 2b. Nút Ẩn / Hiện Vòng 2 trên Viewer
@@ -2107,7 +2395,7 @@
               activePlayerTurn: playerNum
             }
           });
-          showNotification(`👤 Đã set lượt thi đấu cho Player ${playerNum}!`);
+          showNotification(` Đã set lượt thi đấu cho Player ${playerNum}!`);
         });
       });
 
@@ -2120,7 +2408,7 @@
             questionType: 2
           }
         });
-        showNotification('⚙️ Đã chọn loại câu hỏi: 2 ĐÁP ÁN');
+        showNotification('️ Đã chọn loại câu hỏi: 2 ĐÁP ÁN');
       });
 
       document.getElementById('btn-v2-type-4').addEventListener('click', async () => {
@@ -2131,7 +2419,7 @@
             questionType: 4
           }
         });
-        showNotification('⚙️ Đã chọn loại câu hỏi: 4 ĐÁP ÁN');
+        showNotification('️ Đã chọn loại câu hỏi: 4 ĐÁP ÁN');
       });
 
       // 5. Chọn chủ đề khi nhấn vào nút chủ đề
@@ -2153,7 +2441,7 @@
             chosenTopics: chosen
           }
         });
-        showNotification(`🎯 Đã chọn Chủ đề ${topicIndex + 1}: [${topicObj.topic}]`);
+        showNotification(` Đã chọn Chủ đề ${topicIndex + 1}: [${topicObj.topic}]`);
       };
 
       // 6. NÚT: HIỆN CÂU HỎI
@@ -2227,7 +2515,7 @@
         };
 
         await window.broadcastStateUpdate({ vong2State: newVong2State });
-        showNotification(`📖 Đã hiện câu hỏi (${qItem.options.length} đáp án) - Chủ đề: [${topicObj.topic}]`);
+        showNotification(` Đã hiện câu hỏi (${qItem.options.length} đáp án) - Chủ đề: [${topicObj.topic}]`);
       });
 
       // HÀM ĐẾM GIỜ CHUẨN XÁC TUYỆT ĐỐI THEO DATE.NOW() CHO VÒNG 2 (60 GIÂY ĐỒNG NHẤT)
@@ -2434,6 +2722,7 @@
       // ==========================================
       // BỘ ĐIỀU KHIỂN SỰ KIỆN VÒNG 3 (SO TÀI)
       // ==========================================
+      let timerIntervalV3 = null;
 
       // 1. POPUP CHỌN CÁC PLAYER ĐƯỢC MỞ CHUÔNG
       const modalBell = document.getElementById('modal-v3-bell-players');
@@ -2476,7 +2765,7 @@
         });
 
         modalBell.classList.remove('open');
-        showNotification(`🔔 Đã lưu danh sách mở chuông: ${selected.map(id => 'Player ' + id).join(', ')}`);
+        showNotification(` Đã lưu danh sách mở chuông: ${selected.map(id => 'Player ' + id).join(', ')}`);
       });
 
       // 2. NÚT: HIỆN Ô CÂU HỎI (Ô chủ đề và 3 gợi ý hiện ra nhưng không hiện nội dung)
@@ -2522,7 +2811,8 @@
             bellRungBy: null,
             rungPlayers: [],
             isBellLocked: true,
-            showAnswer: false
+            showAnswer: false,
+            isNewQuestion: true
           }
         });
 
@@ -2563,9 +2853,11 @@
 
           if (currentSec < lastDispatched) {
             lastDispatched = currentSec;
+            const currentLiveV3 = window.currentGameState.vong3State || {};
             await window.broadcastStateUpdate({
               vong3State: {
-                ...(window.currentGameState.vong3State || {}),
+                ...currentLiveV3,
+                revealedStage: Math.max(stage, currentLiveV3.revealedStage || stage),
                 stepTimerSeconds: currentSec
               }
             });
@@ -2587,7 +2879,7 @@
                   isBellLocked: false
                 }
               });
-              showNotification('💡 Hiện Gợi ý 1!');
+              showNotification(' Hiện Gợi ý 1!');
               runVong3StepCountdown(7, 2);
             } else if (nextStage === 3) {
               await window.broadcastStateUpdate({
@@ -2599,7 +2891,7 @@
                   isBellLocked: false
                 }
               });
-              showNotification('💡 Hiện Gợi ý 2!');
+              showNotification(' Hiện Gợi ý 2!');
               runVong3StepCountdown(7, 3);
             } else if (nextStage === 4) {
               await window.broadcastStateUpdate({
@@ -2611,7 +2903,7 @@
                   isBellLocked: false
                 }
               });
-              showNotification('💡 Hiện Gợi ý 3!');
+              showNotification(' Hiện Gợi ý 3!');
               runVong3StepCountdown(7, 4);
             } else {
               await window.broadcastStateUpdate({
@@ -2623,7 +2915,7 @@
                   isBellLocked: true
                 }
               });
-              showNotification('🔒 Hết 7 giây sau Gợi ý 3: Đã khóa chuông tất cả người chơi!');
+              showNotification(' Hết 7 giây sau Gợi ý 3: Đã khóa chuông tất cả người chơi!');
             }
           }
         }, 30);
@@ -2706,7 +2998,7 @@
           }
         });
 
-        showNotification('⏩ Tiếp tục chạy câu hỏi! Chuông đã được mở lại cho người chơi còn lại!');
+        showNotification(' Tiếp tục chạy câu hỏi! Chuông đã được mở lại cho người chơi còn lại!');
         runVong3StepCountdown(secondsLeft, currentStage);
       });
 
@@ -2738,7 +3030,7 @@
           }
         });
 
-        showNotification('✖️ Đã đóng câu hỏi Vòng 3 (Đã đánh dấu là đã dùng)!');
+        showNotification('️ Đã đóng câu hỏi Vòng 3 (Đã đánh dấu là đã dùng)!');
       });
 
       // 6. NÚT: RESET CHUÔNG (Reset tín hiệu chuông và khóa chuông, cho phép người chơi bấm lại ở câu sau)
@@ -2750,11 +3042,31 @@
             bellRungBy: null,
             bellRungTime: null,
             rungPlayers: [],
-            isBellLocked: true
+            isBellLocked: true,
+            isResetBuzzer: true
           }
         });
 
-        showNotification('🔄 Đã reset tín hiệu chuông và khóa chuông!');
+        showNotification(' Đã reset tín hiệu chuông và khóa chuông!');
+      });
+
+      // 7. NÚT: HIỆN ĐÁP ÁN (Hiện đáp án đúng của câu hỏi Vòng 3)
+      document.getElementById('btn-v3-show-ans').addEventListener('click', async () => {
+        const v3 = window.currentGameState.vong3State || {};
+        if (!v3.activeQuestion || !v3.isBoxesVisible) {
+          showPopup('Vui lòng chọn và hiện câu hỏi trước!');
+          return;
+        }
+
+        const currentShow = !!v3.showAnswer;
+        await window.broadcastStateUpdate({
+          vong3State: {
+            ...v3,
+            showAnswer: !currentShow
+          }
+        });
+
+        showNotification(!currentShow ? ' Đã hiển thị đáp án Vòng 3!' : ' Đã ẩn đáp án Vòng 3!');
       });
 
       // ==========================================
@@ -2796,7 +3108,7 @@
             showGiftClue: !current
           }
         });
-        showNotification(!current ? '🎁 Đã hiện Gợi ý tặng Vòng 4 trên tất cả màn hình!' : '🎁 Đã ẩn Gợi ý tặng Vòng 4!');
+        showNotification(!current ? ' Đã hiện Gợi ý tặng Vòng 4 trên tất cả màn hình!' : ' Đã ẩn Gợi ý tặng Vòng 4!');
       });
 
       // 2. CHỌN Ô SỐ (1 ĐẾN 6)
@@ -2811,7 +3123,7 @@
             selectedBoxId: boxId
           }
         });
-        showNotification(`🎯 Đã chọn Ô số ${boxId} (Màu ${target.name})!`);
+        showNotification(` Đã chọn Ô số ${boxId} (Màu ${target.name})!`);
       };
 
       document.querySelectorAll('.btn-v4-select-box').forEach(btn => {
@@ -2974,7 +3286,6 @@
           onTick: async (sec) => {
             await window.broadcastStateUpdate({
               vong4State: {
-                ...(window.currentGameState.vong4State || {}),
                 timerSeconds: sec
               }
             });
@@ -2982,7 +3293,6 @@
           onComplete: async () => {
             await window.broadcastStateUpdate({
               vong4State: {
-                ...(window.currentGameState.vong4State || {}),
                 timerRunning: false,
                 timerSeconds: 0
               }
@@ -3008,7 +3318,7 @@
         showNotification('Đã dừng đồng hồ 120s!');
       });
 
-      // 9. NÚT: ĐÚNG (Hiện đáp án đúng, giữ nguyên số tiền hiện có)
+      // 9. NÚT: ĐÚNG (Hiện đáp án đúng, giữ nguyên số tiền hiện có & phát nhạc Congrat)
       document.getElementById('btn-v4-result-correct').addEventListener('click', async () => {
         clearInterval(timerIntervalV4);
         const v4 = window.currentGameState.vong4State || {};
@@ -3020,10 +3330,18 @@
             timerRunning: false,
             showAnswer: true,
             resultStatus: 'correct'
+          },
+          audioState: {
+            soundboard: {
+              track: 'Congrat.mp3',
+              playing: true,
+              loop: false,
+              timestamp: Date.now()
+            }
           }
         });
 
-        showNotification(`ĐÚNG! Hiện đáp án đúng, giữ nguyên tiền thưởng: ${currentTotal.toLocaleString('vi-VN')} VNĐ!`);
+        showNotification(`ĐÚNG! Phát nhạc Congrat & giữ nguyên tiền thưởng: ${currentTotal.toLocaleString('vi-VN')} VNĐ!`);
       });
 
       // 10. NÚT: SAI (Hiện đáp án đúng, số tiền tổng trở thành 5.000.000)
@@ -3057,6 +3375,98 @@
         showNotification('Đã xáo ngẫu nhiên 6 giá trị tiền vào 6 ô số!');
       });
 
+      // 12. NÚT: RESET VỀ TRẠNG THÁI MẶC ĐỊNH
+      document.getElementById('btn-v4-reset-default').addEventListener('click', async () => {
+        if (timerIntervalV4) {
+          clearInterval(timerIntervalV4);
+          timerIntervalV4 = null;
+        }
+
+        const defaultBoxes = generateRandomBoxes();
+
+        await window.broadcastStateUpdate({
+          vong4State: {
+            totalMoney: 8000000,
+            timerSeconds: 120,
+            timerRunning: false,
+            showGiftClue: false,
+            showAnswer: false,
+            resultStatus: null,
+            selectedBoxId: null,
+            boxes: defaultBoxes
+          }
+        });
+
+        showNotification('Đã Reset Vòng 4 về trạng thái mặc định (8.000.000 VNĐ, 120s, ẩn gợi ý & đáp án)!');
+      });
+
+      // ==========================================
+      // BỘ ĐIỀU KHIỂN SỰ KIỆN CÂU HỎI PHỤ (CHP)
+      // ==========================================
+      document.querySelectorAll('.chk-chp-player').forEach(cb => {
+        cb.addEventListener('change', async () => {
+          const checkedNodes = document.querySelectorAll('.chk-chp-player:checked');
+          const selectedIds = Array.from(checkedNodes).map(node => Number(node.value));
+          const chp = window.currentGameState.chpState || {};
+          await window.broadcastStateUpdate({
+            chpState: {
+              ...chp,
+              allowedPlayerIds: selectedIds,
+              allowedPlayerId: selectedIds.length === 4 ? 'all' : (selectedIds.length === 1 ? selectedIds[0] : selectedIds)
+            }
+          });
+          const label = selectedIds.length === 4 ? 'Tất cả Player' : (selectedIds.length === 0 ? 'Không ai' : 'Player ' + selectedIds.join(', '));
+          showNotification(`Đã cập nhật danh sách Player được bấm chuông CHP: ${label}`);
+        });
+      });
+
+      document.getElementById('btn-chp-unlock')?.addEventListener('click', async () => {
+        const chp = window.currentGameState.chpState || {};
+        await window.broadcastStateUpdate({
+          chpState: {
+            ...chp,
+            locked: false,
+            buzzerWinner: null
+          }
+        });
+        showNotification('Đã MỞ chuông Câu hỏi phụ!');
+      });
+
+      document.getElementById('btn-chp-lock')?.addEventListener('click', async () => {
+        const chp = window.currentGameState.chpState || {};
+        await window.broadcastStateUpdate({
+          chpState: {
+            ...chp,
+            locked: true
+          }
+        });
+        showNotification('Đã KHÓA chuông Câu hỏi phụ!');
+      });
+
+      document.getElementById('btn-chp-reset-unlock')?.addEventListener('click', async () => {
+        const chp = window.currentGameState.chpState || {};
+        await window.broadcastStateUpdate({
+          chpState: {
+            ...chp,
+            buzzerWinner: null,
+            locked: false
+          }
+        });
+        showNotification('Đã Reset tín hiệu chuông & MỞ chuông CHP!');
+      });
+
+      document.getElementById('btn-chp-reset-lock')?.addEventListener('click', async () => {
+        const chp = window.currentGameState.chpState || {};
+        await window.broadcastStateUpdate({
+          chpState: {
+            ...chp,
+            buzzerWinner: null,
+            locked: true
+          }
+        });
+        showNotification('Đã Reset tín hiệu chuông & KHÓA chuông CHP!');
+      });
+
       // ==========================================
       // RENDER PREVIEW CONTROLLER
       // ==========================================
@@ -3085,6 +3495,12 @@
           v4ControlPanel.style.display = (viewKey === 'vong4') ? 'flex' : 'none';
         }
 
+        // Chỉ xuất hiện bảng nút bấm điều khiển Câu hỏi phụ khi đang xem View CHP
+        const chpControlPanel = document.getElementById('controller-chp-control-panel');
+        if (chpControlPanel) {
+          chpControlPanel.style.display = (viewKey === 'chp') ? 'flex' : 'none';
+        }
+
         const area = document.getElementById('controller-preview-area');
         if (!area) return;
 
@@ -3093,6 +3509,79 @@
             <div style="text-align: center; padding: 16px;">
               <h3 style="color: #94a3b8; margin: 4px 0 0 0; font-size: 14px;">CHẾ ĐỘ MÀN HÌNH TRỐNG</h3>
               <p style="color: #64748b; font-size: 11px; margin: 2px 0 0 0;">Tất cả các màn hình Host, Player 1-4, Viewer đang ở trạng thái trống.</p>
+            </div>
+          `;
+          return;
+        }
+
+        if (viewKey === 'chp') {
+          const chp = window.currentGameState.chpState || {};
+          const isLocked = (chp.locked === true || chp.locked === undefined);
+          const winner = chp.buzzerWinner;
+          const players = window.currentGameState.players || [];
+          let allowedList = [1, 2, 3, 4];
+          if (Array.isArray(chp.allowedPlayerIds)) {
+            allowedList = chp.allowedPlayerIds.map(Number);
+          } else if (chp.allowedPlayerId && chp.allowedPlayerId !== 'all') {
+            allowedList = [Number(chp.allowedPlayerId)];
+          }
+
+          area.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 12px; padding: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="background: #fbbf24; color: #000; font-weight: 900; padding: 3px 8px; border-radius: 4px; font-size: 11px;">GIÁM SÁT CHUÔNG CÂU HỎI PHỤ</span>
+                  <span style="background: ${isLocked ? '#dc2626' : '#16a34a'}; color: white; font-weight: bold; padding: 3px 8px; border-radius: 4px; font-size: 11px;">
+                    ${isLocked ? 'CHUÔNG ĐANG KHÓA' : 'CHUÔNG ĐANG MỞ'}
+                  </span>
+                </div>
+                <div style="font-size: 11px; color: #94a3b8;">
+                  Được phép bấm: <b style="color: #fbbf24;">${allowedList.length === 4 ? 'Tất cả 4 Player' : 'Player ' + allowedList.join(', ')}</b>
+                </div>
+              </div>
+
+              ${winner ? `
+                <div style="background: linear-gradient(135deg, #15803d, #166534); border: 2px solid #facc15; border-radius: 8px; padding: 14px; text-align: center; box-shadow: 0 0 20px rgba(250, 204, 21, 0.4);">
+                  <div style="font-size: 11px; color: #fef08a; text-transform: uppercase; font-weight: bold;">THÍ SINH BẤM CHUÔNG NHANH NHẤT:</div>
+                  <div style="font-size: 20px; font-weight: 900; color: #ffffff; margin: 4px 0;">
+                    ${winner.name.toUpperCase()} (PLAYER ${winner.playerId})
+                  </div>
+                  <div style="font-size: 12px; color: #facc15;">Thời gian ghi nhận: <b>${winner.time || ''}</b></div>
+                </div>
+              ` : `
+                <div style="background: #1e293b; border: 1.5px dashed #475569; border-radius: 8px; padding: 14px; text-align: center;">
+                  <div style="font-size: 13px; color: ${isLocked ? '#94a3b8' : '#4ade80'}; font-weight: bold;">
+                    ${isLocked ? 'Chuông đang khóa - Bấm nút "Mở chuông" phía trên để thí sinh bấm' : 'Chuông đang mở! Đang chờ thí sinh bấm chuông...'}
+                  </div>
+                </div>
+              `}
+
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 4px;">
+                ${[1, 2, 3, 4].map(id => {
+                  const p = players.find(x => Number(x.id) === id) || { name: `Người chơi ${id}` };
+                  const isEligible = allowedList.includes(id);
+                  const isWinnerThis = winner && Number(winner.playerId) === id;
+                  let bg = '#1e293b';
+                  let border = '1px solid #334155';
+                  let statusText = isEligible ? (isLocked ? 'Chờ mở chuông' : 'Sẵn sàng') : 'Không được bấm';
+                  let statusColor = isEligible ? (isLocked ? '#94a3b8' : '#22c55e') : '#ef4444';
+
+                  if (isWinnerThis) {
+                    bg = 'linear-gradient(135deg, #15803d, #166534)';
+                    border = '2px solid #facc15';
+                    statusText = 'ĐÃ BẤM ĐẦU TIÊN!';
+                    statusColor = '#facc15';
+                  }
+
+                  return `
+                    <div style="background: ${bg}; border: ${border}; border-radius: 6px; padding: 8px; text-align: center;">
+                      <div style="font-size: 11px; color: #94a3b8;">Player ${id}</div>
+                      <div style="font-size: 12px; font-weight: bold; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 2px 0;">${p.name}</div>
+                      <div style="font-size: 10px; font-weight: bold; color: ${statusColor}; margin-top: 4px;">${statusText}</div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
             </div>
           `;
           return;
@@ -3193,7 +3682,6 @@
             if (!activeQ || !activeQ.isOpened) {
               area.innerHTML = `
                 <div style="text-align: center; padding: 24px;">
-                  <span style="font-size: 28px;">❓</span>
                   <h3 style="color: #f59e0b; margin: 6px 0 0 0; font-size: 14px;">BẢNG CÂU HỎI VÒNG 2 (MẶC ĐỊNH ĐANG ẨN)</h3>
                   <p style="color: #94a3b8; font-size: 12px; margin: 4px 0 10px 0;">
                     Chủ đề đang chọn: <b style="color: #c084fc;">${v2.selectedTopicName || 'Chưa chọn'}</b> | Loại: <b style="color: #facc15;">${v2.questionType || 4} đáp án</b>
@@ -3226,7 +3714,7 @@
                     bg = '#facc15'; // Vàng
                     color = '#000000'; // Chữ đen
                     border = '3px solid #ffffff';
-                    tag += `<span style="background: #22c55e; color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">✓ ĐÚNG</span>`;
+                    tag += `<span style="background: #22c55e; color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">ĐÚNG</span>`;
                   } else {
                     bg = '#020617'; // Đen
                     color = '#ffffff'; // Chữ trắng
@@ -3267,7 +3755,7 @@
 
                 ${v2.scored ? `
                   <div style="margin-top: 6px; background: #064e3b; border: 1.5px solid #22c55e; border-radius: 6px; padding: 6px 12px; font-size: 11px; color: #a7f3d0; text-align: center;">
-                    🎉 Đã chấm điểm! Player ${v2.activePlayerTurn || 1} được cộng <b>+${v2.awardedScore || 0} điểm</b> từ đáp án đúng số ${correctIdx}.
+                    Đã chấm điểm! Player ${v2.activePlayerTurn || 1} được cộng <b>+${v2.awardedScore || 0} điểm</b> từ đáp án đúng số ${correctIdx}.
                   </div>
                 ` : ''}
               `;
@@ -3286,7 +3774,6 @@
           if (!activeQ || !isVisible) {
             area.innerHTML = `
               <div style="text-align: center; padding: 24px;">
-                <span style="font-size: 28px;">🎯</span>
                 <h3 style="color: #c084fc; margin: 6px 0 0 0; font-size: 14px;">VÒNG 3: SO TÀI (ĐANG CHỜ MỞ Ô CÂU HỎI)</h3>
                 <p style="color: #94a3b8; font-size: 12px; margin: 4px 0 10px 0;">Nhấn nút <b>"Hiện ô câu hỏi"</b> hoặc <b>"Chạy câu hỏi"</b> để mở câu hỏi gần nhất chưa dùng.</p>
                 <div style="font-size: 11px; color: #64748b;">Số câu đã dùng: ${(v3.usedQuestionIndices || []).length} câu</div>
@@ -3317,12 +3804,12 @@
               if (isCurrentRung) {
                 bg = 'linear-gradient(135deg, #b45309, #d97706)';
                 border = '2px solid #facc15';
-                statusText = '<b style="color: #ffffff;">🚨 ĐÃ BẤM CHUÔNG!</b>';
+                statusText = '<b style="color: #ffffff;">ĐÃ BẤM CHUÔNG!</b>';
               } else if (hasRung) {
                 statusText = '<span style="color: #f87171;">Đã bấm lượt trước</span>';
               } else if (!v3.isBellLocked && isAllowed) {
                 border = '1.5px solid #22c55e';
-                statusText = '<b style="color: #22c55e;">🔔 Đang mở</b>';
+                statusText = '<b style="color: #22c55e;">Đang mở</b>';
               }
 
               return `
@@ -3486,7 +3973,7 @@
 
         await window.broadcastStateUpdate({ players: updatedPlayers });
         modalPlayers.classList.remove('open');
-        showNotification('👥 Đã cập nhật danh sách 4 người chơi!');
+        showNotification(' Đã cập nhật danh sách 4 người chơi!');
       });
 
       // 4b. MODAL SET ĐIỂM THỦ CÔNG CHO 4 PLAYER
@@ -3568,7 +4055,7 @@
 
         await window.broadcastStateUpdate({ players: updatedPlayers });
         if (modalManualScores) modalManualScores.classList.remove('open');
-        showNotification('✓ Đã cập nhật và lưu thay đổi điểm số thành công!');
+        showNotification('Đã cập nhật và lưu thay đổi điểm số thành công!');
       }
 
       if (btnSaveCloseManualScores) {
@@ -3591,7 +4078,7 @@
           updateExcelUIStatus(
             'Dữ liệu câu hỏi hiện tại',
             'Hệ thống',
-            `✓ Đang có sẵn: V1 (${v1Count} câu), V2 (${v2Count} chủ đề), V3 (${v3Count} câu), V4 (sẵn sàng)`,
+            `Đang có sẵn: V1 (${v1Count} câu), V2 (${v2Count} chủ đề), V3 (${v3Count} câu), V4 (sẵn sàng)`,
             true,
             false
           );
@@ -3687,7 +4174,7 @@
           container.innerHTML = `
             <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">Vòng 4: Ẩn số may mắn:</div>
             <div style="background: #1e293b; padding: 8px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #eab308; font-size: 12px;">
-              <b>🎁 Ô Tặng:</b> "${gift.clue}" -> Đáp án: <span style="color: #4ade80;">${gift.answer}</span>
+              <b> Ô Tặng:</b> "${gift.clue}" -> Đáp án: <span style="color: #4ade80;">${gift.answer}</span>
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px; max-height: 240px; overflow-y: auto;">
               ${clues.map(c => `
