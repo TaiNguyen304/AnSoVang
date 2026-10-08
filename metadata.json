@@ -1,6 +1,6 @@
 {
-  "name": "An Số Vàng Hub",
-  "description": "Hệ thống web đa trang kết nối với máy chủ An Số Vàng trên Render, hỗ trợ bảo mật DevTools và tối ưu hiển thị.",
+  "name": "Ẩn Số Vàng Hub",
+  "description": "Hệ thống web đa trang kết nối với máy chủ Ẩn Số Vàng trên Render, hỗ trợ bảo mật DevTools và tối ưu hiển thị.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

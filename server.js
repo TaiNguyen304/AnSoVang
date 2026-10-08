@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import GameCipher from './cipher.js';
 
@@ -90,8 +91,8 @@ function createDefaultGameState(roomId = '123456') {
         { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true, money: 200000, revealedMoney: false, revealedClue: false, moneyDeducted: false },
         { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', money: 300000, revealedMoney: false, revealedClue: false, moneyDeducted: false },
         { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', money: 500000, revealedMoney: false, revealedClue: false, moneyDeducted: false },
-        { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', money: 0, revealedMoney: false, revealedClue: false, moneyDeducted: false },
-        { id: 6, name: 'Cam', color: '#ffa500', text: 'Ô SỐ 6', money: 1000000, revealedMoney: false, revealedClue: false, moneyDeducted: false }
+        { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', darkText: true, money: 0, revealedMoney: false, revealedClue: false, moneyDeducted: false },
+        { id: 6, name: 'Cam', color: '#ff7700', text: 'Ô SỐ 6', darkText: true, money: 1000000, revealedMoney: false, revealedClue: false, moneyDeducted: false }
       ],
       showAnswer: false,
       resultStatus: null
@@ -145,32 +146,60 @@ app.use((req, res, next) => {
 const distDir = path.join(__dirname, 'dist');
 const staticDir = fs.existsSync(distDir) ? distDir : __dirname;
 
-// Ngăn trình duyệt cache file sync-client.js
+// Favicon endpoint để ngăn lỗi 404 trong Console trình duyệt
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+// Xử lý các request từ extension trình duyệt (/site_integration) trả về 200 để không sinh lỗi 403 trong console
+app.use(['/site_integration', '/site_integration/*'], (req, res) => {
+  res.status(200).json({ code: 200, status: 'ok', handled: true });
+});
+
+// Caching tối ưu cho tài nguyên tĩnh (Audio, fonts, styles) và ngăn cache HTML/JS
 app.use((req, res, next) => {
-  if (req.url && req.url.includes('sync-client.js')) {
+  if (req.url && (req.url.includes('sync-client.js') || req.url.match(/\.html(\?|$)/i))) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
+  } else if (req.url && req.url.match(/\.(mp3|wav|ogg|png|jpg|jpeg|gif|svg|woff2?)$/i)) {
+    // Cache âm thanh và tài nguyên tĩnh 7 ngày để chạy mượt mà kể cả khi mạng yếu
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
   }
   next();
 });
 
-app.use(express.static(staticDir));
+const staticOptions = {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+};
+
+app.use(express.static(staticDir, staticOptions));
 if (staticDir !== __dirname) {
-  app.use(express.static(__dirname));
+  app.use(express.static(__dirname, staticOptions));
 }
 
 let sseClients = [];
 function broadcastSSE(roomId = '123456') {
   const rid = String(roomId || '123456').trim() || '123456';
   const targetState = getRoomState(rid);
-  const encPayload = GameCipher.encrypt(targetState);
-  const sseData = `data: ${JSON.stringify({ payload: encPayload })}\n\n`;
+  const now = Date.now();
+  const encPayload = GameCipher.encrypt({
+    ...targetState,
+    serverTime: now
+  });
+  const sseData = `data: ${JSON.stringify({ payload: encPayload, serverTime: now })}\n\n`;
 
   sseClients = sseClients.filter(client => {
     if (client.roomId && client.roomId !== rid) return true;
     try {
       client.res.write(sseData);
+      if (typeof client.res.flush === 'function') client.res.flush();
       return true;
     } catch (e) {
       return false;
@@ -178,21 +207,59 @@ function broadcastSSE(roomId = '123456') {
   });
 }
 
-// API Server-Sent Events (SSE) theo từng phòng độc lập
+// Gửi tín hiệu Heartbeat ping định kỳ 2.5s để giữ kết nối SSE luôn thông suốt, không bao giờ bị nghẽn hay trễ mạng
+setInterval(() => {
+  sseClients = sseClients.filter(client => {
+    try {
+      client.res.write(':ping\n\n');
+      if (typeof client.res.flush === 'function') client.res.flush();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  });
+}, 2500);
+
+// API Lấy mốc thời gian chuẩn của Server (NTP Time Sync) để đồng bộ đồng hồ tuyệt đối giữa mọi máy
+app.get('/api/game/time', (req, res) => {
+  res.json({ serverTime: Date.now(), clientTime: req.query._t ? Number(req.query._t) : undefined });
+});
+
+// API Server-Sent Events (SSE) theo từng phòng độc lập (0ms delay, triệt tiêu hoàn toàn proxy buffering trên OnRender / Local)
 app.get('/api/game/events', (req, res) => {
   const roomId = String(req.query.roomid || '123456').trim() || '123456';
+
   res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-transform',
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform, no-store, must-revalidate',
     'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*'
+    'X-Accel-Buffering': 'no', // Vô hiệu hóa bộ đệm NGINX / Render reverse proxy
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': '*'
   });
+
+  if (typeof res.flushHeaders === 'function') res.flushHeaders();
+  if (req.socket) {
+    req.socket.setNoDelay(true); // Tắt Nagle algorithm, gửi gói tin ngay lập tức (0ms)
+    req.socket.setKeepAlive(true, 1000);
+  }
+
+  // Gửi 2KB padding comment để ngay lập tức vượt qua ngưỡng đệm 1KB-2KB của các proxy trung gian
+  res.write(':' + ' '.repeat(2048) + '\n\n');
+
   const targetState = getRoomState(roomId);
-  const encPayload = GameCipher.encrypt(targetState);
-  res.write(`data: ${JSON.stringify({ payload: encPayload })}\n\n`);
-  sseClients.push({ res, roomId });
+  const now = Date.now();
+  const encPayload = GameCipher.encrypt({
+    ...targetState,
+    serverTime: now
+  });
+  res.write(`data: ${JSON.stringify({ payload: encPayload, serverTime: now })}\n\n`);
+  if (typeof res.flush === 'function') res.flush();
+
+  const clientObj = { res, roomId };
+  sseClients.push(clientObj);
   req.on('close', () => {
-    sseClients = sseClients.filter(c => c.res !== res);
+    sseClients = sseClients.filter(c => c !== clientObj);
   });
 });
 
@@ -200,8 +267,12 @@ app.get('/api/game/events', (req, res) => {
 app.get('/api/game/state', (req, res) => {
   const roomId = String(req.query.roomid || '123456').trim() || '123456';
   const targetState = getRoomState(roomId);
-  const encPayload = GameCipher.encrypt(targetState);
-  res.json({ payload: encPayload });
+  const now = Date.now();
+  const encPayload = GameCipher.encrypt({
+    ...targetState,
+    serverTime: now
+  });
+  res.json({ payload: encPayload, serverTime: now });
 });
 
 // API Cập nhật trạng thái phòng (Nhận và trả dữ liệu mã hóa)
@@ -236,29 +307,221 @@ app.post('/api/game/state', (req, res) => {
   }
 
   if (data.vong1State) {
+    const prevV1 = gameState.vong1State || {};
+    const nextV1 = { ...data.vong1State };
+
+    // SERVER-AUTHORITATIVE TIMER VÒNG 1
+    const serverNow = Date.now();
+    const isStart = nextV1.isStartTimer === true;
+    const isReset = nextV1.isResetTimer === true;
+    const isStop = nextV1.isStopTimer === true;
+
+    delete nextV1.isStartTimer;
+    delete nextV1.isResetTimer;
+    delete nextV1.isStopTimer;
+
+    const isExplicitReset = (isReset && nextV1.timerRunning !== true);
+    const isExplicitStart = (
+      isStart ||
+      (isReset && nextV1.timerRunning === true) ||
+      (nextV1.timerRunning === true && !prevV1.timerRunning)
+    );
+    const isExplicitStop = (
+      isStop ||
+      (nextV1.timerRunning === false && prevV1.timerRunning === true)
+    );
+
+    if (isExplicitReset) {
+      const dur = Number(nextV1.timerDuration || nextV1.timerSeconds || 5);
+      nextV1.timerDuration = dur;
+      nextV1.timerSeconds = dur;
+      nextV1.timerStartTime = 0;
+      nextV1.timerEndTime = 0;
+      nextV1.timerRunning = false;
+    } else if (isExplicitStart) {
+      const dur = Number(nextV1.timerDuration || nextV1.timerSeconds || 5);
+      nextV1.timerDuration = dur;
+      nextV1.timerStartTime = serverNow;
+      nextV1.timerEndTime = serverNow + dur * 1000;
+      nextV1.timerSeconds = dur;
+      nextV1.timerRunning = true;
+    } else if (isExplicitStop) {
+      let stoppedSec = nextV1.timerSeconds;
+      if (typeof stoppedSec !== 'number') {
+        const prevEnd = Number(prevV1.timerEndTime) || 0;
+        stoppedSec = prevEnd > serverNow ? Math.max(0, Math.ceil((prevEnd - serverNow) / 1000)) : 0;
+      }
+      nextV1.timerSeconds = Math.max(0, stoppedSec);
+      nextV1.timerStartTime = 0;
+      nextV1.timerEndTime = 0;
+      nextV1.timerRunning = false;
+    } else {
+      if (prevV1.timerRunning && prevV1.timerEndTime > 0 && prevV1.timerEndTime <= serverNow) {
+        nextV1.timerRunning = false;
+        nextV1.timerEndTime = 0;
+        nextV1.timerSeconds = 0;
+      } else {
+        nextV1.timerRunning = prevV1.timerRunning || false;
+        nextV1.timerStartTime = prevV1.timerStartTime || 0;
+        nextV1.timerEndTime = prevV1.timerEndTime || 0;
+        nextV1.timerDuration = prevV1.timerDuration || 5;
+        nextV1.timerSeconds = (typeof prevV1.timerSeconds === 'number') ? prevV1.timerSeconds : 5;
+      }
+    }
+
+    // Bảo toàn đáp án các thí sinh (không để một cập nhật từ Controller hay Player khác xóa mất đáp án)
+    let mergedAnswers = {
+      ...(prevV1.answers || {})
+    };
+    if (nextV1.answers && typeof nextV1.answers === 'object') {
+      mergedAnswers = {
+        ...mergedAnswers,
+        ...nextV1.answers
+      };
+    }
+    // Nếu là câu hỏi mới thì khởi tạo lại đáp án
+    const isNewQ = nextV1.isNewQuestion || (
+      nextV1.activeQuestion && prevV1.activeQuestion &&
+      (nextV1.activeQuestion.index !== prevV1.activeQuestion.index || nextV1.activeQuestion.turn !== prevV1.activeQuestion.turn)
+    );
+    if (isNewQ) {
+      mergedAnswers = nextV1.answers || {};
+    }
+
     gameState.vong1State = {
-      ...(gameState.vong1State || {}),
-      ...data.vong1State
+      ...prevV1,
+      ...nextV1,
+      answers: mergedAnswers
     };
   }
 
   if (data.vong2State) {
     const prevV2 = gameState.vong2State || {};
-    const nextV2 = data.vong2State;
-    const mergedChosen = (nextV2.isResetVong2 || nextV2.chosenTopics === null)
-      ? (nextV2.chosenTopics || [])
-      : Array.from(new Set([...(prevV2.chosenTopics || []), ...(nextV2.chosenTopics || [])]));
+    const nextV2 = { ...data.vong2State };
+
+    // SERVER-AUTHORITATIVE TIMER 60s VÒNG 2
+    const serverNow = Date.now();
+    const isStart = nextV2.isStartTimer === true;
+    const isReset = nextV2.isResetTimer === true;
+    const isStop = nextV2.isStopTimer === true;
+
+    delete nextV2.isStartTimer;
+    delete nextV2.isResetTimer;
+    delete nextV2.isStopTimer;
+
+    const isExplicitReset = (isReset && nextV2.timerRunning !== true);
+    const isExplicitStart = (
+      isStart ||
+      (isReset && nextV2.timerRunning === true) ||
+      (nextV2.timerRunning === true && !prevV2.timerRunning)
+    );
+    const isExplicitStop = (
+      isStop ||
+      (nextV2.timerRunning === false && prevV2.timerRunning === true)
+    );
+
+    if (isExplicitReset) {
+      const dur = Number(nextV2.timerDuration || nextV2.timerSeconds || 60);
+      nextV2.timerDuration = dur;
+      nextV2.timerSeconds = dur;
+      nextV2.timerStartTime = 0;
+      nextV2.timerEndTime = 0;
+      nextV2.timerRunning = false;
+    } else if (isExplicitStart) {
+      const dur = Number(nextV2.timerDuration || nextV2.timerSeconds || 60);
+      nextV2.timerDuration = dur;
+      nextV2.timerStartTime = serverNow;
+      nextV2.timerEndTime = serverNow + dur * 1000;
+      nextV2.timerSeconds = dur;
+      nextV2.timerRunning = true;
+    } else if (isExplicitStop) {
+      let stoppedSec = nextV2.timerSeconds;
+      if (typeof stoppedSec !== 'number') {
+        const prevEnd = Number(prevV2.timerEndTime) || 0;
+        stoppedSec = prevEnd > serverNow ? Math.max(0, Math.ceil((prevEnd - serverNow) / 1000)) : 0;
+      }
+      nextV2.timerSeconds = Math.max(0, stoppedSec);
+      nextV2.timerStartTime = 0;
+      nextV2.timerEndTime = 0;
+      nextV2.timerRunning = false;
+    } else {
+      if (prevV2.timerRunning && prevV2.timerEndTime > 0 && prevV2.timerEndTime <= serverNow) {
+        nextV2.timerRunning = false;
+        nextV2.timerEndTime = 0;
+        nextV2.timerSeconds = 0;
+      } else {
+        nextV2.timerRunning = prevV2.timerRunning || false;
+        nextV2.timerStartTime = prevV2.timerStartTime || 0;
+        nextV2.timerEndTime = prevV2.timerEndTime || 0;
+        nextV2.timerDuration = prevV2.timerDuration || 60;
+        nextV2.timerSeconds = (typeof prevV2.timerSeconds === 'number') ? prevV2.timerSeconds : 60;
+      }
+    }
+
+    const mergedChosen = Array.isArray(nextV2.chosenTopics)
+      ? nextV2.chosenTopics
+      : (prevV2.chosenTopics || []);
+
+    const mergedBets = (nextV2.isResetBets || (nextV2.bets && Object.keys(nextV2.bets).length === 4 && nextV2.bets[1] === 0 && nextV2.bets[2] === 0 && nextV2.bets[3] === 0 && nextV2.bets[4] === 0))
+      ? (nextV2.bets || { 1: 0, 2: 0, 3: 0, 4: 0 })
+      : { ...(prevV2.bets || {}), ...(nextV2.bets || {}) };
+
+    const mergedUsedMap = {
+      ...(prevV2.usedQuestionMap || {}),
+      ...(nextV2.usedQuestionMap || {})
+    };
 
     gameState.vong2State = {
       ...prevV2,
       ...nextV2,
-      chosenTopics: mergedChosen
+      chosenTopics: mergedChosen,
+      bets: mergedBets,
+      usedQuestionMap: mergedUsedMap
     };
   }
 
   if (data.vong3State) {
     const prevV3 = gameState.vong3State || {};
-    const nextV3 = data.vong3State;
+    const nextV3 = { ...data.vong3State };
+
+    // SERVER-AUTHORITATIVE STEP TIMER 7s VÒNG 3
+    const serverNow = Date.now();
+    const isNowRunning = nextV3.isRunning === true || nextV3.stepTimerRunning === true;
+    const wasRunning = prevV3.isRunning === true || prevV3.stepTimerRunning === true;
+
+    const isExplicitStart = (nextV3.isStartTimer === true || nextV3.isResetTimer === true);
+    const isExplicitStop = (nextV3.isStopTimer === true || ((nextV3.isRunning === false || nextV3.stepTimerRunning === false) && wasRunning));
+
+    delete nextV3.isStartTimer;
+    delete nextV3.isResetTimer;
+    delete nextV3.isStopTimer;
+
+    if (isExplicitStart) {
+      const dur = Number(nextV3.stepTimerDuration || nextV3.stepTimerSeconds || 7);
+      nextV3.stepTimerDuration = dur;
+      nextV3.stepTimerStartTime = serverNow;
+      nextV3.stepTimerEndTime = (nextV3.isResetTimer && !isNowRunning) ? 0 : (serverNow + dur * 1000);
+      nextV3.stepTimerSeconds = dur;
+      nextV3.stepTimerRunning = (nextV3.isResetTimer && !isNowRunning) ? false : true;
+      nextV3.isRunning = nextV3.stepTimerRunning;
+    } else if (isExplicitStop) {
+      let stoppedSec = nextV3.stepTimerSeconds;
+      if (typeof stoppedSec !== 'number') {
+        const prevEnd = Number(prevV3.stepTimerEndTime) || 0;
+        stoppedSec = prevEnd > serverNow ? Math.max(0, Math.ceil((prevEnd - serverNow) / 1000)) : 0;
+      }
+      nextV3.stepTimerSeconds = Math.max(0, stoppedSec);
+      nextV3.stepTimerEndTime = 0;
+      nextV3.stepTimerRunning = false;
+      nextV3.isRunning = false;
+    } else {
+      nextV3.isRunning = prevV3.isRunning || false;
+      nextV3.stepTimerRunning = prevV3.stepTimerRunning || false;
+      nextV3.stepTimerStartTime = prevV3.stepTimerStartTime || 0;
+      nextV3.stepTimerEndTime = prevV3.stepTimerEndTime || 0;
+      nextV3.stepTimerDuration = prevV3.stepTimerDuration || 7;
+      nextV3.stepTimerSeconds = (typeof prevV3.stepTimerSeconds === 'number') ? prevV3.stepTimerSeconds : 7;
+    }
 
     let newRevealedStage = nextV3.revealedStage;
     if (!nextV3.isNewQuestion && typeof prevV3.revealedStage === 'number' && typeof nextV3.revealedStage === 'number') {
@@ -289,16 +552,78 @@ app.post('/api/game/state', (req, res) => {
 
   if (data.vong4State) {
     const prevV4 = gameState.vong4State || {};
-    const nextV4 = data.vong4State;
+    const nextV4 = { ...data.vong4State };
+
+    // SERVER-AUTHORITATIVE TIMER 120s VÒNG 4
+    const serverNow = Date.now();
+    const isStart = nextV4.isStartTimer === true;
+    const isReset = nextV4.isResetTimer === true;
+    const isStop = nextV4.isStopTimer === true;
+
+    delete nextV4.isStartTimer;
+    delete nextV4.isResetTimer;
+    delete nextV4.isStopTimer;
+
+    const isExplicitReset = (isReset && nextV4.timerRunning !== true);
+    const isExplicitStart = (
+      isStart ||
+      (isReset && nextV4.timerRunning === true) ||
+      (nextV4.timerRunning === true && !prevV4.timerRunning)
+    );
+    const isExplicitStop = (
+      isStop ||
+      (nextV4.timerRunning === false && prevV4.timerRunning === true)
+    );
+
+    if (isExplicitReset) {
+      const dur = Number(nextV4.timerDuration || nextV4.timerSeconds || 120);
+      nextV4.timerDuration = dur;
+      nextV4.timerSeconds = dur;
+      nextV4.timerStartTime = 0;
+      nextV4.timerEndTime = 0;
+      nextV4.timerRunning = false;
+    } else if (isExplicitStart) {
+      const dur = Number(nextV4.timerDuration || nextV4.timerSeconds || 120);
+      nextV4.timerDuration = dur;
+      nextV4.timerStartTime = serverNow;
+      nextV4.timerEndTime = serverNow + dur * 1000;
+      nextV4.timerSeconds = dur;
+      nextV4.timerRunning = true;
+    } else if (isExplicitStop) {
+      let stoppedSec = nextV4.timerSeconds;
+      if (typeof stoppedSec !== 'number') {
+        const prevEnd = Number(prevV4.timerEndTime) || 0;
+        stoppedSec = prevEnd > serverNow ? Math.max(0, Math.ceil((prevEnd - serverNow) / 1000)) : 0;
+      }
+      nextV4.timerSeconds = Math.max(0, stoppedSec);
+      nextV4.timerStartTime = 0;
+      nextV4.timerEndTime = 0;
+      nextV4.timerRunning = false;
+    } else {
+      if (prevV4.timerRunning && prevV4.timerEndTime > 0 && prevV4.timerEndTime <= serverNow) {
+        nextV4.timerRunning = false;
+        nextV4.timerEndTime = 0;
+        nextV4.timerSeconds = 0;
+      } else {
+        nextV4.timerRunning = prevV4.timerRunning || false;
+        nextV4.timerStartTime = prevV4.timerStartTime || 0;
+        nextV4.timerEndTime = prevV4.timerEndTime || 0;
+        nextV4.timerDuration = prevV4.timerDuration || 120;
+        nextV4.timerSeconds = (typeof prevV4.timerSeconds === 'number') ? prevV4.timerSeconds : 120;
+      }
+    }
 
     let mergedBoxes = nextV4.boxes || prevV4.boxes;
-    if (prevV4.boxes && nextV4.boxes && !nextV4.isResetVong4) {
+    if (nextV4.isResetVong4) {
+      mergedBoxes = nextV4.boxes;
+      delete nextV4.isResetVong4;
+    } else if (prevV4.boxes && nextV4.boxes) {
       mergedBoxes = nextV4.boxes.map((b, idx) => {
         const prevBox = prevV4.boxes.find(p => p.id === b.id) || prevV4.boxes[idx] || {};
         return {
           ...b,
-          revealedMoney: b.revealedMoney || prevBox.revealedMoney || false,
-          revealedClue: b.revealedClue || prevBox.revealedClue || false
+          revealedMoney: b.revealedMoney !== undefined ? b.revealedMoney : (prevBox.revealedMoney || false),
+          revealedClue: b.revealedClue !== undefined ? b.revealedClue : (prevBox.revealedClue || false)
         };
       });
     }
@@ -337,24 +662,66 @@ app.post('/api/game/state', (req, res) => {
   res.json({ payload: encPayload });
 });
 
-// API Cập nhật Audio
+// API Gửi đáp án thí sinh siêu tốc (Ultra-lightweight 0ms endpoint - ghi nhận tức thì 100% trên mọi mạng yếu/lag)
+app.post('/api/game/answer', (req, res) => {
+  let data = req.body || {};
+  if (data && data.payload && typeof data.payload === 'string') {
+    const decrypted = GameCipher.decrypt(data.payload);
+    if (decrypted) data = decrypted;
+  }
+  const roomId = String(req.query.roomid || data.roomId || '123456').trim() || '123456';
+  const playerId = Number(data.playerId);
+  const answer = String(data.answer || '').trim();
+
+  if (playerId >= 1 && playerId <= 4 && answer) {
+    const gameState = getRoomState(roomId);
+    if (!gameState.vong1State) gameState.vong1State = {};
+    if (!gameState.vong1State.answers) gameState.vong1State.answers = {};
+
+    // Ghi nhận ngay lập tức đáp án của người chơi
+    gameState.vong1State.answers[playerId] = answer;
+    gameState.lastUpdated = Date.now();
+
+    // Phát tín hiệu SSE siêu tốc đến Controller & Host & Viewer
+    broadcastSSE(roomId);
+    const encPayload = GameCipher.encrypt({ success: true, playerId, answer, recorded: true });
+    return res.json({ payload: encPayload });
+  }
+
+  res.status(400).json({ error: 'Dữ liệu đáp án không hợp lệ' });
+});
+
+// API Cập nhật Audio siêu tốc (<5ms)
 app.post('/api/game/audio', (req, res) => {
   let data = req.body;
   if (data && data.payload && typeof data.payload === 'string') {
     const decrypted = GameCipher.decrypt(data.payload);
     if (decrypted) data = decrypted;
   }
-  gameState.audioState = {
-    ...gameState.audioState,
-    soundboard: {
+  const roomId = String(req.query.roomid || data.roomId || '123456').trim() || '123456';
+  const gameState = getRoomState(roomId);
+  const subType = data.subType || 'soundboard';
+  const now = Date.now();
+
+  if (!gameState.audioState) gameState.audioState = {};
+
+  if (subType === 'effects') {
+    gameState.audioState.effects = {
       track: data.track || null,
       playing: !!data.playing,
       loop: !!data.loop,
-      timestamp: Date.now()
-    }
-  };
-  gameState.lastUpdated = Date.now();
-  broadcastSSE();
+      timestamp: data.timestamp || now
+    };
+  } else {
+    gameState.audioState.soundboard = {
+      track: data.track || null,
+      playing: !!data.playing,
+      loop: !!data.loop,
+      timestamp: data.timestamp || now
+    };
+  }
+  gameState.lastUpdated = now;
+  broadcastSSE(roomId);
   const encPayload = GameCipher.encrypt({ success: true, audioState: gameState.audioState, lastUpdated: gameState.lastUpdated });
   res.json({ payload: encPayload });
 });
@@ -366,11 +733,14 @@ app.post('/api/game/view', (req, res) => {
     const decrypted = GameCipher.decrypt(data.payload);
     if (decrypted) data = decrypted;
   }
+  const roomId = String(req.query.roomid || data.roomId || '123456').trim() || '123456';
+  const gameState = getRoomState(roomId);
   const { view } = data;
   if (!view) return res.status(400).json({ error: 'Thiếu view' });
   gameState.currentView = view;
   gameState.lastUpdated = Date.now();
-  console.log(`[GameState] View đã chuyển sang: ${view}`);
+  console.log(`[GameState] [Room ${roomId}] View đã chuyển sang: ${view}`);
+  broadcastSSE(roomId);
   const encPayload = GameCipher.encrypt({ success: true, currentView: gameState.currentView, lastUpdated: gameState.lastUpdated });
   res.json({ payload: encPayload });
 });
@@ -382,6 +752,8 @@ app.post('/api/game/players', (req, res) => {
     const decrypted = GameCipher.decrypt(data.payload);
     if (decrypted) data = decrypted;
   }
+  const roomId = String(req.query.roomid || data.roomId || '123456').trim() || '123456';
+  const gameState = getRoomState(roomId);
   const { players } = data;
   if (!Array.isArray(players) || players.length !== 4) {
     return res.status(400).json({ error: 'Cần danh sách 4 người chơi' });
@@ -392,7 +764,8 @@ app.post('/api/game/players', (req, res) => {
     score: typeof p.score === 'number' ? p.score : (gameState.players[idx]?.score || 0)
   }));
   gameState.lastUpdated = Date.now();
-  console.log('[GameState] Đã cập nhật người chơi:', gameState.players.map(p => p.name));
+  console.log(`[GameState] [Room ${roomId}] Đã cập nhật người chơi:`, gameState.players.map(p => p.name));
+  broadcastSSE(roomId);
   const encPayload = GameCipher.encrypt({ success: true, players: gameState.players, lastUpdated: gameState.lastUpdated });
   res.json({ payload: encPayload });
 });
@@ -404,11 +777,14 @@ app.post('/api/game/questions', (req, res) => {
     const decrypted = GameCipher.decrypt(data.payload);
     if (decrypted) data = decrypted;
   }
+  const roomId = String(req.query.roomid || data.roomId || '123456').trim() || '123456';
+  const gameState = getRoomState(roomId);
   const { questions } = data;
   if (!questions) return res.status(400).json({ error: 'Thiếu dữ liệu câu hỏi' });
   gameState.questions = questions;
   gameState.lastUpdated = Date.now();
-  console.log('[GameState] Đã nạp đề câu hỏi từ file Excel vào hệ thống');
+  console.log(`[GameState] [Room ${roomId}] Đã nạp đề câu hỏi từ file Excel vào hệ thống`);
+  broadcastSSE(roomId);
   const encPayload = GameCipher.encrypt({ success: true, lastUpdated: gameState.lastUpdated });
   res.json({ payload: encPayload });
 });
@@ -445,6 +821,9 @@ rolePages.forEach((page) => {
       filePath = path.join(__dirname, page.file);
     }
     if (fs.existsSync(filePath)) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       return res.sendFile(filePath);
     }
     res.status(404).send(`Không tìm thấy file ${page.file}`);
@@ -470,8 +849,10 @@ app.get('/', (req, res) => {
 
 // Trạng thái hệ thống & OnRender
 app.get('/api/status', (req, res) => {
+  const roomId = String(req.query.roomid || '123456').trim() || '123456';
+  const defaultState = getRoomState(roomId);
   res.json({
-    appName: 'An Số Vàng Hub',
+    appName: 'Ẩn Số Vàng Hub',
     status: 'running',
     port: PORT,
     renderConnection: {
@@ -480,10 +861,11 @@ app.get('/api/status', (req, res) => {
       latencyMs: 1,
     },
     gameState: {
-      currentView: gameState.currentView,
-      playersCount: gameState.players.length,
-      hasQuestions: !!gameState.questions,
-      lastUpdated: gameState.lastUpdated
+      roomId: roomId,
+      currentView: defaultState.currentView,
+      playersCount: defaultState.players.length,
+      hasQuestions: !defaultState.questions,
+      lastUpdated: defaultState.lastUpdated
     },
     pages: rolePages.map((p) => ({
       name: p.name,
@@ -533,9 +915,37 @@ app.all('/api/render/*', async (req, res) => {
   }
 });
 
+function getLocalIpAddresses() {
+  const interfaces = os.networkInterfaces();
+  const ips = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const net of interfaces[name] || []) {
+      if (net.family === 'IPv4' && !net.internal) {
+        ips.push(net.address);
+      }
+    }
+  }
+  return ips;
+}
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Server] An Số Vàng server đang lắng nghe tại: http://0.0.0.0:${PORT}`);
-  console.log(`[Server] Link kết nối OnRender: ${RENDER_LINK}`);
+  const localIps = getLocalIpAddresses();
+  console.log(`\n================================================================`);
+  console.log(`🚀 ẨN SỐ VÀNG - HỆ THỐNG MÁY CHỦ SẴN SÀNG CHẠY CẢ LOCAL & ONRENDER`);
+  console.log(`================================================================`);
+  console.log(`📡 Chạy Local máy này: http://localhost:${PORT}`);
+  if (localIps.length > 0) {
+    localIps.forEach(ip => {
+      console.log(`🌐 Trong mạng LAN / Wi-Fi: http://${ip}:${PORT}`);
+    });
+  }
+  console.log(`----------------------------------------------------------------`);
+  console.log(`💻 Controller:  http://localhost:${PORT}/Controller.html`);
+  console.log(`🎤 Host:        http://localhost:${PORT}/Host.html`);
+  console.log(`📺 Viewer:      http://localhost:${PORT}/Viewer.html`);
+  console.log(`👤 Players:     http://localhost:${PORT}/Player1.html ... Player4.html`);
+  console.log(`☁️ OnRender:    ${RENDER_LINK}`);
+  console.log(`================================================================\n`);
 });
 
 export default app;

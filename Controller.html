@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Controller</title>
-    <meta name="description" content="Trang điều khiển Controller của gameshow An Số Vàng" />
+    <meta name="description" content="Trang điều khiển Controller của gameshow Ẩn Số Vàng" />
 
     <!-- 100% font-weight là bold cho tất cả các phần tử -->
     <style>
@@ -24,6 +24,10 @@
       }
       button, .btn, a.btn, input[type='button'], input[type='submit'], input[type='reset'] {
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
         transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
         outline: none;
         will-change: background-color, color, box-shadow;
@@ -107,25 +111,21 @@
     <!-- Thư viện SheetJS đọc Excel trực tiếp trên trình duyệt từ tệp người dùng -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
-      function disableDevTools() {
-        window.addEventListener('keydown', function (e) {
-          if (e.key === 'F12' || e.keyCode === 123) {
-            e.preventDefault(); e.stopPropagation(); return false;
-          }
-          const isCmdOrCtrl = e.ctrlKey || e.metaKey;
-          if (isCmdOrCtrl && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-          }
-          if (isCmdOrCtrl && ['u', 'U', 's', 'S'].includes(e.key)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-          }
-        }, true);
-        window.addEventListener('contextmenu', function (e) {
-          e.preventDefault(); return false;
-        }, true);
-      }
-      disableDevTools();
-      window.disableDevTools = disableDevTools;
+      // Bảo vệ trang khỏi các lỗi Promise unhandled và lỗi từ extension trình duyệt
+      window.addEventListener('unhandledrejection', function (e) {
+        try {
+          e.preventDefault();
+          if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        } catch (err) {}
+      }, true);
+      window.addEventListener('error', function (e) {
+        if (e && (e.filename?.includes('speedflow') || e.message?.includes('Listener error') || e.message?.includes('HalfBold'))) {
+          try {
+            e.preventDefault();
+            if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+          } catch (err) {}
+        }
+      }, true);
     </script>
     <!-- Đồng bộ thời gian thực -->
     <script src="./sync-client.js"></script>
@@ -169,9 +169,14 @@
           </button>
         </div>
 
-        <!-- Các nút mở nhanh kèm URL parameters (?roomid=...&auth=...) -->
-        <div style="display: flex; align-items: center; gap: 4px;">
-          <span style="font-size: 11px; color: #94a3b8; margin-right: 2px;">Mở trang:</span>
+        <!-- Các nút mở nhanh kèm URL parameters (?roomid=...&auth=...) & Chuyển máy chủ -->
+        <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+          <select id="ctrl-server-switch" style="background: #0f172a; color: #facc15; border: 1px solid #eab308; border-radius: 6px; padding: 2px 4px; font-size: 10px; cursor: pointer;" title="Chuyển đổi máy chủ (Local hoặc OnRender)">
+            <option value="auto">Máy chủ: Auto</option>
+            <option value="local">Máy chủ: Local (3000)</option>
+            <option value="render">Máy chủ: OnRender</option>
+          </select>
+          <span style="font-size: 11px; color: #94a3b8; margin-right: 2px; margin-left: 4px;">Mở trang:</span>
           <a id="link-open-host" href="/Host.html?roomid=123456" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f8fafc; padding: 4px 7px; border-radius: 6px; font-size: 11px;">Host</a>
           <a id="link-open-viewer" href="/Viewer.html?roomid=123456" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f8fafc; padding: 4px 7px; border-radius: 6px; font-size: 11px;">Viewer</a>
           <a id="link-open-p1" href="/Player1.html?roomid=123456&auth=1111" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #38bdf8; padding: 4px 7px; border-radius: 6px; font-size: 11px;">P1</a>
@@ -431,12 +436,20 @@
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: auto 1fr auto auto auto auto auto; gap: 4px; align-items: center;">
+            <!-- CHỌN CHỦ ĐỀ & CÁC NÚT THAO TÁC CÂU HỎI -->
+            <div style="display: grid; grid-template-columns: 1.5fr auto auto auto auto auto auto; gap: 4px; align-items: center;">
               
+              <div style="background: #1e293b; padding: 2px 5px; border-radius: 5px; display: flex; align-items: center; gap: 4px; border: 1px solid #334155;">
+                <span style="font-size: 9px; color: #c084fc; white-space: nowrap; font-weight: bold;">CHỦ ĐỀ:</span>
+                <select id="ctrl-v2-topic-select" style="background: #0f172a; color: #facc15; border: 1px solid #475569; padding: 2px 4px; border-radius: 4px; font-size: 10px; font-weight: bold; width: 100%; max-width: 140px;">
+                  <option value="">-- Chọn 1 trong 10 chủ đề --</option>
+                </select>
+              </div>
+
               <div style="background: #1e293b; padding: 2px 5px; border-radius: 5px; display: flex; align-items: center; gap: 3px; border: 1px solid #334155;">
                 <span style="font-size: 9px; color: #94a3b8;">LOẠI:</span>
-                <button id="btn-v2-type-2" class="btn btn-v2-type" data-type="2" style="padding: 2px 6px; font-size: 9px; border-radius: 3px; background: #334155; color: #cbd5e1;">2 Đáp án</button>
-                <button id="btn-v2-type-4" class="btn btn-v2-type active" data-type="4" style="padding: 2px 6px; font-size: 9px; border-radius: 3px; background: #d97706; color: white;">4 Đáp án</button>
+                <button id="btn-v2-type-2" class="btn btn-v2-type" data-type="2" style="padding: 2px 6px; font-size: 9px; border-radius: 3px; background: #334155; color: #cbd5e1;">2 Đ/A</button>
+                <button id="btn-v2-type-4" class="btn btn-v2-type active" data-type="4" style="padding: 2px 6px; font-size: 9px; border-radius: 3px; background: #d97706; color: white;">4 Đ/A</button>
               </div>
 
               <button id="btn-v2-show-q" class="btn" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 5px 7px; border-radius: 5px; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 3px;">
@@ -462,6 +475,25 @@
               <button id="btn-v2-score" class="btn" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; padding: 5px 7px; border-radius: 5px; font-size: 11px;">
                 Chấm điểm
               </button>
+            </div>
+
+            <!-- THÔNG TIN CHỦ ĐỀ & CÂU HỎI VÒNG 2 TRÊN CONTROLLER -->
+            <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; border-left: 3px solid #f59e0b; display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                <div>
+                  <span style="color: #94a3b8;">CHỦ ĐỀ ĐANG CHỌN:</span>
+                  <b id="ctrl-v2-selected-topic-text" style="color: #c084fc; margin-left: 4px;">Chưa chọn chủ đề</b>
+                </div>
+                <div id="ctrl-v2-chosen-count" style="font-size: 10px; color: #facc15;">Đã chọn: 0/10 chủ đề</div>
+              </div>
+              <div id="ctrl-v2-q-info-row" style="font-size: 11px; color: #ffffff; background: #0f172a; padding: 4px 8px; border-radius: 4px; border: 1px solid #334155;">
+                <span id="ctrl-v2-q-text-label" style="color: #38bdf8; font-weight: bold;">Câu hỏi:</span>
+                <span id="ctrl-v2-q-text-val" style="margin-left: 4px; color: #cbd5e1;">Chưa mở câu hỏi (Nhấn "Hiện câu hỏi" để mở)</span>
+              </div>
+              <div id="ctrl-v2-ans-info-row" style="display: flex; justify-content: space-between; font-size: 10.5px; color: #94a3b8;">
+                <div id="ctrl-v2-correct-ans-val">Đáp án đúng: ---</div>
+                <div id="ctrl-v2-score-status-val" style="color: #4ade80;">Chưa chấm</div>
+              </div>
             </div>
 
             <!-- Nút Ẩn / Hiện Vòng 2 trên Viewer -->
@@ -639,10 +671,6 @@
                 <div>
                   <span style="color: #94a3b8;">GỢI Ý TẶNG:</span>
                   <span id="ctrl-v4-gift-badge" style="color: #94a3b8;">Chưa mở</span>
-                </div>
-                <div>
-                  <span style="color: #94a3b8;">KẾT QUẢ:</span>
-                  <span id="ctrl-v4-result-status" style="color: #cbd5e1;">---</span>
                 </div>
               </div>
 
@@ -1224,7 +1252,8 @@
         btnReloadServerExcel.addEventListener('click', async () => {
           updateExcelUIStatus('Ẩn số vàng.xlsx', 'Server', 'Đang tải file từ máy chủ...', false, false);
           try {
-            const res = await fetch('/api/game/excel-file');
+            const excelUrl = window.getServerApiUrl ? window.getServerApiUrl('/api/game/excel-file') : '/api/game/excel-file';
+            const res = await fetch(excelUrl);
             if (!res.ok) {
               updateExcelUIStatus('Ẩn số vàng.xlsx', 'Server', 'Không tìm thấy file trên server', false, true);
               showPopup('Không tìm thấy file Excel trên máy chủ. Vui lòng chọn file từ máy tính của bạn.');
@@ -1385,9 +1414,36 @@
         // Cập nhật Mã phòng & Mật khẩu các trang
         updateRoomAuthControllerUI(state);
 
-        // Cập nhật Preview
-        renderPreview(currentPreviewingView);
+        // Cập nhật Preview (Chỉ vẽ lại khi nội dung thay đổi, tránh giật lag khi timer tick)
+        const v1Key = state.vong1State?.activeQuestion ? `${state.vong1State.activeQuestion.turn}_${state.vong1State.activeQuestion.index}` : 'none';
+        const v2Topic = state.vong2State?.selectedTopicIndex ?? 'none';
+        const v2Chosen = (state.vong2State?.chosenTopics || []).join(',');
+        const v2ActiveQ = state.vong2State?.activeQuestion ? `${state.vong2State.activeQuestion.topicIndex}_${state.vong2State.activeQuestion.questionIndex}_${state.vong2State.activeQuestion.isOpened}` : 'none';
+        const v2ShowAns = state.vong2State?.showAnswer ? '1' : '0';
+        const v2Bets = JSON.stringify(state.vong2State?.bets || {});
+        const v2Key = `${state.vong2State?.scene || 'none'}_${v2Topic}_${v2Chosen}_${v2ActiveQ}_${v2ShowAns}_${v2Bets}_${state.vong2State?.scored}`;
+        const v3Key = state.vong3State?.revealedStage ?? 'none';
+        const v4BoxesStr = JSON.stringify((state.vong4State?.boxes || []).map(b => `${b.id}_${b.money}_${b.revealedMoney}_${b.revealedClue}`));
+        const v4Key = `${state.vong4State?.selectedBoxId}_${state.vong4State?.totalMoney}_${state.vong4State?.showGiftClue}_${state.vong4State?.showAnswer}_${state.vong4State?.resultStatus}_${v4BoxesStr}`;
+        const chpKey = state.chpState?.buzzerWinner ? state.chpState.buzzerWinner.playerId : 'none';
+        const previewStateKey = `${currentPreviewingView}_${v1Key}_${v2Key}_${v3Key}_${v4Key}_${chpKey}_${state.questions ? 'loaded' : 'no'}`;
+
+        if (window._lastControllerPreviewKey !== previewStateKey) {
+          window._lastControllerPreviewKey = previewStateKey;
+          renderPreview(currentPreviewingView);
+        }
       });
+
+      const ctrlServerSwitch = document.getElementById('ctrl-server-switch');
+      if (ctrlServerSwitch) {
+        ctrlServerSwitch.value = localStorage.getItem('anso_target_server') || 'auto';
+        ctrlServerSwitch.addEventListener('change', (e) => {
+          const val = e.target.value;
+          if (window.switchServerTarget) {
+            window.switchServerTarget(val === 'auto' ? '' : val);
+          }
+        });
+      }
 
       function updateRoomAuthControllerUI(state) {
         const r = state.roomAuth || { roomId: '123456', passwords: { 1: '1111', 2: '2222', 3: '3333', 4: '4444' } };
@@ -1606,12 +1662,49 @@
         // 6. Đồng hồ 120s
         const timerV4El = document.getElementById('ctrl-v4-timer-display');
         if (timerV4El) {
-          timerV4El.textContent = `${v4.timerSeconds ?? 120}s`;
+          const displaySec = (typeof window.calculateRemainingSeconds === 'function')
+            ? window.calculateRemainingSeconds(v4, 120, 'v4')
+            : (v4.timerSeconds ?? 120);
+          timerV4El.textContent = `${displaySec}s`;
           if (v4.timerRunning) {
             timerV4El.style.color = '#ef4444';
           } else {
             timerV4El.style.color = '#facc15';
           }
+        }
+
+        if (v4.timerRunning && !timerIntervalV4) {
+          const rem = (typeof window.calculateRemainingSeconds === 'function')
+            ? window.calculateRemainingSeconds(v4, 120, 'v4')
+            : (v4.timerSeconds ?? 120);
+          if (rem > 0) {
+            startPrecisionCountdownV4({
+              totalSeconds: rem,
+              onTick: (sec) => {
+                const ctrlTimer = document.getElementById('ctrl-v4-timer-display');
+                if (ctrlTimer) {
+                  ctrlTimer.textContent = `${sec}s`;
+                  ctrlTimer.style.color = sec > 0 ? '#ef4444' : '#facc15';
+                }
+              },
+              onComplete: async () => {
+                const curV4 = window.currentGameState?.vong4State || {};
+                await window.broadcastStateUpdate({
+                  vong4State: {
+                    ...curV4,
+                    isStopTimer: true,
+                    timerRunning: false,
+                    timerSeconds: 0,
+                    timerEndTime: 0
+                  }
+                });
+                showNotification('Hết 120 giây Vòng 4!');
+              }
+            });
+          }
+        } else if (!v4.timerRunning && timerIntervalV4) {
+          clearInterval(timerIntervalV4);
+          timerIntervalV4 = null;
         }
       }
 
@@ -1759,7 +1852,89 @@
           }
         }
 
-        // 6. Nút Ẩn / Hiện Vòng 2 trên Viewer
+        // 6. Cập nhật thông tin Chủ đề & Câu hỏi Vòng 2 trên Controller
+        const topicSelectEl = document.getElementById('ctrl-v2-topic-select');
+        const topicNameEl = document.getElementById('ctrl-v2-selected-topic-text');
+        const chosenCountEl = document.getElementById('ctrl-v2-chosen-count');
+        const qTextValEl = document.getElementById('ctrl-v2-q-text-val');
+        const correctAnsValEl = document.getElementById('ctrl-v2-correct-ans-val');
+        const scoreStatusValEl = document.getElementById('ctrl-v2-score-status-val');
+
+        // Nạp danh sách chủ đề vào dropdown nếu có dữ liệu
+        const qData = getQuestionsData();
+        if (topicSelectEl && qData && qData.vong2 && qData.vong2.length > 0) {
+          const currentCount = topicSelectEl.options.length - 1;
+          if (currentCount !== qData.vong2.length) {
+            topicSelectEl.innerHTML = '<option value="">-- Chọn 1 trong 10 chủ đề --</option>';
+            qData.vong2.forEach((tObj, idx) => {
+              const opt = document.createElement('option');
+              opt.value = idx;
+              opt.textContent = `Chủ đề ${idx + 1}: ${tObj.topic}`;
+              topicSelectEl.appendChild(opt);
+            });
+          }
+          if (typeof v2.selectedTopicIndex === 'number' && v2.selectedTopicIndex !== null) {
+            topicSelectEl.value = String(v2.selectedTopicIndex);
+          } else {
+            topicSelectEl.value = '';
+          }
+        }
+
+        const chosenArr = Array.isArray(v2.chosenTopics) ? v2.chosenTopics : [];
+        if (chosenCountEl) chosenCountEl.textContent = `Đã chọn: ${chosenArr.length}/10 chủ đề`;
+
+        if (topicNameEl) {
+          if (v2.selectedTopicName) {
+            const topicNum = (typeof v2.selectedTopicIndex === 'number') ? `[Chủ đề ${v2.selectedTopicIndex + 1}] ` : '';
+            topicNameEl.textContent = `${topicNum}${v2.selectedTopicName}`;
+            topicNameEl.style.color = '#c084fc';
+          } else if (typeof v2.selectedTopicIndex === 'number' && qData?.vong2?.[v2.selectedTopicIndex]) {
+            const tObj = qData.vong2[v2.selectedTopicIndex];
+            topicNameEl.textContent = `[Chủ đề ${v2.selectedTopicIndex + 1}] ${tObj.topic}`;
+            topicNameEl.style.color = '#c084fc';
+          } else {
+            topicNameEl.textContent = 'Chưa chọn chủ đề (Chọn ở ô dropdown hoặc bấm vào bảng)';
+            topicNameEl.style.color = '#94a3b8';
+          }
+        }
+
+        if (v2.activeQuestion && v2.activeQuestion.isOpened) {
+          const optLabels = ['A', 'B', 'C', 'D'];
+          const correctIdx = Number(v2.activeQuestion.correct);
+          const correctLetter = optLabels[correctIdx - 1] || correctIdx;
+          const optsList = v2.activeQuestion.options || [];
+          const correctText = optsList[correctIdx - 1] || '';
+
+          const optionsSummary = optsList.map((o, i) => `<span style="color: ${i + 1 === correctIdx ? '#4ade80' : '#cbd5e1'}; font-weight: ${i + 1 === correctIdx ? 'bold' : 'normal'};">[${optLabels[i]}. ${o}]</span>`).join(' &nbsp;|&nbsp; ');
+
+          if (qTextValEl) {
+            qTextValEl.innerHTML = `<b>${v2.activeQuestion.question || ''}</b><br><div style="margin-top: 4px; font-size: 10px; color: #94a3b8;">${optionsSummary}</div>`;
+            qTextValEl.style.color = '#ffffff';
+          }
+          if (correctAnsValEl) {
+            if (v2.showAnswer) {
+              correctAnsValEl.innerHTML = `ĐÁP ÁN ĐÚNG: <b style="color: #22c55e; font-size: 12px;">[${correctLetter}. ${correctText}]</b>`;
+            } else {
+              correctAnsValEl.innerHTML = `Đáp án trong đề: <span style="color: #facc15; font-weight: bold;">[${correctLetter}. ${correctText}]</span> (Đang ẩn trên màn hình chính)`;
+            }
+          }
+          if (scoreStatusValEl) {
+            if (v2.scored) {
+              scoreStatusValEl.innerHTML = `<b style="color: #4ade80;"> ĐÃ CỘNG +${v2.awardedScore || 0}đ cho Player ${v2.activePlayerTurn || 1}</b>`;
+            } else {
+              scoreStatusValEl.innerHTML = `<span style="color: #94a3b8;">Chưa chấm</span>`;
+            }
+          }
+        } else {
+          if (qTextValEl) {
+            qTextValEl.textContent = 'Chưa mở câu hỏi (Chọn chủ đề rồi nhấn "Hiện câu hỏi" để mở)';
+            qTextValEl.style.color = '#94a3b8';
+          }
+          if (correctAnsValEl) correctAnsValEl.textContent = 'Đáp án đúng: ---';
+          if (scoreStatusValEl) scoreStatusValEl.textContent = 'Chưa chấm';
+        }
+
+        // 7. Nút Ẩn / Hiện Vòng 2 trên Viewer
         const btnToggleV2 = document.getElementById('btn-v2-toggle-viewer');
         if (btnToggleV2) {
           const isShown = v2.showOnViewer !== false;
@@ -1938,35 +2113,21 @@
       }
 
       document.querySelectorAll('.btn-sound').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', () => {
           const track = btn.getAttribute('data-track');
           const curAudio = window.currentGameState.audioState || {};
           const sb = curAudio.soundboard || {};
           const isLoop = chkSoundLoop ? chkSoundLoop.checked : false;
 
           if (sb.track === track && sb.playing) {
-            await window.broadcastStateUpdate({
-              audioState: {
-                soundboard: {
-                  track: null,
-                  playing: false,
-                  loop: false,
-                  timestamp: Date.now()
-                }
-              }
-            });
+            if (typeof window.stopSoundboardAudio === 'function') {
+              window.stopSoundboardAudio();
+            }
             showPopup(`Đã dừng nhạc: ${track}`);
           } else {
-            await window.broadcastStateUpdate({
-              audioState: {
-                soundboard: {
-                  track: track,
-                  playing: true,
-                  loop: isLoop,
-                  timestamp: Date.now()
-                }
-              }
-            });
+            if (typeof window.playSoundboardAudio === 'function') {
+              window.playSoundboardAudio(track, isLoop);
+            }
             const isLocal = typeof window.isControllerAudioEnabled === 'function' ? window.isControllerAudioEnabled() : true;
             showPopup(`Đang phát: ${track} ${isLoop ? '(Lặp lại liên tục)' : '(1 lần)'} ${isLocal ? '(Phát tại loa máy này & các màn hình)' : '(Đã phát tới Host, Viewer, Thí sinh)'}`);
           }
@@ -1975,39 +2136,26 @@
 
       const btnSoundStop = document.getElementById('btn-sound-stop');
       if (btnSoundStop) {
-        btnSoundStop.addEventListener('click', async () => {
-          await window.broadcastStateUpdate({
-            audioState: {
-              soundboard: {
-                track: null,
-                playing: false,
-                loop: false,
-                timestamp: Date.now()
-              },
-              effects: {
-                track: null,
-                playing: false,
-                loop: false,
-                timestamp: Date.now()
-              }
-            }
-          });
+        btnSoundStop.addEventListener('click', () => {
+          if (typeof window.stopAllAudio === 'function') {
+            window.stopAllAudio();
+          }
           showPopup('Đã dừng tất cả nhạc trên tất cả màn hình!');
         });
       }
 
-      // HÀM ĐẾM GIỜ CHUẨN XÁC TUYỆT ĐỐI THEO DATE.NOW() CHO VÒNG 1 (ĐỒNG NHẤT 1000MS/GIÂY)
+      // HÀM ĐẾM GIỜ CHUẨN XÁC TUYỆT ĐỐI THEO SERVER TIME CHO VÒNG 1 (ĐỒNG NHẤT GIỮA MỌI MÁY)
       function startPrecisionCountdownV1({ totalSeconds, onTick, onComplete }) {
         if (timerInterval) {
           clearInterval(timerInterval);
           timerInterval = null;
         }
-        const startTime = Date.now();
+        const startTime = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
         const targetEndTime = startTime + totalSeconds * 1000;
         let lastDispatchedSecond = totalSeconds;
 
         timerInterval = setInterval(() => {
-          const now = Date.now();
+          const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
           const remainingMs = targetEndTime - now;
           const currentSecond = Math.max(0, Math.ceil(remainingMs / 1000));
 
@@ -2162,13 +2310,21 @@
           timerInterval = null;
         }
 
-        // Bắt đầu đếm 5s cho Lượt 1
+        const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
+        const duration = 5;
+        const endTime = now + duration * 1000;
+
+        // Bắt đầu đếm 5s cho Lượt 1 đồng thời phát ngay hiệu ứng 5s.mp3 trên tất cả màn hình
         await window.broadcastStateUpdate({
           vong1State: {
             ...v1,
+            isStartTimer: true,
             timerRunning: true,
             timerTurn: 1,
             timerSeconds: 5,
+            timerDuration: 5,
+            timerStartTime: now,
+            timerEndTime: endTime,
             showAnswer: false,
             scored: false
           },
@@ -2177,27 +2333,28 @@
               track: '5s.mp3',
               playing: true,
               loop: false,
-              timestamp: Date.now()
+              timestamp: now
             }
           }
         });
 
         startPrecisionCountdownV1({
           totalSeconds: 5,
-          onTick: async (sec) => {
-            await window.broadcastStateUpdate({
-              vong1State: {
-                ...(window.currentGameState.vong1State || {}),
-                timerSeconds: sec
-              }
-            });
+          onTick: (sec) => {
+            const ctrlTimer = document.getElementById('ctrl-v1-timer-display');
+            if (ctrlTimer) ctrlTimer.textContent = `${sec}s`;
+            if (window.currentGameState.vong1State) {
+              window.currentGameState.vong1State.timerSeconds = sec;
+            }
           },
           onComplete: async () => {
+            const curV1 = window.currentGameState.vong1State || {};
             await window.broadcastStateUpdate({
               vong1State: {
-                ...(window.currentGameState.vong1State || {}),
+                ...curV1,
                 timerRunning: false,
-                timerSeconds: 0
+                timerSeconds: 0,
+                timerEndTime: 0
               }
             });
             showNotification('Hết 5 giây Lượt 1! Đã khóa đáp án của Player 1 & 2.');
@@ -2220,12 +2377,20 @@
           timerInterval = null;
         }
 
+        const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
+        const duration = 5;
+        const endTime = now + duration * 1000;
+
         await window.broadcastStateUpdate({
           vong1State: {
             ...v1,
+            isStartTimer: true,
             timerRunning: true,
             timerTurn: 2,
             timerSeconds: 5,
+            timerDuration: 5,
+            timerStartTime: now,
+            timerEndTime: endTime,
             showAnswer: false,
             scored: false
           },
@@ -2234,27 +2399,28 @@
               track: '5s.mp3',
               playing: true,
               loop: false,
-              timestamp: Date.now()
+              timestamp: now
             }
           }
         });
 
         startPrecisionCountdownV1({
           totalSeconds: 5,
-          onTick: async (sec) => {
-            await window.broadcastStateUpdate({
-              vong1State: {
-                ...(window.currentGameState.vong1State || {}),
-                timerSeconds: sec
-              }
-            });
+          onTick: (sec) => {
+            const ctrlTimer = document.getElementById('ctrl-v1-timer-display');
+            if (ctrlTimer) ctrlTimer.textContent = `${sec}s`;
+            if (window.currentGameState.vong1State) {
+              window.currentGameState.vong1State.timerSeconds = sec;
+            }
           },
           onComplete: async () => {
+            const curV1 = window.currentGameState.vong1State || {};
             await window.broadcastStateUpdate({
               vong1State: {
-                ...(window.currentGameState.vong1State || {}),
+                ...curV1,
                 timerRunning: false,
-                timerSeconds: 0
+                timerSeconds: 0,
+                timerEndTime: 0
               }
             });
             showNotification('Hết 5 giây Lượt 2! Đã khóa đáp án của Player 3 & 4.');
@@ -2274,7 +2440,6 @@
 
         await window.broadcastStateUpdate({
           vong1State: {
-            ...v1,
             showAnswer: true
           }
         });
@@ -2326,7 +2491,6 @@
         await window.broadcastStateUpdate({
           players: currentPlayers,
           vong1State: {
-            ...v1,
             showAnswer: true,
             scored: true
           }
@@ -2343,16 +2507,26 @@
       // 3.B. LOGIC CÁC NÚT ĐIỀU KHIỂN VÒNG 2 (ĐẶT CƯỢC)
       // ==========================================
 
-      // 1. Chuyển cảnh Bảng chủ đề
+      // 1. Chuyển cảnh Bảng chủ đề (Reset 10 chủ đề về chưa chọn cho câu tiếp theo)
       document.getElementById('btn-v2-scene-topics').addEventListener('click', async () => {
         const v2 = window.currentGameState.vong2State || {};
         await window.broadcastStateUpdate({
           vong2State: {
             ...v2,
-            scene: 'topics_board'
+            scene: 'topics_board',
+            selectedTopicIndex: null,
+            selectedTopicName: '',
+            chosenTopics: [], // Reset 10 chủ đề về màu xanh (chưa chọn)
+            activeQuestion: null,
+            timerRunning: false,
+            timerSeconds: 60,
+            bets: { 1: 0, 2: 0, 3: 0, 4: 0 },
+            showAnswer: false,
+            scored: false,
+            awardedScore: 0
           }
         });
-        showNotification(' Đã chuyển sang BẢNG CHỦ ĐỀ VÒNG 2 trên tất cả màn hình!');
+        showNotification(' Đã chuyển sang BẢNG CHỦ ĐỀ VÒNG 2 (Reset 10 chủ đề về chưa chọn)!');
       });
 
       // 2. Chuyển cảnh Bảng câu hỏi
@@ -2384,7 +2558,7 @@
         });
       }
 
-      // 3. Set lượt người chơi (P1-P4)
+      // 3. Set lượt người chơi (P1-P4) - Reset 10 chủ đề cho lượt mới
       document.querySelectorAll('.btn-v2-player-turn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const playerNum = parseInt(btn.getAttribute('data-player'));
@@ -2392,10 +2566,21 @@
           await window.broadcastStateUpdate({
             vong2State: {
               ...v2,
-              activePlayerTurn: playerNum
+              activePlayerTurn: playerNum,
+              scene: 'topics_board',
+              selectedTopicIndex: null,
+              selectedTopicName: '',
+              chosenTopics: [], // Reset 10 chủ đề cho lượt mới
+              activeQuestion: null,
+              timerRunning: false,
+              timerSeconds: 60,
+              bets: { 1: 0, 2: 0, 3: 0, 4: 0 },
+              showAnswer: false,
+              scored: false,
+              awardedScore: 0
             }
           });
-          showNotification(` Đã set lượt thi đấu cho Player ${playerNum}!`);
+          showNotification(` Đã set lượt thi đấu cho Player ${playerNum} (Reset 10 chủ đề về chưa chọn)!`);
         });
       });
 
@@ -2422,16 +2607,36 @@
         showNotification('️ Đã chọn loại câu hỏi: 4 ĐÁP ÁN');
       });
 
-      // 5. Chọn chủ đề khi nhấn vào nút chủ đề
+      // 5. Chọn chủ đề khi nhấn vào nút chủ đề hoặc chọn từ dropdown
+      const ctrlV2TopicSelect = document.getElementById('ctrl-v2-topic-select');
+      if (ctrlV2TopicSelect) {
+        ctrlV2TopicSelect.addEventListener('change', async () => {
+          const val = ctrlV2TopicSelect.value;
+          if (val === '') {
+            const v2 = window.currentGameState.vong2State || {};
+            await window.broadcastStateUpdate({
+              vong2State: {
+                ...v2,
+                selectedTopicIndex: null,
+                selectedTopicName: '',
+                chosenTopics: []
+              }
+            });
+            return;
+          }
+          const topicIndex = parseInt(val, 10);
+          if (!isNaN(topicIndex)) {
+            await window.selectVong2Topic(topicIndex);
+          }
+        });
+      }
+
       window.selectVong2Topic = async function(topicIndex) {
         const q = getQuestionsData();
         if (!q || !q.vong2 || !q.vong2[topicIndex]) return;
         const topicObj = q.vong2[topicIndex];
         const v2 = window.currentGameState.vong2State || {};
-        const chosen = Array.isArray(v2.chosenTopics) ? [...v2.chosenTopics] : [];
-        if (!chosen.includes(topicIndex)) {
-          chosen.push(topicIndex);
-        }
+        const chosen = [topicIndex]; // Đặt chủ đề đang chọn ở câu này thành màu tím
 
         await window.broadcastStateUpdate({
           vong2State: {
@@ -2506,8 +2711,10 @@
             correct: qItem.correct
           },
           usedQuestionMap: updatedUsedMap,
+          isResetTimer: true,
           timerRunning: false,
           timerSeconds: 60,
+          timerEndTime: 0,
           bets: { 1: 0, 2: 0, 3: 0, 4: 0 },
           showAnswer: false,
           scored: false,
@@ -2518,18 +2725,24 @@
         showNotification(` Đã hiện câu hỏi (${qItem.options.length} đáp án) - Chủ đề: [${topicObj.topic}]`);
       });
 
-      // HÀM ĐẾM GIỜ CHUẨN XÁC TUYỆT ĐỐI THEO DATE.NOW() CHO VÒNG 2 (60 GIÂY ĐỒNG NHẤT)
+      // HÀM ĐẾM GIỜ CHUẨN XÁC TUYỆT ĐỐI THEO SERVER TIME CHO VÒNG 2 (60 GIÂY ĐỒNG NHẤT GIỮA MỌI MÁY)
       function startPrecisionCountdownV2({ totalSeconds, onTick, onComplete }) {
         if (timerIntervalV2) {
           clearInterval(timerIntervalV2);
           timerIntervalV2 = null;
         }
-        const startTime = Date.now();
-        const targetEndTime = startTime + totalSeconds * 1000;
         let lastDispatchedSecond = totalSeconds;
 
         timerIntervalV2 = setInterval(() => {
-          const now = Date.now();
+          const v2 = window.currentGameState?.vong2State;
+          if (!v2 || !v2.timerRunning) {
+            clearInterval(timerIntervalV2);
+            timerIntervalV2 = null;
+            return;
+          }
+
+          const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
+          const targetEndTime = Number(v2.timerEndTime) || (now + totalSeconds * 1000);
           const remainingMs = targetEndTime - now;
           const currentSecond = Math.max(0, Math.ceil(remainingMs / 1000));
 
@@ -2541,7 +2754,9 @@
           if (remainingMs <= 0 || currentSecond <= 0) {
             clearInterval(timerIntervalV2);
             timerIntervalV2 = null;
-            onComplete();
+            if (lastDispatchedSecond <= 1) {
+              onComplete();
+            }
           }
         }, 30);
 
@@ -2561,30 +2776,43 @@
           timerIntervalV2 = null;
         }
 
+        if (typeof window.resetTimerMonotonic === 'function') {
+          window.resetTimerMonotonic('v2', 60);
+        }
+
+        const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
+        const duration = 60;
+        const endTime = now + duration * 1000;
+
         await window.broadcastStateUpdate({
           vong2State: {
             ...v2,
+            isStartTimer: true,
             timerRunning: true,
-            timerSeconds: 60
+            timerSeconds: 60,
+            timerDuration: 60,
+            timerStartTime: now,
+            timerEndTime: endTime
           }
         });
 
         startPrecisionCountdownV2({
           totalSeconds: 60,
-          onTick: async (sec) => {
-            await window.broadcastStateUpdate({
-              vong2State: {
-                ...(window.currentGameState.vong2State || {}),
-                timerSeconds: sec
-              }
-            });
+          onTick: (sec) => {
+            const ctrlTimer = document.getElementById('ctrl-v2-timer-display');
+            if (ctrlTimer) ctrlTimer.textContent = `${sec}s`;
+            if (window.currentGameState.vong2State) {
+              window.currentGameState.vong2State.timerSeconds = sec;
+            }
           },
           onComplete: async () => {
+            const currentV2 = window.currentGameState.vong2State || {};
             await window.broadcastStateUpdate({
               vong2State: {
-                ...(window.currentGameState.vong2State || {}),
+                ...currentV2,
                 timerRunning: false,
-                timerSeconds: 0
+                timerSeconds: 0,
+                timerEndTime: 0
               }
             });
             showNotification('Hết 60 giây Vòng 2!');
@@ -2601,13 +2829,21 @@
           timerIntervalV2 = null;
         }
         const v2 = window.currentGameState.vong2State || {};
+        const remSec = (typeof window.calculateRemainingSeconds === 'function')
+          ? window.calculateRemainingSeconds(v2, 60, 'v2')
+          : (v2.timerSeconds ?? 60);
+        const ctrlTimer = document.getElementById('ctrl-v2-timer-display');
+        if (ctrlTimer) ctrlTimer.textContent = `${remSec}s`;
         await window.broadcastStateUpdate({
           vong2State: {
             ...v2,
-            timerRunning: false
+            isStopTimer: true,
+            timerRunning: false,
+            timerSeconds: remSec,
+            timerEndTime: 0
           }
         });
-        showNotification('Đã dừng đồng hồ 60s!');
+        showNotification(`Đã dừng đồng hồ ở mốc ${remSec}s!`);
       });
 
       // 9. NÚT: SET ĐIỂM ĐẶT CƯỢC VÀO ĐÁP ÁN (Người chơi có thể đặt nhiều đáp án)
@@ -2628,7 +2864,6 @@
 
         await window.broadcastStateUpdate({
           vong2State: {
-            ...v2,
             bets: currentBets
           }
         });
@@ -2638,10 +2873,8 @@
 
       // Xóa cược
       document.getElementById('btn-v2-clear-bets').addEventListener('click', async () => {
-        const v2 = window.currentGameState.vong2State || {};
         await window.broadcastStateUpdate({
           vong2State: {
-            ...v2,
             bets: { 1: 0, 2: 0, 3: 0, 4: 0 }
           }
         });
@@ -2658,28 +2891,36 @@
 
         await window.broadcastStateUpdate({
           vong2State: {
-            ...v2,
             showAnswer: true
           }
         });
         showNotification(`Đã mở đáp án đúng: [Đáp án ${v2.activeQuestion.correct}] (Màu Vàng / Chữ Đen)`);
       });
 
-      // 11. NÚT: ĐÓNG CÂU HỎI
+      // 11. NÚT: ĐÓNG CÂU HỎI (Reset 10 chủ đề về chưa chọn cho câu tiếp theo, giữ nguyên các câu đã dùng)
       document.getElementById('btn-v2-close-q').addEventListener('click', async () => {
         clearInterval(timerIntervalV2);
         const v2 = window.currentGameState.vong2State || {};
         await window.broadcastStateUpdate({
           vong2State: {
             ...v2,
+            scene: 'topics_board',
+            selectedTopicIndex: null,
+            selectedTopicName: '',
+            chosenTopics: [], // Reset 10 chủ đề về chưa chọn
             activeQuestion: null,
+            isResetTimer: true,
             timerRunning: false,
             timerSeconds: 60,
+            timerEndTime: 0,
+            bets: { 1: 0, 2: 0, 3: 0, 4: 0 },
             showAnswer: false,
-            scored: false
+            scored: false,
+            awardedScore: 0
+            // usedQuestionMap được giữ nguyên để các câu đã trả lời không bị lặp lại
           }
         });
-        showNotification('Đã đóng câu hỏi hiện tại!');
+        showNotification('Đã đóng câu hỏi và reset trạng thái 10 chủ đề về chưa chọn cho câu tiếp theo!');
       });
 
       // 12. NÚT: CHẤM ĐIỂM
@@ -2705,7 +2946,6 @@
         await window.broadcastStateUpdate({
           players: currentPlayers,
           vong2State: {
-            ...v2,
             showAnswer: true,
             scored: true,
             awardedScore: betOnCorrect
@@ -2826,7 +3066,7 @@
           timerIntervalV3 = null;
         }
 
-        const startTime = Date.now();
+        const startTime = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
         const targetEndTime = startTime + initialSeconds * 1000;
         let lastDispatched = initialSeconds;
 
@@ -2840,6 +3080,7 @@
               vong3State: {
                 ...liveV3,
                 isRunning: false,
+                stepTimerRunning: false,
                 isBellLocked: true
               }
             });
@@ -2847,20 +3088,17 @@
             return;
           }
 
-          const now = Date.now();
+          const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
           const remMs = targetEndTime - now;
           const currentSec = Math.max(0, Math.ceil(remMs / 1000));
 
           if (currentSec < lastDispatched) {
             lastDispatched = currentSec;
-            const currentLiveV3 = window.currentGameState.vong3State || {};
-            await window.broadcastStateUpdate({
-              vong3State: {
-                ...currentLiveV3,
-                revealedStage: Math.max(stage, currentLiveV3.revealedStage || stage),
-                stepTimerSeconds: currentSec
-              }
-            });
+            if (window.currentGameState.vong3State) {
+              window.currentGameState.vong3State.stepTimerSeconds = currentSec;
+            }
+            const ctrlTimer = document.getElementById('ctrl-v3-timer-display');
+            if (ctrlTimer) ctrlTimer.textContent = `${currentSec}s`;
           }
 
           if (remMs <= 0 || currentSec <= 0) {
@@ -2869,13 +3107,20 @@
 
             const nextStage = stage + 1;
             const currentLiveV3 = window.currentGameState.vong3State || {};
+            const nextStartTime = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
+            const nextEndTime = nextStartTime + 7000;
+
             if (nextStage === 2) {
               await window.broadcastStateUpdate({
                 vong3State: {
                   ...currentLiveV3,
                   revealedStage: 2,
                   stepTimerSeconds: 7,
+                  stepTimerDuration: 7,
+                  stepTimerStartTime: nextStartTime,
+                  stepTimerEndTime: nextEndTime,
                   isRunning: true,
+                  stepTimerRunning: true,
                   isBellLocked: false
                 }
               });
@@ -2887,7 +3132,11 @@
                   ...currentLiveV3,
                   revealedStage: 3,
                   stepTimerSeconds: 7,
+                  stepTimerDuration: 7,
+                  stepTimerStartTime: nextStartTime,
+                  stepTimerEndTime: nextEndTime,
                   isRunning: true,
+                  stepTimerRunning: true,
                   isBellLocked: false
                 }
               });
@@ -2899,7 +3148,11 @@
                   ...currentLiveV3,
                   revealedStage: 4,
                   stepTimerSeconds: 7,
+                  stepTimerDuration: 7,
+                  stepTimerStartTime: nextStartTime,
+                  stepTimerEndTime: nextEndTime,
                   isRunning: true,
+                  stepTimerRunning: true,
                   isBellLocked: false
                 }
               });
@@ -2911,7 +3164,9 @@
                   ...currentLiveV3,
                   revealedStage: 5,
                   stepTimerSeconds: 0,
+                  stepTimerEndTime: 0,
                   isRunning: false,
+                  stepTimerRunning: false,
                   isBellLocked: true
                 }
               });
@@ -2951,13 +3206,19 @@
 
         let currentStage = 1;
         let secondsLeft = 7;
+        const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
+        const endTime = now + secondsLeft * 1000;
 
         await window.broadcastStateUpdate({
           vong3State: {
             ...v3,
             revealedStage: currentStage,
             isRunning: true,
+            stepTimerRunning: true,
             stepTimerSeconds: secondsLeft,
+            stepTimerDuration: 7,
+            stepTimerStartTime: now,
+            stepTimerEndTime: endTime,
             bellRungBy: null,
             isBellLocked: false // Chuông của các Player được chọn mở chuông được mở
           }
@@ -2987,6 +3248,8 @@
 
         let currentStage = v3.revealedStage || 1;
         let secondsLeft = (v3.stepTimerSeconds > 0) ? v3.stepTimerSeconds : 7;
+        const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
+        const endTime = now + secondsLeft * 1000;
 
         await window.broadcastStateUpdate({
           vong3State: {
@@ -2994,7 +3257,11 @@
             bellRungBy: null,
             isBellLocked: false, // Chuông của người còn lại được mở lại
             isRunning: true,
-            stepTimerSeconds: secondsLeft
+            stepTimerRunning: true,
+            stepTimerSeconds: secondsLeft,
+            stepTimerDuration: 7,
+            stepTimerStartTime: now,
+            stepTimerEndTime: endTime
           }
         });
 
@@ -3050,7 +3317,7 @@
         showNotification(' Đã reset tín hiệu chuông và khóa chuông!');
       });
 
-      // 7. NÚT: HIỆN ĐÁP ÁN (Hiện đáp án đúng của câu hỏi Vòng 3)
+      // 7. NÚT: HIỆN ĐÁP ÁN (Hiện đáp án đúng của câu hỏi Vòng 3 & mở toàn bộ các gợi ý)
       document.getElementById('btn-v3-show-ans').addEventListener('click', async () => {
         const v3 = window.currentGameState.vong3State || {};
         if (!v3.activeQuestion || !v3.isBoxesVisible) {
@@ -3059,14 +3326,16 @@
         }
 
         const currentShow = !!v3.showAnswer;
+        const nextShow = !currentShow;
         await window.broadcastStateUpdate({
           vong3State: {
             ...v3,
-            showAnswer: !currentShow
+            showAnswer: nextShow,
+            revealedStage: nextShow ? 4 : v3.revealedStage
           }
         });
 
-        showNotification(!currentShow ? ' Đã hiển thị đáp án Vòng 3!' : ' Đã ẩn đáp án Vòng 3!');
+        showNotification(!currentShow ? ' Đã hiển thị đáp án Vòng 3 & mở toàn bộ gợi ý!' : ' Đã ẩn đáp án Vòng 3!');
       });
 
       // ==========================================
@@ -3075,14 +3344,19 @@
       let timerIntervalV4 = null;
 
       function generateRandomBoxes() {
-        const colorDefs = [
-          { id: 1, name: 'Đỏ', color: '#ff0000', text: 'Ô SỐ 1', darkText: false },
-          { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true },
-          { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', darkText: false },
-          { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', darkText: false },
-          { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', darkText: false },
-          { id: 6, name: 'Cam', color: '#ffa500', text: 'Ô SỐ 6', darkText: true }
-        ];
+        if (typeof window.generateRandomVong4Boxes === 'function') {
+          return window.generateRandomVong4Boxes();
+        }
+        const colorDefs = (typeof window.getDefaultVong4Boxes === 'function')
+          ? window.getDefaultVong4Boxes()
+          : [
+            { id: 1, name: 'Đỏ', color: '#ff0000', text: 'Ô SỐ 1', darkText: false },
+            { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true },
+            { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', darkText: false },
+            { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', darkText: false },
+            { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', darkText: true },
+            { id: 6, name: 'Cam', color: '#ff7700', text: 'Ô SỐ 6', darkText: true }
+          ];
         const moneyPool = [0, 0, 200000, 300000, 500000, 1000000];
         // Xáo ngẫu nhiên 6 giá trị tiền
         for (let i = moneyPool.length - 1; i > 0; i--) {
@@ -3101,27 +3375,41 @@
       // 1. NÚT: HIỆN GỢI Ý TẶNG
       document.getElementById('btn-v4-show-gift').addEventListener('click', async () => {
         const v4 = window.currentGameState.vong4State || {};
-        const current = !!v4.showGiftClue;
+        const current = !v4.showGiftClue;
+        const updatedV4 = {
+          ...v4,
+          showGiftClue: current
+        };
+        window.currentGameState.vong4State = updatedV4;
+        window._lastControllerPreviewKey = '';
+        renderPreview('vong4');
+        updateVong4ControllerUI(window.currentGameState);
         await window.broadcastStateUpdate({
-          vong4State: {
-            ...v4,
-            showGiftClue: !current
-          }
+          vong4State: updatedV4
         });
-        showNotification(!current ? ' Đã hiện Gợi ý tặng Vòng 4 trên tất cả màn hình!' : ' Đã ẩn Gợi ý tặng Vòng 4!');
+        showNotification(current ? ' Đã hiện Gợi ý tặng Vòng 4 trên tất cả màn hình!' : ' Đã ẩn Gợi ý tặng Vòng 4!');
       });
 
       // 2. CHỌN Ô SỐ (1 ĐẾN 6)
       window.selectVong4Box = async function(boxId) {
         const v4 = window.currentGameState.vong4State || {};
-        const boxes = v4.boxes || [];
+        const boxes = (Array.isArray(v4.boxes) && v4.boxes.length === 6)
+          ? v4.boxes
+          : (window.getDefaultVong4Boxes ? window.getDefaultVong4Boxes() : generateRandomBoxes());
         const target = boxes.find(b => b.id === boxId) || { name: `Ô ${boxId}` };
 
+        const updatedV4 = {
+          ...v4,
+          boxes: boxes,
+          selectedBoxId: boxId
+        };
+        window.currentGameState.vong4State = updatedV4;
+        window._lastControllerPreviewKey = '';
+        renderPreview('vong4');
+        updateVong4ControllerUI(window.currentGameState);
+
         await window.broadcastStateUpdate({
-          vong4State: {
-            ...v4,
-            selectedBoxId: boxId
-          }
+          vong4State: updatedV4
         });
         showNotification(` Đã chọn Ô số ${boxId} (Màu ${target.name})!`);
       };
@@ -3142,7 +3430,9 @@
           return;
         }
 
-        const boxes = JSON.parse(JSON.stringify(v4.boxes || generateRandomBoxes()));
+        const boxes = JSON.parse(JSON.stringify((Array.isArray(v4.boxes) && v4.boxes.length === 6)
+          ? v4.boxes
+          : (window.getDefaultVong4Boxes ? window.getDefaultVong4Boxes() : generateRandomBoxes())));
         const targetBox = boxes.find(b => b.id === selectedId);
         if (!targetBox) return;
 
@@ -3158,12 +3448,18 @@
           targetBox.moneyDeducted = true;
         }
 
+        const updatedV4 = {
+          ...v4,
+          totalMoney: newTotal,
+          boxes: boxes
+        };
+        window.currentGameState.vong4State = updatedV4;
+        window._lastControllerPreviewKey = '';
+        renderPreview('vong4');
+        updateVong4ControllerUI(window.currentGameState);
+
         await window.broadcastStateUpdate({
-          vong4State: {
-            ...v4,
-            totalMoney: newTotal,
-            boxes: boxes
-          }
+          vong4State: updatedV4
         });
 
         showNotification(`Ô ${selectedId} (${targetBox.name}): ${targetBox.money.toLocaleString('vi-VN')} VNĐ! Đã trừ vào tổng tiền, còn lại: ${newTotal.toLocaleString('vi-VN')} VNĐ.`);
@@ -3178,17 +3474,25 @@
           return;
         }
 
-        const boxes = JSON.parse(JSON.stringify(v4.boxes || generateRandomBoxes()));
+        const boxes = JSON.parse(JSON.stringify((Array.isArray(v4.boxes) && v4.boxes.length === 6)
+          ? v4.boxes
+          : (window.getDefaultVong4Boxes ? window.getDefaultVong4Boxes() : generateRandomBoxes())));
         const targetBox = boxes.find(b => b.id === selectedId);
         if (!targetBox) return;
 
         targetBox.revealedClue = true;
 
+        const updatedV4 = {
+          ...v4,
+          boxes: boxes
+        };
+        window.currentGameState.vong4State = updatedV4;
+        window._lastControllerPreviewKey = '';
+        renderPreview('vong4');
+        updateVong4ControllerUI(window.currentGameState);
+
         await window.broadcastStateUpdate({
-          vong4State: {
-            ...v4,
-            boxes: boxes
-          }
+          vong4State: updatedV4
         });
 
         showNotification(`Đã mở nội dung gợi ý của Ô ${selectedId} (${targetBox.name})!`);
@@ -3197,35 +3501,50 @@
       // 5. NÚT: SET SỐ TIỀN TỔNG VỀ 8.000.000
       document.getElementById('btn-v4-reset-money').addEventListener('click', async () => {
         const v4 = window.currentGameState.vong4State || {};
-        const newBoxes = generateRandomBoxes();
+        const resetBoxes = (Array.isArray(v4.boxes) && v4.boxes.length === 6)
+          ? v4.boxes.map(b => ({ ...b, revealedMoney: false, revealedClue: false, moneyDeducted: false }))
+          : (window.getDefaultVong4Boxes ? window.getDefaultVong4Boxes() : generateRandomBoxes());
+
+        const updatedV4 = {
+          ...v4,
+          totalMoney: 8000000,
+          boxes: resetBoxes,
+          showGiftClue: v4.showGiftClue ?? false,
+          showAnswer: false,
+          resultStatus: null,
+          selectedBoxId: null,
+          isResetVong4: true
+        };
+        window.currentGameState.vong4State = updatedV4;
+        window._lastControllerPreviewKey = '';
+        renderPreview('vong4');
+        updateVong4ControllerUI(window.currentGameState);
 
         await window.broadcastStateUpdate({
-          vong4State: {
-            ...v4,
-            totalMoney: 8000000,
-            boxes: newBoxes,
-            showGiftClue: false,
-            showAnswer: false,
-            resultStatus: null,
-            selectedBoxId: null
-          }
+          vong4State: updatedV4
         });
 
-        showNotification('Đã đặt lại tổng tiền về 8.000.000 VNĐ và khởi tạo lại 6 ô số ngẫu nhiên!');
+        showNotification('Đã đặt lại tổng tiền về 8.000.000 VNĐ và đóng các ô số!');
       });
 
-      // HÀM ĐẾM GIỜ CHUẨN XÁC TUYỆT ĐỐI THEO DATE.NOW() CHO VÒNG 4 (120 GIÂY ĐỒNG NHẤT)
+      // HÀM ĐẾM GIỜ CHUẨN XÁC TUYỆT ĐỐI THEO SERVER TIME CHO VÒNG 4 (120 GIÂY ĐỒNG NHẤT GIỮA MỌI MÁY)
       function startPrecisionCountdownV4({ totalSeconds, onTick, onComplete }) {
         if (timerIntervalV4) {
           clearInterval(timerIntervalV4);
           timerIntervalV4 = null;
         }
-        const startTime = Date.now();
-        const targetEndTime = startTime + totalSeconds * 1000;
         let lastDispatchedSecond = totalSeconds;
 
         timerIntervalV4 = setInterval(() => {
-          const now = Date.now();
+          const v4 = window.currentGameState?.vong4State;
+          if (!v4 || !v4.timerRunning) {
+            clearInterval(timerIntervalV4);
+            timerIntervalV4 = null;
+            return;
+          }
+
+          const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
+          const targetEndTime = Number(v4.timerEndTime) || (now + totalSeconds * 1000);
           const remainingMs = targetEndTime - now;
           const currentSecond = Math.max(0, Math.ceil(remainingMs / 1000));
 
@@ -3237,7 +3556,9 @@
           if (remainingMs <= 0 || currentSecond <= 0) {
             clearInterval(timerIntervalV4);
             timerIntervalV4 = null;
-            onComplete();
+            if (lastDispatchedSecond <= 1) {
+              onComplete();
+            }
           }
         }, 30);
 
@@ -3250,13 +3571,28 @@
           clearInterval(timerIntervalV4);
           timerIntervalV4 = null;
         }
+        if (typeof window.resetTimerMonotonic === 'function') {
+          window.resetTimerMonotonic('v4', 120);
+        }
         const v4 = window.currentGameState.vong4State || {};
+        const updatedV4 = {
+          ...v4,
+          isResetTimer: true,
+          timerSeconds: 120,
+          timerDuration: 120,
+          timerStartTime: 0,
+          timerEndTime: 0,
+          timerRunning: false,
+          showGiftClue: v4.showGiftClue ?? false
+        };
+        window.currentGameState.vong4State = updatedV4;
+        const ctrlTimer = document.getElementById('ctrl-v4-timer-display');
+        if (ctrlTimer) {
+          ctrlTimer.textContent = '120s';
+          ctrlTimer.style.color = '#facc15';
+        }
         await window.broadcastStateUpdate({
-          vong4State: {
-            ...v4,
-            timerSeconds: 120,
-            timerRunning: false
-          }
+          vong4State: updatedV4
         });
         showNotification('Đã đặt đồng hồ Vòng 4 về 120 giây!');
       });
@@ -3271,30 +3607,48 @@
         let seconds = typeof v4.timerSeconds === 'number' ? v4.timerSeconds : 120;
         if (seconds <= 0) seconds = 120;
 
+        if (typeof window.resetTimerMonotonic === 'function') {
+          window.resetTimerMonotonic('v4', seconds);
+        }
+
+        const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
+        const endTime = now + seconds * 1000;
+
+        const updatedV4 = {
+          ...v4,
+          isStartTimer: true,
+          timerSeconds: seconds,
+          timerDuration: seconds,
+          timerStartTime: now,
+          timerEndTime: endTime,
+          timerRunning: true
+        };
+        window.currentGameState.vong4State = updatedV4;
+
         await window.broadcastStateUpdate({
-          vong4State: {
-            ...v4,
-            timerSeconds: seconds,
-            timerRunning: true
-          }
+          vong4State: updatedV4
         });
 
         showNotification('Bắt đầu chạy đồng hồ 120 giây Vòng 4!');
 
         startPrecisionCountdownV4({
           totalSeconds: seconds,
-          onTick: async (sec) => {
-            await window.broadcastStateUpdate({
-              vong4State: {
-                timerSeconds: sec
-              }
-            });
+          onTick: (sec) => {
+            const ctrlTimer = document.getElementById('ctrl-v4-timer-display');
+            if (ctrlTimer) {
+              ctrlTimer.textContent = `${sec}s`;
+              ctrlTimer.style.color = sec > 0 ? '#ef4444' : '#facc15';
+            }
           },
           onComplete: async () => {
+            const curV4 = window.currentGameState.vong4State || {};
             await window.broadcastStateUpdate({
               vong4State: {
+                ...curV4,
+                isStopTimer: true,
                 timerRunning: false,
-                timerSeconds: 0
+                timerSeconds: 0,
+                timerEndTime: 0
               }
             });
             showNotification('Hết 120 giây Vòng 4!');
@@ -3309,28 +3663,53 @@
           timerIntervalV4 = null;
         }
         const v4 = window.currentGameState.vong4State || {};
+        const remSec = (typeof window.calculateRemainingSeconds === 'function')
+          ? window.calculateRemainingSeconds(v4, 120, 'v4')
+          : (v4.timerSeconds ?? 120);
+        const ctrlTimer = document.getElementById('ctrl-v4-timer-display');
+        if (ctrlTimer) {
+          ctrlTimer.textContent = `${remSec}s`;
+          ctrlTimer.style.color = '#facc15';
+        }
+        const updatedV4 = {
+          ...v4,
+          isStopTimer: true,
+          timerRunning: false,
+          timerSeconds: remSec,
+          timerEndTime: 0
+        };
+        window.currentGameState.vong4State = updatedV4;
         await window.broadcastStateUpdate({
-          vong4State: {
-            ...v4,
-            timerRunning: false
-          }
+          vong4State: updatedV4
         });
-        showNotification('Đã dừng đồng hồ 120s!');
+        showNotification(`Đã dừng đồng hồ 120s ở mốc ${remSec}s!`);
       });
 
       // 9. NÚT: ĐÚNG (Hiện đáp án đúng, giữ nguyên số tiền hiện có & phát nhạc Congrat)
       document.getElementById('btn-v4-result-correct').addEventListener('click', async () => {
         clearInterval(timerIntervalV4);
+        timerIntervalV4 = null;
         const v4 = window.currentGameState.vong4State || {};
         const currentTotal = typeof v4.totalMoney === 'number' ? v4.totalMoney : 8000000;
+        const remSec = (typeof window.calculateRemainingSeconds === 'function')
+          ? window.calculateRemainingSeconds(v4, 120, 'v4')
+          : (v4.timerSeconds ?? 120);
+        const updatedV4 = {
+          ...v4,
+          isStopTimer: true,
+          timerRunning: false,
+          timerSeconds: remSec,
+          timerEndTime: 0,
+          showAnswer: true,
+          resultStatus: 'correct'
+        };
+        window.currentGameState.vong4State = updatedV4;
+        window._lastControllerPreviewKey = '';
+        renderPreview('vong4');
+        updateVong4ControllerUI(window.currentGameState);
 
         await window.broadcastStateUpdate({
-          vong4State: {
-            ...v4,
-            timerRunning: false,
-            showAnswer: true,
-            resultStatus: 'correct'
-          },
+          vong4State: updatedV4,
           audioState: {
             soundboard: {
               track: 'Congrat.mp3',
@@ -3347,16 +3726,28 @@
       // 10. NÚT: SAI (Hiện đáp án đúng, số tiền tổng trở thành 5.000.000)
       document.getElementById('btn-v4-result-wrong').addEventListener('click', async () => {
         clearInterval(timerIntervalV4);
+        timerIntervalV4 = null;
         const v4 = window.currentGameState.vong4State || {};
+        const remSec = (typeof window.calculateRemainingSeconds === 'function')
+          ? window.calculateRemainingSeconds(v4, 120, 'v4')
+          : (v4.timerSeconds ?? 120);
+        const updatedV4 = {
+          ...v4,
+          isStopTimer: true,
+          timerRunning: false,
+          timerSeconds: remSec,
+          timerEndTime: 0,
+          showAnswer: true,
+          resultStatus: 'wrong',
+          totalMoney: 5000000
+        };
+        window.currentGameState.vong4State = updatedV4;
+        window._lastControllerPreviewKey = '';
+        renderPreview('vong4');
+        updateVong4ControllerUI(window.currentGameState);
 
         await window.broadcastStateUpdate({
-          vong4State: {
-            ...v4,
-            timerRunning: false,
-            showAnswer: true,
-            resultStatus: 'wrong',
-            totalMoney: 5000000
-          }
+          vong4State: updatedV4
         });
 
         showNotification('SAI! Hiện đáp án đúng, số tiền tổng chuyển thành 5.000.000 VNĐ!');
@@ -3365,14 +3756,25 @@
       // 11. NÚT: XÁO TIỀN
       document.getElementById('btn-v4-shuffle-money').addEventListener('click', async () => {
         const v4 = window.currentGameState.vong4State || {};
-        const newBoxes = generateRandomBoxes();
+        const newBoxes = (window.generateRandomVong4Boxes ? window.generateRandomVong4Boxes() : generateRandomBoxes());
+        const updatedV4 = {
+          ...v4,
+          boxes: newBoxes,
+          selectedBoxId: null,
+          isResetVong4: true,
+          showGiftClue: v4.showGiftClue ?? false,
+          showAnswer: false,
+          resultStatus: null
+        };
+        window.currentGameState.vong4State = updatedV4;
+        window._lastControllerPreviewKey = '';
+        renderPreview('vong4');
+        updateVong4ControllerUI(window.currentGameState);
+
         await window.broadcastStateUpdate({
-          vong4State: {
-            ...v4,
-            boxes: newBoxes
-          }
+          vong4State: updatedV4
         });
-        showNotification('Đã xáo ngẫu nhiên 6 giá trị tiền vào 6 ô số!');
+        showNotification('Đã xáo ngẫu nhiên 6 giá trị tiền vào 6 ô số trên tất cả các máy!');
       });
 
       // 12. NÚT: RESET VỀ TRẠNG THÁI MẶC ĐỊNH
@@ -3381,20 +3783,34 @@
           clearInterval(timerIntervalV4);
           timerIntervalV4 = null;
         }
+        if (typeof window.resetTimerMonotonic === 'function') {
+          window.resetTimerMonotonic('v4', 120);
+        }
 
-        const defaultBoxes = generateRandomBoxes();
+        const defaultBoxes = (window.getDefaultVong4Boxes ? window.getDefaultVong4Boxes() : generateRandomBoxes());
+
+        const updatedV4 = {
+          totalMoney: 8000000,
+          timerSeconds: 120,
+          timerDuration: 120,
+          timerStartTime: 0,
+          timerEndTime: 0,
+          timerRunning: false,
+          isResetTimer: true,
+          showGiftClue: false,
+          showAnswer: false,
+          resultStatus: null,
+          selectedBoxId: null,
+          boxes: defaultBoxes,
+          isResetVong4: true
+        };
+        window.currentGameState.vong4State = updatedV4;
+        window._lastControllerPreviewKey = '';
+        renderPreview('vong4');
+        updateVong4ControllerUI(window.currentGameState);
 
         await window.broadcastStateUpdate({
-          vong4State: {
-            totalMoney: 8000000,
-            timerSeconds: 120,
-            timerRunning: false,
-            showGiftClue: false,
-            showAnswer: false,
-            resultStatus: null,
-            selectedBoxId: null,
-            boxes: defaultBoxes
-          }
+          vong4State: updatedV4
         });
 
         showNotification('Đã Reset Vòng 4 về trạng thái mặc định (8.000.000 VNĐ, 120s, ẩn gợi ý & đáp án)!');
@@ -3694,6 +4110,62 @@
               const bets = v2.bets || {};
               const showAns = v2.showAnswer;
               const correctIdx = activeQ.correct;
+              const optLabels = ['A', 'B', 'C', 'D'];
+              const currentQKey = `ctrl_q_${activeQ.topicIndex ?? ''}_${activeQ.questionIndex ?? ''}_${activeQ.question || ''}`;
+
+              const existingPreviewBoard = document.getElementById('ctrl-v2-preview-board');
+              if (existingPreviewBoard && existingPreviewBoard.getAttribute('data-qkey') === currentQKey) {
+                const turnEl = document.getElementById('ctrl-v2-preview-turn');
+                if (turnEl) turnEl.textContent = `Lượt Player ${v2.activePlayerTurn || 1}`;
+
+                for (let idx = 0; idx < opts.length; idx++) {
+                  const oneBased = idx + 1;
+                  const betVal = bets[oneBased] || 0;
+                  const optCard = document.getElementById(`ctrl-v2-preview-opt-${idx}`);
+                  const badgeEl = document.getElementById(`ctrl-v2-preview-badge-${idx}`);
+
+                  if (optCard) {
+                    if (showAns) {
+                      if (oneBased === correctIdx) {
+                        optCard.style.background = '#facc15';
+                        optCard.style.color = '#000000';
+                        optCard.style.border = '3px solid #ffffff';
+                      } else {
+                        optCard.style.background = '#020617';
+                        optCard.style.color = '#ffffff';
+                        optCard.style.border = '2px solid #334155';
+                      }
+                    } else if (betVal > 0) {
+                      optCard.style.background = 'linear-gradient(135deg, #9333ea, #7c3aed)';
+                      optCard.style.color = '#ffffff';
+                      optCard.style.border = '2px solid #d8b4fe';
+                    } else {
+                      optCard.style.background = 'linear-gradient(135deg, #0284c7, #0369a1)';
+                      optCard.style.color = '#ffffff';
+                      optCard.style.border = '2px solid #38bdf8';
+                    }
+                  }
+
+                  if (badgeEl) {
+                    if (showAns && oneBased === correctIdx) {
+                      badgeEl.innerHTML = `<span style="background: #22c55e; color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">ĐÚNG</span>`;
+                    } else if (betVal > 0) {
+                      badgeEl.innerHTML = `<span style="background: #facc15; color: black; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">[CƯỢC: ${betVal}đ]</span>`;
+                    } else {
+                      badgeEl.innerHTML = '';
+                    }
+                  }
+                }
+
+                const scoredBanner = document.getElementById('ctrl-v2-preview-scored-banner');
+                if (scoredBanner) {
+                  scoredBanner.style.display = v2.scored ? 'block' : 'none';
+                  if (v2.scored) {
+                    scoredBanner.innerHTML = `Đã chấm điểm! Player ${v2.activePlayerTurn || 1} được cộng <b>+${v2.awardedScore || 0} điểm</b> từ đáp án đúng số ${correctIdx}.`;
+                  }
+                }
+                return;
+              }
 
               const renderOptionCard = (optText, optIdx) => {
                 const oneBased = optIdx + 1;
@@ -3722,42 +4194,41 @@
                   }
                 }
 
-                const optLabels = ['A', 'B', 'C', 'D'];
                 return `
-                  <div style="background: ${bg}; color: ${color}; border: ${border}; border-radius: 8px; padding: 10px 14px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; transition: all 0.3s ease;">
+                  <div id="ctrl-v2-preview-opt-${optIdx}" style="background: ${bg}; color: ${color}; border: ${border}; border-radius: 8px; padding: 10px 14px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; transition: all 0.3s ease;">
                     <div>
                       <b style="font-size: 14px; margin-right: 6px;">${optLabels[optIdx] || oneBased}.</b>
                       <span>${optText}</span>
                     </div>
-                    <div>${tag}</div>
+                    <div id="ctrl-v2-preview-badge-${optIdx}">${tag}</div>
                   </div>
                 `;
               };
 
               area.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px;">
-                  <div>
-                    <span style="color: #c084fc; font-size: 11px;">CHỦ ĐỀ: <b>${activeQ.topicName || ''}</b></span>
-                    <span style="color: #94a3b8; font-size: 11px; margin-left: 8px;">(${opts.length} đáp án)</span>
+                <div id="ctrl-v2-preview-board" data-qkey="${currentQKey}">
+                  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px;">
+                    <div>
+                      <span style="color: #c084fc; font-size: 11px;">CHỦ ĐỀ: <b>${activeQ.topicName || ''}</b></span>
+                      <span style="color: #94a3b8; font-size: 11px; margin-left: 8px;">(${opts.length} đáp án)</span>
+                    </div>
+                    <div id="ctrl-v2-preview-turn" style="font-size: 11px; color: #facc15; font-weight: bold;">
+                      Lượt Player ${v2.activePlayerTurn || 1}
+                    </div>
                   </div>
-                  <div style="font-size: 11px; color: #facc15;">
-                    Lượt Player ${v2.activePlayerTurn || 1} | Đồng hồ: <b>${v2.timerSeconds ?? 60}s</b>
+
+                  <div style="background: #1e293b; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #f59e0b; font-size: 14px; color: #ffffff;">
+                    <b>Câu hỏi:</b> ${activeQ.question}
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: ${opts.length === 2 ? '1fr 1fr' : '1fr 1fr'}; gap: 6px;">
+                    ${opts.map((o, idx) => renderOptionCard(o, idx)).join('')}
+                  </div>
+
+                  <div id="ctrl-v2-preview-scored-banner" style="display: ${v2.scored ? 'block' : 'none'}; margin-top: 6px; background: #064e3b; border: 1.5px solid #22c55e; border-radius: 6px; padding: 6px 12px; font-size: 11px; color: #a7f3d0; text-align: center;">
+                    ${v2.scored ? `Đã chấm điểm! Player ${v2.activePlayerTurn || 1} được cộng <b>+${v2.awardedScore || 0} điểm</b> từ đáp án đúng số ${correctIdx}.` : ''}
                   </div>
                 </div>
-
-                <div style="background: #1e293b; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #f59e0b; font-size: 14px; color: #ffffff;">
-                  <b>Câu hỏi:</b> ${activeQ.question}
-                </div>
-
-                <div style="display: grid; grid-template-columns: ${opts.length === 2 ? '1fr 1fr' : '1fr 1fr'}; gap: 6px;">
-                  ${opts.map((o, idx) => renderOptionCard(o, idx)).join('')}
-                </div>
-
-                ${v2.scored ? `
-                  <div style="margin-top: 6px; background: #064e3b; border: 1.5px solid #22c55e; border-radius: 6px; padding: 6px 12px; font-size: 11px; color: #a7f3d0; text-align: center;">
-                    Đã chấm điểm! Player ${v2.activePlayerTurn || 1} được cộng <b>+${v2.awardedScore || 0} điểm</b> từ đáp án đúng số ${correctIdx}.
-                  </div>
-                ` : ''}
               `;
             }
           }
@@ -3855,16 +4326,18 @@
           const gift = v4Data.gift || {};
           const clues = v4Data.clues || [];
           const v4Live = window.currentGameState.vong4State || {};
-          const boxes = v4Live.boxes || generateRandomBoxes();
+          const boxes = (Array.isArray(v4Live.boxes) && v4Live.boxes.length === 6)
+            ? v4Live.boxes
+            : (window.getDefaultVong4Boxes ? window.getDefaultVong4Boxes() : generateRandomBoxes());
           const totalMoney = typeof v4Live.totalMoney === 'number' ? v4Live.totalMoney : 8000000;
           const selectedBoxId = v4Live.selectedBoxId;
           const showGift = v4Live.showGiftClue;
           const showAnswer = v4Live.showAnswer;
           const resultStatus = v4Live.resultStatus;
 
-          const renderBoxPreview = (box) => {
+          const renderBoxPreview = (box, bIdx) => {
             const isSelected = (box.id === selectedBoxId);
-            const clueObj = clues.find(c => String(c.index) === String(box.id)) || { clue: `Gợi ý ô ${box.id}` };
+            const clueObj = (window.getClueForBox ? window.getClueForBox(clues, box.id, bIdx) : null) || clues.find(c => String(c.index) === String(box.id)) || { clue: `Gợi ý ô ${box.id}` };
             const textColor = box.darkText ? '#000000' : '#ffffff';
             const moneyFormatted = (box.money || 0).toLocaleString('vi-VN');
 
@@ -3904,8 +4377,8 @@
                 </span>
               </div>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 11px; color: #facc15;">120s: <b>${v4Live.timerSeconds ?? 120}s</b></span>
-                <span style="font-size: 11px; color: #94a3b8;">${v4Live.timerRunning ? 'Đang chạy' : 'Đang dừng'}</span>
+                <span style="font-size: 11px; color: #facc15;">120s: <b id="ctrl-v4-preview-timer-val">${(typeof window.calculateRemainingSeconds === 'function') ? window.calculateRemainingSeconds(v4Live, 120, 'v4') : (v4Live.timerSeconds ?? 120)}s</b></span>
+                <span id="ctrl-v4-preview-timer-status" style="font-size: 11px; color: #94a3b8;">${v4Live.timerRunning ? 'Đang chạy' : 'Đang dừng'}</span>
               </div>
             </div>
 
@@ -3925,20 +4398,8 @@
 
             <!-- 6 Ô màu sắc (1 - 6) -->
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px;">
-              ${boxes.map(b => renderBoxPreview(b)).join('')}
+              ${boxes.map((b, bIdx) => renderBoxPreview(b, bIdx)).join('')}
             </div>
-
-            <!-- Kết quả Vòng 4 -->
-            ${showAnswer ? `
-              <div style="background: ${resultStatus === 'correct' ? '#064e3b' : '#450a0a'}; border: 2px solid ${resultStatus === 'correct' ? '#22c55e' : '#ef4444'}; border-radius: 8px; padding: 8px 12px; text-align: center; color: white;">
-                <div style="font-size: 13px; font-weight: bold;">
-                  ${resultStatus === 'correct' ? 'THÍ SINH TRẢ LỜI ĐÚNG - GIỮ NGUYÊN TIỀN THƯỞNG!' : 'THÍ SINH TRẢ LỜI SAI - TIỀN THƯỞNG LÀ 5.000.000 VNĐ!'}
-                </div>
-                <div style="font-size: 11px; margin-top: 2px; color: #cbd5e1;">
-                  Tổng tiền thưởng nhận được: <b style="color: #facc15; font-size: 13px;">${totalMoney.toLocaleString('vi-VN')} VNĐ</b>
-                </div>
-              </div>
-            ` : ''}
           `;
         }
       }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Host</title>
-    <meta name="description" content="Trang Host dẫn chương trình kết nối với máy chủ An Số Vàng trên OnRender" />
+    <meta name="description" content="Trang Host dẫn chương trình kết nối với máy chủ Ẩn Số Vàng trên OnRender" />
 
     <style>
       *, *::before, *::after {
@@ -24,6 +24,10 @@
       }
       button, .btn, a.btn, input[type='button'], input[type='submit'], input[type='reset'] {
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
         transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
         outline: none;
         will-change: background-color, color, box-shadow;
@@ -67,25 +71,21 @@
     </style>
 
     <script>
-      function disableDevTools() {
-        window.addEventListener('keydown', function (e) {
-          if (e.key === 'F12' || e.keyCode === 123) {
-            e.preventDefault(); e.stopPropagation(); return false;
-          }
-          const isCmdOrCtrl = e.ctrlKey || e.metaKey;
-          if (isCmdOrCtrl && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-          }
-          if (isCmdOrCtrl && ['u', 'U', 's', 'S'].includes(e.key)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-          }
-        }, true);
-        window.addEventListener('contextmenu', function (e) {
-          e.preventDefault(); return false;
-        }, true);
-      }
-      disableDevTools();
-      window.disableDevTools = disableDevTools;
+      // Bảo vệ trang khỏi các lỗi Promise unhandled và lỗi từ extension trình duyệt
+      window.addEventListener('unhandledrejection', function (e) {
+        try {
+          e.preventDefault();
+          if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        } catch (err) {}
+      }, true);
+      window.addEventListener('error', function (e) {
+        if (e && (e.filename?.includes('speedflow') || e.message?.includes('Listener error') || e.message?.includes('HalfBold'))) {
+          try {
+            e.preventDefault();
+            if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+          } catch (err) {}
+        }
+      }, true);
     </script>
     <script src="./sync-client.js"></script>
   </head>
@@ -129,7 +129,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="background: #0284c7; color: white; padding: 3px 8px; border-radius: 5px; font-size: 11px;">VÒNG 1</span>
-            <h3 style="margin: 0; font-size: 16px; color: #38bdf8;">THỬ SỨC (ĐÚNG / SAI)</h3>
+            <h3 style="margin: 0; font-size: 16px; color: #38bdf8;">THỬ SỨC</h3>
           </div>
           <div id="host-v1-timer-badge" style="background: #0f172a; border: 1.5px solid #facc15; padding: 3px 10px; border-radius: 6px; font-size: 13px; color: #facc15;">
             Đồng hồ: <span id="host-v1-timer-sec">5s</span>
@@ -210,7 +210,7 @@
       <!-- VIEW VÒNG 2 -->
       <div id="view-vong2" class="view-container" style="background: #1e293b; border-radius: 12px; padding: 12px; border: 2px solid #f59e0b;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0;">
-          <h3 style="margin: 0; font-size: 18px; color: #f59e0b;">VÒNG 2: ĐẶT CƯỢC (TRẮC NGHIỆM)</h3>
+          <h3 style="margin: 0; font-size: 18px; color: #f59e0b;">VÒNG 2: ĐẶT CƯỢC</h3>
           <span style="background: #b45309; color: white; padding: 3px 10px; border-radius: 999px; font-size: 11px;">Host Script</span>
         </div>
         <div id="host-v2-content" style="flex: 1; min-height: 0; overflow-y: auto;">Đang tải chủ đề và câu hỏi...</div>
@@ -298,6 +298,12 @@
 
       let currentHostRenderedView = null;
 
+      // Khai báo trước các biến cờ đệm ở đầu script để loại trừ hoàn toàn lỗi TDZ
+      var lastRenderedHostV2Key = '';
+      var lastRenderedHostV3Key = '';
+      var lastRenderedHostV4Key = '';
+      var lastRenderedHostCHPKey = '';
+
       window.onGameStateChange(function(state, changes) {
         if (!checkRoomAccess()) return;
 
@@ -343,20 +349,12 @@
           }
         }
 
-        // 3. Cập nhật nội dung Vòng 1 chi tiết
-        renderHostVong1(state);
-
-        // 4. Cập nhật nội dung Vòng 2 chi tiết
-        renderHostVong2(state);
-
-        // 5. Cập nhật nội dung Vòng 3 chi tiết
-        renderHostVong3(state);
-
-        // 6. Cập nhật nội dung Vòng 4 chi tiết
-        renderHostVong4(state);
-
-        // 7. Cập nhật nội dung Câu hỏi phụ chi tiết
-        renderHostCHP(state);
+        // 3. Cập nhật nội dung các vòng thi
+        try { renderHostVong1(state); } catch (e) {}
+        try { renderHostVong2(state); } catch (e) {}
+        try { renderHostVong3(state); } catch (e) {}
+        try { renderHostVong4(state); } catch (e) {}
+        try { renderHostCHP(state); } catch (e) {}
       });
 
       function renderHostVong1(state) {
@@ -369,7 +367,10 @@
         const correctVal = document.getElementById('host-v1-correct-val');
 
         if (timerSec) {
-          timerSec.textContent = `${v1.timerSeconds || 0}s`;
+          const displaySec = (typeof window.calculateRemainingSeconds === 'function')
+            ? window.calculateRemainingSeconds(v1, 5, 'v1')
+            : (v1.timerSeconds ?? 5);
+          timerSec.textContent = `${displaySec}s`;
           timerSec.style.color = v1.timerRunning ? '#ef4444' : '#facc15';
         }
 
@@ -456,13 +457,29 @@
         if (!v2El) return;
 
         if (!q || !q.vong2 || q.vong2.length === 0) {
+          lastRenderedHostV2Key = 'empty';
           v2El.innerHTML = '<div style="color: #94a3b8; text-align: center; padding: 20px;">Chưa có dữ liệu câu hỏi Vòng 2. Hãy nạp từ Controller.</div>';
           return;
         }
 
-        const topics = q.vong2;
         const scene = v2.scene || 'topics_board';
         const chosen = Array.isArray(v2.chosenTopics) ? v2.chosenTopics : [];
+        const activeQ = v2.activeQuestion;
+        const currentV2Key = `${scene}_${chosen.join(',')}_${v2.selectedTopicIndex}_${activeQ ? activeQ.question : 'none'}_${activeQ?.isOpened}_${v2.showAnswer}_${v2.scored}_${JSON.stringify(v2.bets)}_${v2.activePlayerTurn}`;
+
+        if (lastRenderedHostV2Key === currentV2Key) {
+          const timerEl = document.getElementById('host-v2-timer-display');
+          if (timerEl) {
+            const displaySec = (typeof window.calculateRemainingSeconds === 'function')
+              ? window.calculateRemainingSeconds(v2, 60, 'v2')
+              : (v2.timerSeconds ?? 60);
+            timerEl.textContent = `THỜI GIAN: ${displaySec}s`;
+          }
+          return;
+        }
+        lastRenderedHostV2Key = currentV2Key;
+
+        const topics = q.vong2;
 
         if (scene === 'topics_board') {
           // Bảng 10 chủ đề (2 - 3 - 3 - 2)
@@ -492,7 +509,7 @@
 
           v2El.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 16px;">
-              <h4 style="margin: 0; color: #f59e0b; font-size: 16px;">BẢNG 10 CHỦ ĐỀ (CẤU TRÚC 2 - 3 - 3 - 2)</h4>
+              <h4 style="margin: 0; color: #f59e0b; font-size: 16px;">BẢNG 10 CHỦ ĐỀ</h4>
               <span style="font-size: 13px; color: #94a3b8;">Chủ đề chưa chọn: Màu Blue | Đã chọn: Màu Tím</span>
             </div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -525,83 +542,146 @@
             const bets = v2.bets || {};
             const showAns = v2.showAnswer;
             const correctIdx = activeQ.correct;
+            const optLabels = ['A', 'B', 'C', 'D'];
+            const currentQKey = `host_q_${activeQ.topicIndex}_${activeQ.questionIndex}_${activeQ.question}`;
+
+            const existingHostBoard = document.getElementById('host-v2-question-board');
+            if (existingHostBoard && existingHostBoard.getAttribute('data-qkey') === currentQKey) {
+              const timerEl = document.getElementById('host-v2-timer-display');
+              if (timerEl) {
+                const displaySec = (typeof window.calculateRemainingSeconds === 'function')
+                  ? window.calculateRemainingSeconds(v2, 60, 'v2')
+                  : (v2.timerSeconds ?? 60);
+                timerEl.textContent = `THỜI GIAN: ${displaySec}s`;
+                timerEl.style.color = v2.timerRunning ? '#ef4444' : '#facc15';
+              }
+
+              for (let idx = 0; idx < opts.length; idx++) {
+                const oneBased = idx + 1;
+                const betVal = bets[oneBased] || 0;
+                const optCard = document.getElementById(`host-v2-opt-${idx}`);
+                const badgeEl = document.getElementById(`host-v2-bet-badge-${idx}`);
+
+                if (optCard) {
+                  if (showAns) {
+                    if (oneBased === correctIdx) {
+                      optCard.style.background = '#facc15';
+                      optCard.style.color = '#000000';
+                      optCard.style.border = '3px solid #ffffff';
+                    } else {
+                      optCard.style.background = '#020617';
+                      optCard.style.color = '#ffffff';
+                      optCard.style.border = '2px solid #334155';
+                    }
+                  } else if (betVal > 0) {
+                    optCard.style.background = 'linear-gradient(135deg, #9333ea, #7c3aed)';
+                    optCard.style.color = '#ffffff';
+                    optCard.style.border = '2px solid #d8b4fe';
+                  } else {
+                    optCard.style.background = 'linear-gradient(135deg, #0284c7, #0369a1)';
+                    optCard.style.color = '#ffffff';
+                    optCard.style.border = '2px solid #38bdf8';
+                  }
+                }
+
+                if (badgeEl) {
+                  if (showAns && oneBased === correctIdx) {
+                    badgeEl.style.display = 'block';
+                    badgeEl.innerHTML = `<span style="background: #22c55e; color: white; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 6px;">ĐÁP ÁN ĐÚNG</span>`;
+                  } else if (betVal > 0) {
+                    badgeEl.style.display = 'block';
+                    badgeEl.innerHTML = `<span style="background: #facc15; color: black; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 6px;">[ĐẶT CƯỢC: ${betVal}đ]</span>`;
+                  } else {
+                    badgeEl.style.display = 'none';
+                  }
+                }
+              }
+
+              const scoredBanner = document.getElementById('host-v2-scored-banner');
+              if (scoredBanner) {
+                scoredBanner.style.display = v2.scored ? 'block' : 'none';
+                if (v2.scored) {
+                  scoredBanner.innerHTML = `ĐÃ CHẤM ĐIỂM! Player ${v2.activePlayerTurn || 1} được cộng +${v2.awardedScore || 0} điểm từ đáp án đúng số ${correctIdx}.`;
+                }
+              }
+              return;
+            }
 
             const renderOptionCard = (optText, optIdx) => {
               const oneBased = optIdx + 1;
               const betVal = bets[oneBased] || 0;
-              let bg = 'linear-gradient(135deg, #0284c7, #0369a1)'; // Blue
+              let bg = 'linear-gradient(135deg, #0284c7, #0369a1)';
               let color = '#ffffff';
               let border = '2px solid #38bdf8';
               let tag = '';
 
               if (betVal > 0) {
-                bg = 'linear-gradient(135deg, #9333ea, #7c3aed)'; // Tím
+                bg = 'linear-gradient(135deg, #9333ea, #7c3aed)';
                 border = '2px solid #d8b4fe';
-                tag = `<span style="background: #facc15; color: black; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 6px; margin-left: 8px;">[ĐẶT CƯỢC: ${betVal}đ]</span>`;
+                tag = `<span style="background: #facc15; color: black; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 6px;">[ĐẶT CƯỢC: ${betVal}đ]</span>`;
               }
 
               if (showAns) {
                 if (oneBased === correctIdx) {
-                  bg = '#facc15'; // Vàng
-                  color = '#000000'; // Chữ đen
+                  bg = '#facc15';
+                  color = '#000000';
                   border = '3px solid #ffffff';
-                  tag += `<span style="background: #22c55e; color: white; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 6px; margin-left: 8px;">ĐÁP ÁN ĐÚNG</span>`;
+                  tag = `<span style="background: #22c55e; color: white; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 6px;">ĐÁP ÁN ĐÚNG</span>`;
                 } else {
-                  bg = '#020617'; // Đen
-                  color = '#ffffff'; // Chữ trắng
+                  bg = '#020617';
+                  color = '#ffffff';
                   border = '2px solid #334155';
                 }
               }
 
-              const optLabels = ['A', 'B', 'C', 'D'];
               return `
-                <div style="background: ${bg}; color: ${color}; border: ${border}; border-radius: 12px; padding: 16px 20px; font-size: 16px; display: flex; align-items: center; justify-content: space-between; transition: all 0.3s ease;">
+                <div id="host-v2-opt-${optIdx}" style="background: ${bg}; color: ${color}; border: ${border}; border-radius: 12px; padding: 16px 20px; font-size: 16px; display: flex; align-items: center; justify-content: space-between;">
                   <div>
                     <b style="font-size: 18px; margin-right: 8px;">${optLabels[optIdx] || oneBased}.</b>
                     <span>${optText}</span>
                   </div>
-                  <div>${tag}</div>
+                  <div id="host-v2-bet-badge-${optIdx}">${tag}</div>
                 </div>
               `;
             };
 
             v2El.innerHTML = `
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 16px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="background: #7c3aed; color: white; padding: 4px 12px; border-radius: 6px; font-size: 13px;">CHỦ ĐỀ: ${activeQ.topicName || ''}</span>
-                  <span style="background: #0284c7; color: white; padding: 4px 12px; border-radius: 6px; font-size: 13px;">${opts.length} ĐÁP ÁN</span>
-                  <span style="background: #eab308; color: black; font-weight: bold; padding: 4px 12px; border-radius: 6px; font-size: 13px;">LƯỢT: PLAYER ${v2.activePlayerTurn || 1}</span>
+              <div id="host-v2-question-board" data-qkey="${currentQKey}">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 16px;">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="background: #7c3aed; color: white; padding: 4px 12px; border-radius: 6px; font-size: 13px;">CHỦ ĐỀ: ${activeQ.topicName || ''}</span>
+                    <span style="background: #0284c7; color: white; padding: 4px 12px; border-radius: 6px; font-size: 13px;">${opts.length} ĐÁP ÁN</span>
+                    <span style="background: #eab308; color: black; font-weight: bold; padding: 4px 12px; border-radius: 6px; font-size: 13px;">LƯỢT: PLAYER ${v2.activePlayerTurn || 1}</span>
+                  </div>
+                  <div id="host-v2-timer-display" style="background: #0f172a; border: 2px solid #f59e0b; padding: 6px 16px; border-radius: 8px; font-size: 20px; color: ${v2.timerRunning ? '#ef4444' : '#facc15'}; font-weight: bold;">
+                    THỜI GIAN: ${(typeof window.calculateRemainingSeconds === 'function') ? window.calculateRemainingSeconds(v2, 60, 'v2') : (v2.timerSeconds ?? 60)}s
+                  </div>
                 </div>
-                <div style="background: #0f172a; border: 2px solid #f59e0b; padding: 6px 16px; border-radius: 8px; font-size: 20px; color: #facc15; font-weight: bold;">
-                  THỜI GIAN: ${v2.timerSeconds ?? 60}s
+
+                <!-- Câu hỏi -->
+                <div style="background: #0f172a; border: 2px solid #f59e0b; border-radius: 12px; padding: 18px 22px; font-size: 20px; color: #ffffff; line-height: 1.4; margin-bottom: 16px;">
+                  <b>CÂU HỎI:</b> ${activeQ.question}
                 </div>
-              </div>
 
-              <!-- Câu hỏi -->
-              <div style="background: #0f172a; border: 2px solid #f59e0b; border-radius: 12px; padding: 18px 22px; font-size: 20px; color: #ffffff; line-height: 1.4; margin-bottom: 16px;">
-                <b>CÂU HỎI:</b> ${activeQ.question}
-              </div>
-
-              <!-- Các đáp án -->
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                ${opts.map((o, idx) => renderOptionCard(o, idx)).join('')}
-              </div>
-
-              <!-- Ô đáp án đúng dành riêng cho Host (Hiển thị ngay cả khi chưa công bố đáp án) -->
-              <div style="margin-top: 16px; background: #1e1b4b; border: 2px dashed #a855f7; border-radius: 12px; padding: 14px 18px; color: #e9d5ff; font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px;">
-                <div>
-                  <b style="color: #c084fc;">ĐÁP ÁN ĐÚNG (Chỉ dành riêng cho Host):</b>
-                  <span style="color: #facc15; font-weight: bold; font-size: 18px; margin-left: 6px; text-transform: uppercase;">
-                    ${['A', 'B', 'C', 'D'][correctIdx - 1] || correctIdx}. ${opts[correctIdx - 1] || ''}
-                  </span>
+                <!-- Các đáp án -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  ${opts.map((o, idx) => renderOptionCard(o, idx)).join('')}
                 </div>
-              </div>
 
-              ${v2.scored ? `
-                <div style="margin-top: 14px; background: #064e3b; border: 2px solid #22c55e; border-radius: 10px; padding: 12px; font-size: 16px; color: #a7f3d0; text-align: center; font-weight: bold;">
+                <!-- Ô đáp án đúng dành riêng cho Host (Hiển thị ngay cả khi chưa công bố đáp án) -->
+                <div style="margin-top: 16px; background: #1e1b4b; border: 2px dashed #a855f7; border-radius: 12px; padding: 14px 18px; color: #e9d5ff; font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px;">
+                  <div>
+                    <b style="color: #c084fc;">ĐÁP ÁN ĐÚNG (Chỉ dành riêng cho Host):</b>
+                    <span style="color: #facc15; font-weight: bold; font-size: 18px; margin-left: 6px; text-transform: uppercase;">
+                      ${['A', 'B', 'C', 'D'][correctIdx - 1] || correctIdx}. ${opts[correctIdx - 1] || ''}
+                    </span>
+                  </div>
+                </div>
+
+                <div id="host-v2-scored-banner" style="display: ${v2.scored ? 'block' : 'none'}; margin-top: 14px; background: #064e3b; border: 2px solid #22c55e; border-radius: 10px; padding: 12px; font-size: 16px; color: #a7f3d0; text-align: center; font-weight: bold;">
                   ĐÃ CHẤM ĐIỂM! Player ${v2.activePlayerTurn || 1} được cộng +${v2.awardedScore || 0} điểm từ đáp án đúng số ${correctIdx}.
                 </div>
-              ` : ''}
+              </div>
             `;
           }
         }
@@ -622,6 +702,7 @@
         const players = state.players || [];
 
         if (!activeQ || !isVisible) {
+          lastRenderedHostV3Key = 'none';
           v3El.innerHTML = `
             <div style="text-align: center; padding: 40px 20px; background: #0f172a; border-radius: 14px; border: 2px dashed #6d28d9;">
               <span style="font-size: 40px;"></span>
@@ -631,6 +712,17 @@
           `;
           return;
         }
+
+        const currentHostV3Key = `${activeQ.index}_${isVisible}_${stage}_${allowed.join(',')}_${rungList.join(',')}_${bellRungBy}_${v3.isBellLocked}`;
+        const timerV3El = document.getElementById('host-v3-timer-display');
+        if (timerV3El && lastRenderedHostV3Key === currentHostV3Key) {
+          const displaySec = (typeof window.calculateRemainingSeconds === 'function')
+            ? window.calculateRemainingSeconds(v3, 7, 'v3')
+            : (v3.stepTimerSeconds ?? 7);
+          timerV3El.textContent = `BƯỚC: ${displaySec}s`;
+          return;
+        }
+        lastRenderedHostV3Key = currentHostV3Key;
 
         const renderBox = (title, content, isRevealed, borderCol, bgGrad) => {
           return `
@@ -707,8 +799,8 @@
               </span>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
-              <div style="background: #0f172a; border: 2px solid #a855f7; padding: 6px 18px; border-radius: 8px; font-size: 20px; color: #c084fc; font-weight: bold;">
-                BƯỚC: ${v3.stepTimerSeconds ?? 7}s
+              <div id="host-v3-timer-display" style="background: #0f172a; border: 2px solid #a855f7; padding: 6px 18px; border-radius: 8px; font-size: 20px; color: #c084fc; font-weight: bold;">
+                BƯỚC: ${(typeof window.calculateRemainingSeconds === 'function') ? window.calculateRemainingSeconds(v3, 7, 'v3') : (v3.stepTimerSeconds ?? 7)}s
               </div>
             </div>
           </div>
@@ -754,20 +846,34 @@
         const gift = v4Data.gift || {};
         const clues = v4Data.clues || [];
         const v4 = state.vong4State || {};
-        const boxes = v4.boxes || [
-          { id: 1, name: 'Đỏ', color: '#ff0000', text: 'Ô SỐ 1', money: 0 },
-          { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true, money: 200000 },
-          { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', money: 300000 },
-          { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', money: 500000 },
-          { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', money: 0 },
-          { id: 6, name: 'Cam', color: '#ffa500', text: 'Ô SỐ 6', darkText: true, money: 1000000 }
-        ];
+        const boxes = (Array.isArray(v4.boxes) && v4.boxes.length === 6)
+          ? v4.boxes
+          : (window.getDefaultVong4Boxes ? window.getDefaultVong4Boxes() : [
+            { id: 1, name: 'Đỏ', color: '#ff0000', text: 'Ô SỐ 1', money: 0 },
+            { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true, money: 200000 },
+            { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', money: 300000 },
+            { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', money: 500000 },
+            { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', darkText: true, money: 0 },
+            { id: 6, name: 'Cam', color: '#ff7700', text: 'Ô SỐ 6', darkText: true, money: 1000000 }
+          ]);
         const totalMoney = typeof v4.totalMoney === 'number' ? v4.totalMoney : 8000000;
         const selectedId = v4.selectedBoxId;
 
-        const renderHostBox = (box) => {
+        const currentHostV4Key = `${selectedId}_${v4.showGiftClue}_${v4.showAnswer}_${v4.resultStatus}_${totalMoney}_${JSON.stringify(boxes)}`;
+        const timerV4El = document.getElementById('host-v4-timer-display');
+        if (timerV4El && lastRenderedHostV4Key === currentHostV4Key) {
+          const displaySec = (typeof window.calculateRemainingSeconds === 'function')
+            ? window.calculateRemainingSeconds(v4, 120, 'v4')
+            : (v4.timerSeconds ?? 120);
+          timerV4El.textContent = `120s: ${displaySec}s`;
+          timerV4El.style.color = v4.timerRunning ? '#ef4444' : '#facc15';
+          return;
+        }
+        lastRenderedHostV4Key = currentHostV4Key;
+
+        const renderHostBox = (box, bIdx) => {
           const isSelected = (box.id === selectedId);
-          const clueObj = clues.find(c => String(c.index) === String(box.id)) || { clue: `Gợi ý ô ${box.id}` };
+          const clueObj = (window.getClueForBox ? window.getClueForBox(clues, box.id, bIdx) : null) || clues.find(c => String(c.index) === String(box.id)) || { clue: `Gợi ý ô ${box.id}` };
           const isDarkText = box.darkText || (box.id === 2 || box.id === 5 || box.id === 6);
           const textColor = isDarkText ? '#000000' : '#ffffff';
           const moneyFormatted = (box.money || 0).toLocaleString('vi-VN');
@@ -785,7 +891,7 @@
                 <div style="font-size: 15px; font-weight: bold; color: ${box.revealedMoney ? '#4ade80' : '#facc15'};">
                   ${moneyFormatted} VNĐ
                   <span style="font-size: 10px; margin-left: 6px; color: ${box.revealedMoney ? '#4ade80' : '#94a3b8'};">
-                    (${box.revealedMoney ? 'ĐÃ HIỆN' : 'ĐANG ẨN'})
+                    (${box.revealedMoney ? 'Đã hiện' : 'Đang ẩn'})
                   </span>
                 </div>
               </div>
@@ -797,7 +903,7 @@
                   ${clueObj.clue}
                 </div>
                 <div style="font-size: 10px; margin-top: 3px; color: ${box.revealedClue ? '#4ade80' : '#f87171'};">
-                  Trạng thái: <b>${box.revealedClue ? 'ĐÃ MỞ CHO THÍ SINH XEM' : 'ĐANG ẨN'}</b>
+                  Trạng thái: <b>${box.revealedClue ? 'Đã hiện' : 'Đang ẩn'}</b>
                 </div>
               </div>
             </div>
@@ -817,8 +923,8 @@
             </div>
 
             <div style="display: flex; align-items: center; gap: 12px;">
-              <div style="background: #0f172a; border: 2px solid #eab308; padding: 6px 20px; border-radius: 10px; font-size: 22px; color: #facc15; font-weight: bold;">
-                120s: ${v4.timerSeconds ?? 120}s
+              <div id="host-v4-timer-display" style="background: #0f172a; border: 2px solid #eab308; padding: 6px 20px; border-radius: 10px; font-size: 22px; color: #facc15; font-weight: bold;">
+                120s: ${(typeof window.calculateRemainingSeconds === 'function') ? window.calculateRemainingSeconds(v4, 120, 'v4') : (v4.timerSeconds ?? 120)}s
               </div>
             </div>
           </div>
@@ -836,27 +942,15 @@
             </div>
             <div>
               <span style="background: ${v4.showGiftClue ? '#22c55e' : '#334155'}; color: white; font-size: 12px; font-weight: bold; padding: 6px 14px; border-radius: 8px;">
-                ${v4.showGiftClue ? 'SÂN KHẤU ĐANG HIỆN' : 'SÂN KHẤU ĐANG ẨN'}
+                ${v4.showGiftClue ? 'Đã hiện' : 'Đang ẩn'}
               </span>
             </div>
           </div>
 
           <!-- 6 Ô số có màu sắc tương ứng -->
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
-            ${boxes.map(b => renderHostBox(b)).join('')}
+            ${boxes.map((b, bIdx) => renderHostBox(b, bIdx)).join('')}
           </div>
-
-          <!-- Kết quả Đúng / Sai nếu có -->
-          ${v4.showAnswer ? `
-            <div style="background: ${v4.resultStatus === 'correct' ? '#064e3b' : '#450a0a'}; border: 2px solid ${v4.resultStatus === 'correct' ? '#22c55e' : '#ef4444'}; border-radius: 14px; padding: 14px 20px; text-align: center; color: white; margin-bottom: 16px;">
-              <div style="font-size: 20px; font-weight: bold;">
-                ${v4.resultStatus === 'correct' ? 'THÍ SINH TRẢ LỜI ĐÚNG - GIỮ NGUYÊN TIỀN THƯỞNG!' : 'THÍ SINH TRẢ LỜI SAI - TIỀN THƯỞNG TRỞ THÀNH 5.000.000 VNĐ!'}
-              </div>
-              <div style="font-size: 16px; margin-top: 4px; color: #facc15;">
-                Tổng tiền thưởng chung cuộc: <b>${totalMoney.toLocaleString('vi-VN')} VNĐ</b>
-              </div>
-            </div>
-          ` : ''}
 
           <!-- Hộp đáp án Host -->
           <div style="background: linear-gradient(135deg, #064e3b, #022c22); border: 2px solid #10b981; border-radius: 12px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
@@ -884,6 +978,12 @@
         } else if (chp.allowedPlayerId && chp.allowedPlayerId !== 'all') {
           allowedList = [Number(chp.allowedPlayerId)];
         }
+
+        const currentHostCHPKey = `${isLocked}_${winner ? winner.playerId : 'none'}_${allowedList.join(',')}`;
+        if (lastRenderedHostCHPKey === currentHostCHPKey && chpEl.children.length > 0) {
+          return;
+        }
+        lastRenderedHostCHPKey = currentHostCHPKey;
 
         let allowedText = 'Tất cả người chơi';
         if (allowedList.length === 0) {

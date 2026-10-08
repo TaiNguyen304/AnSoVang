@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Player 4</title>
-    <meta name="description" content="Trang người chơi Player 1 gameshow An Số Vàng" />
+    <meta name="description" content="Trang người chơi Player 4 gameshow Ẩn Số Vàng" />
 
     <style>
       *, *::before, *::after {
@@ -24,6 +24,10 @@
       }
       button, .btn, a.btn, input[type='button'], input[type='submit'], input[type='reset'] {
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
         transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
         outline: none;
         will-change: background-color, color, box-shadow;
@@ -48,6 +52,63 @@
         cursor: not-allowed !important;
         pointer-events: none !important;
         filter: grayscale(80%);
+      }
+      /* Styling Vòng 1 Choice Buttons */
+      .btn-choice {
+        background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
+        background-color: #7c3aed !important;
+        color: #ffffff !important;
+        border: 2px solid #a78bfa !important;
+        transition: all 0.2s ease !important;
+      }
+      .btn-choice * {
+        color: inherit !important;
+      }
+      .btn-choice:hover,
+      .btn-choice:hover *,
+      .btn-choice:focus,
+      .btn-choice:active {
+        background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
+        background-color: #7c3aed !important;
+        color: #ffffff !important;
+        border-color: #a78bfa !important;
+        box-shadow: 0 0 12px rgba(167, 139, 250, 0.5) !important;
+        transform: none !important;
+        filter: none !important;
+      }
+      #btn-choice-dung.selected,
+      #btn-choice-dung.selected * {
+        background: linear-gradient(135deg, #16a34a, #15803d) !important;
+        background-color: #16a34a !important;
+        color: #ffffff !important;
+        border-color: #4ade80 !important;
+        box-shadow: 0 0 18px rgba(74, 222, 128, 0.6) !important;
+      }
+      #btn-choice-dung.selected:hover,
+      #btn-choice-dung.selected:hover * {
+        background: linear-gradient(135deg, #16a34a, #15803d) !important;
+        background-color: #16a34a !important;
+        color: #ffffff !important;
+        border-color: #4ade80 !important;
+        box-shadow: 0 0 18px rgba(74, 222, 128, 0.6) !important;
+        transform: none !important;
+      }
+      #btn-choice-sai.selected,
+      #btn-choice-sai.selected * {
+        background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+        background-color: #dc2626 !important;
+        color: #ffffff !important;
+        border-color: #f87171 !important;
+        box-shadow: 0 0 18px rgba(248, 113, 113, 0.6) !important;
+      }
+      #btn-choice-sai.selected:hover,
+      #btn-choice-sai.selected:hover * {
+        background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+        background-color: #dc2626 !important;
+        color: #ffffff !important;
+        border-color: #f87171 !important;
+        box-shadow: 0 0 18px rgba(248, 113, 113, 0.6) !important;
+        transform: none !important;
       }
       ::-webkit-scrollbar {
         width: 6px;
@@ -83,25 +144,21 @@
     </style>
 
     <script>
-      function disableDevTools() {
-        window.addEventListener('keydown', function (e) {
-          if (e.key === 'F12' || e.keyCode === 123) {
-            e.preventDefault(); e.stopPropagation(); return false;
-          }
-          const isCmdOrCtrl = e.ctrlKey || e.metaKey;
-          if (isCmdOrCtrl && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-          }
-          if (isCmdOrCtrl && ['u', 'U', 's', 'S'].includes(e.key)) {
-            e.preventDefault(); e.stopPropagation(); return false;
-          }
-        }, true);
-        window.addEventListener('contextmenu', function (e) {
-          e.preventDefault(); return false;
-        }, true);
-      }
-      disableDevTools();
-      window.disableDevTools = disableDevTools;
+      // Bảo vệ trang khỏi các lỗi Promise unhandled và lỗi từ extension trình duyệt
+      window.addEventListener('unhandledrejection', function (e) {
+        try {
+          e.preventDefault();
+          if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        } catch (err) {}
+      }, true);
+      window.addEventListener('error', function (e) {
+        if (e && (e.filename?.includes('speedflow') || e.message?.includes('Listener error') || e.message?.includes('HalfBold'))) {
+          try {
+            e.preventDefault();
+            if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+          } catch (err) {}
+        }
+      }, true);
     </script>
     <script src="./sync-client.js"></script>
   </head>
@@ -111,8 +168,8 @@
       <!-- Header Người Chơi 1 -->
       <div style="background: #1e293b; border-radius: 10px; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #38bdf8; border-top: 1px solid #334155; border-right: 1px solid #334155; border-bottom: 1px solid #334155; flex-shrink: 0; min-height: 40px;">
         <div>
-          <span style="font-size: 11px; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">PLAYER 1</span>
-          <h2 id="player-display-name" style="margin: 0; font-size: 18px; color: white;">Người chơi 1</h2>
+          <span style="font-size: 11px; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">PLAYER 4</span>
+          <h2 id="player-display-name" style="margin: 0; font-size: 18px; color: white;">Người chơi 4</h2>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <div style="background: #0f172a; padding: 4px 10px; border-radius: 6px; border: 1px solid #334155; text-align: center;">
@@ -165,13 +222,13 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; flex-shrink: 0;">
           
           <!-- Nút ĐÚNG -->
-          <button id="btn-choice-dung" class="btn btn-choice" disabled style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; padding: 12px 10px; border-radius: 10px; font-size: 20px; border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+          <button id="btn-choice-dung" class="btn btn-choice" disabled style="padding: 12px 10px; border-radius: 10px; font-size: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
             <span>ĐÚNG</span>
             <span class="choice-sub" style="font-size: 11px; opacity: 0.85;">Khẳng định đúng</span>
           </button>
 
           <!-- Nút SAI -->
-          <button id="btn-choice-sai" class="btn btn-choice" disabled style="background: linear-gradient(135deg, #e11d48, #be123c); color: white; padding: 12px 10px; border-radius: 10px; font-size: 20px; border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+          <button id="btn-choice-sai" class="btn btn-choice" disabled style="padding: 12px 10px; border-radius: 10px; font-size: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
             <span>SAI</span>
             <span class="choice-sub" style="font-size: 11px; opacity: 0.85;">Khẳng định sai</span>
           </button>
@@ -224,6 +281,12 @@
       const myPlayerId = 4;
       const myTurn = 2; // Player 4 thi đấu ở Lượt 2
 
+      // Khai báo trước các biến cờ đệm ở đầu script để loại trừ hoàn toàn lỗi TDZ
+      var lastRenderedV2Key = '';
+      var lastRenderedV3Key = '';
+      var lastRenderedV4Key = '';
+      var lastRenderedCHPKey = '';
+
       function checkPlayerAccess() {
         const urlParams = new URLSearchParams(window.location.search);
         const roomId = urlParams.get('roomid');
@@ -232,18 +295,6 @@
         if (!roomId || !auth) {
           window.location.replace('index.html');
           return false;
-        }
-
-        const roomAuth = window.currentGameState?.roomAuth;
-        if (roomAuth) {
-          const expectedRoom = String(roomAuth.roomId || '');
-          const expectedAuth = String(roomAuth.passwords?.[myPlayerId] || '');
-          if (expectedRoom && expectedAuth) {
-            if (roomId !== expectedRoom || auth !== expectedAuth) {
-              window.location.replace('index.html');
-              return false;
-            }
-          }
         }
         return true;
       }
@@ -271,18 +322,26 @@
       let currentPlayerView = null;
       let lastSelectedAnswer = null;
 
-      // Xử lý khi thí sinh bấm nút ĐÚNG hoặc SAI
+      // Xử lý khi thí sinh bấm nút ĐÚNG hoặc SAI (ăn ngay 0ms, không lag)
       const btnDung = document.getElementById('btn-choice-dung');
       const btnSai = document.getElementById('btn-choice-sai');
 
-      async function chooseAnswer(ans) {
+      function chooseAnswer(ans) {
+        if (btnDung.disabled) return;
         lastSelectedAnswer = ans;
         updateButtonsHighlight(ans);
-        await window.submitPlayerAnswer(myPlayerId, ans);
+        window.submitPlayerAnswer(myPlayerId, ans);
       }
 
-      btnDung.addEventListener('click', () => chooseAnswer('Đúng'));
-      btnSai.addEventListener('click', () => chooseAnswer('Sai'));
+      btnDung.onclick = (e) => {
+        e.preventDefault();
+        chooseAnswer('Đúng');
+      };
+
+      btnSai.onclick = (e) => {
+        e.preventDefault();
+        chooseAnswer('Sai');
+      };
 
       function updateButtonsHighlight(ans) {
         if (ans === 'Đúng') {
@@ -329,20 +388,12 @@
           }
         }
 
-        // 3. Cập nhật cơ chế VÒNG 1
-        renderPlayerVong1(state);
-
-        // 4. Cập nhật cơ chế VÒNG 2
-        renderPlayerVong2(state);
-
-        // 5. Cập nhật cơ chế VÒNG 3
-        renderPlayerVong3(state);
-
-        // 6. Cập nhật cơ chế VÒNG 4
-        renderPlayerVong4(state);
-
-        // 7. Cập nhật cơ chế CÂU HỎI PHỤ
-        renderPlayerCHP(state, myPlayerId);
+        // 3. Cập nhật cơ chế các vòng thi
+        try { renderPlayerVong1(state); } catch (e) {}
+        try { renderPlayerVong2(state); } catch (e) {}
+        try { renderPlayerVong3(state); } catch (e) {}
+        try { renderPlayerVong4(state); } catch (e) {}
+        try { renderPlayerCHP(state, myPlayerId); } catch (e) {}
       });
 
       function renderPlayerVong1(state) {
@@ -357,11 +408,20 @@
         const scoreResult = document.getElementById('p-v1-score-result');
 
         if (timerSec) {
-          timerSec.textContent = `${v1.timerSeconds || 0}s`;
+          const displaySec = (typeof window.calculateRemainingSeconds === "function")
+            ? window.calculateRemainingSeconds(v1, 5, "v1")
+            : (v1.timerSeconds || 0);
+          timerSec.textContent = `${displaySec}s`;
           timerSec.style.color = v1.timerRunning ? '#ef4444' : '#facc15';
         }
 
         if (v1.activeQuestion) {
+          const qId = `${v1.activeQuestion.turn}_${v1.activeQuestion.index}_${v1.activeQuestion.q}`;
+          if (window._currentActiveQId !== qId) {
+            window._currentActiveQId = qId;
+            lastSelectedAnswer = null;
+          }
+
           const turn = v1.activeQuestion.turn || 1;
           if (qTurnEl) {
             qTurnEl.textContent = turn === 1 
@@ -371,16 +431,20 @@
           if (qNumEl) qNumEl.textContent = `CÂU HỎI SỐ ${v1.activeQuestion.index || 1}`;
           if (qTextEl) qTextEl.textContent = v1.activeQuestion.q;
 
-          // Kiểm tra xem lượt này có phải của Player 1 không
-          const isMyTurn = (turn === myTurn);
-          const isTimerActive = v1.timerRunning && (v1.timerTurn === myTurn);
+          // Kiểm tra xem lượt này có phải của Player 4 không (myTurn = 2)
+          const currentTurn = v1.timerTurn || (v1.activeQuestion && v1.activeQuestion.turn) || v1.currentTurn || 1;
+          const isMyTurn = (currentTurn === 2);
+          const remSec = (typeof window.calculateRemainingSeconds === 'function')
+            ? window.calculateRemainingSeconds(v1, 5, "v1")
+            : (typeof v1.timerSeconds === 'number' ? v1.timerSeconds : 5);
+          const isTimerActive = (v1.timerRunning === true) && (remSec > 0);
 
           // Cập nhật trạng thái mở/khóa 2 nút Đúng/Sai
           if (isMyTurn && isTimerActive) {
             btnDung.disabled = false;
             btnSai.disabled = false;
             if (statusBanner) {
-              statusBanner.innerHTML = `<span style="color: #4ade80;">5 GIÂY ĐANG CHẠY! BẠN CÓ THỂ CHỌN HOẶC ĐỔI ĐÁP ÁN LIÊN TỤC!</span>`;
+              statusBanner.innerHTML = `<span style="color: #4ade80; font-weight: bold;">5 GIÂY ĐANG CHẠY (${remSec}s)! BẠN CÓ THỂ CHỌN HOẶC ĐỔI ĐÁP ÁN LIÊN TỤC!</span>`;
               statusBanner.style.borderColor = '#22c55e';
             }
           } else {
@@ -388,22 +452,23 @@
             btnSai.disabled = true;
             if (statusBanner) {
               if (isMyTurn) {
-                if (v1.timerSeconds === 0) {
-                  statusBanner.innerHTML = `<span style="color: #facc15;">Hết 5 giây! Đã khóa đáp án của bạn: <b>[${v1.answers?.[myPlayerId] || 'Chưa chọn'}]</b></span>`;
+                if (remSec === 0 || (!v1.timerRunning && v1.activeQuestion)) {
+                  const ansText = v1.answers?.[myPlayerId] || lastSelectedAnswer || 'Chưa chọn';
+                  statusBanner.innerHTML = `<span style="color: #facc15; font-weight: bold;">Hết 5 giây! Đã khóa đáp án của bạn: <b>[${ansText}]</b></span>`;
                   statusBanner.style.borderColor = '#eab308';
                 } else {
-                  statusBanner.innerHTML = `Chờ Controller bấm "5 giây Lượt 1" để mở nút trả lời...`;
+                  statusBanner.innerHTML = `Chờ Controller bấm "5 giây Lượt 2" để mở nút trả lời...`;
                   statusBanner.style.borderColor = '#334155';
                 }
               } else {
-                statusBanner.innerHTML = `Đang là Lượt 2 của Player 3 & Player 4. Hãy chú ý theo dõi.`;
+                statusBanner.innerHTML = `Đang là Lượt 1 của Player 1 & Player 2. Hãy chú ý theo dõi.`;
                 statusBanner.style.borderColor = '#334155';
               }
             }
           }
 
-          // Cập nhật nút đã chọn từ state
-          const myAns = v1.answers?.[myPlayerId];
+          // Cập nhật nút đã chọn từ state hoặc lựa chọn cục bộ vừa bấm (chống giật lùi)
+          const myAns = v1.answers?.[myPlayerId] || (isMyTurn ? lastSelectedAnswer : null);
           updateButtonsHighlight(myAns);
 
           // Hiển thị đáp án đúng & chấm điểm
@@ -456,13 +521,30 @@
         if (!v2Container) return;
 
         if (!q || !q.vong2 || q.vong2.length === 0) {
+          lastRenderedV2Key = 'empty';
           v2Container.innerHTML = '<div style="color: #94a3b8; text-align: center; padding: 20px;">Chưa có dữ liệu câu hỏi Vòng 2.</div>';
           return;
         }
 
-        const topics = q.vong2;
         const scene = v2.scene || 'topics_board';
         const chosen = Array.isArray(v2.chosenTopics) ? v2.chosenTopics : [];
+        const activeQ = v2.activeQuestion;
+        const currentV2Key = `${scene}_${chosen.join(',')}_${v2.selectedTopicIndex}_${activeQ ? activeQ.question : 'none'}_${activeQ?.isOpened}_${v2.showAnswer}_${v2.scored}_${JSON.stringify(v2.bets)}_${v2.activePlayerTurn}`;
+
+        if (lastRenderedV2Key === currentV2Key) {
+          const timerEl = document.getElementById('p-v2-timer-display');
+          if (timerEl) {
+            const displaySec = (typeof window.calculateRemainingSeconds === "function")
+            ? window.calculateRemainingSeconds(v2, 60, "v2")
+            : (v2.timerSeconds ?? 60);
+          timerEl.textContent = `THỜI GIAN: ${displaySec}s`;
+            timerEl.style.color = v2.timerRunning ? '#ef4444' : '#facc15';
+          }
+          return;
+        }
+        lastRenderedV2Key = currentV2Key;
+
+        const topics = q.vong2;
 
         if (scene === 'topics_board') {
           // Bảng 10 chủ đề (2 - 3 - 3 - 2)
@@ -514,6 +596,7 @@
           // Bảng câu hỏi (question_board)
           const activeQ = v2.activeQuestion;
           if (!activeQ || !activeQ.isOpened) {
+            lastRenderedV2Key = 'q_closed';
             v2Container.innerHTML = `
               <div style="text-align: center; padding: 40px 20px;">
                 <h3 style="color: #f59e0b; margin: 8px 0 4px 0; font-size: 18px;">BẢNG CÂU HỎI VÒNG 2</h3>
@@ -526,74 +609,137 @@
             const showAns = v2.showAnswer;
             const correctIdx = activeQ.correct;
             const isMyTurn = (v2.activePlayerTurn === myPlayerId);
+            const optLabels = ['A', 'B', 'C', 'D'];
+            const currentQKey = `player_q_${activeQ.topicIndex}_${activeQ.questionIndex}_${activeQ.question}`;
+
+            const existingPlayerBoard = document.getElementById('player-v2-question-board');
+            if (existingPlayerBoard && existingPlayerBoard.getAttribute('data-qkey') === currentQKey) {
+              const timerEl = document.getElementById('p-v2-timer-display');
+              if (timerEl) {
+                const displaySec = (typeof window.calculateRemainingSeconds === "function")
+            ? window.calculateRemainingSeconds(v2, 60, "v2")
+            : (v2.timerSeconds ?? 60);
+          timerEl.textContent = `THỜI GIAN: ${displaySec}s`;
+                timerEl.style.color = v2.timerRunning ? '#ef4444' : '#facc15';
+              }
+
+              for (let idx = 0; idx < opts.length; idx++) {
+                const oneBased = idx + 1;
+                const betVal = bets[oneBased] || 0;
+                const optCard = document.getElementById(`p-v2-opt-${idx}`);
+                const badgeEl = document.getElementById(`p-v2-bet-badge-${idx}`);
+
+                if (optCard) {
+                  if (showAns) {
+                    if (oneBased === correctIdx) {
+                      optCard.style.background = '#facc15';
+                      optCard.style.color = '#000000';
+                      optCard.style.border = '3px solid #ffffff';
+                    } else {
+                      optCard.style.background = '#020617';
+                      optCard.style.color = '#ffffff';
+                      optCard.style.border = '2px solid #334155';
+                    }
+                  } else if (betVal > 0) {
+                    optCard.style.background = 'linear-gradient(135deg, #9333ea, #7c3aed)';
+                    optCard.style.color = '#ffffff';
+                    optCard.style.border = '2px solid #d8b4fe';
+                  } else {
+                    optCard.style.background = 'linear-gradient(135deg, #0284c7, #0369a1)';
+                    optCard.style.color = '#ffffff';
+                    optCard.style.border = '2px solid #38bdf8';
+                  }
+                }
+
+                if (badgeEl) {
+                  if (showAns && oneBased === correctIdx) {
+                    badgeEl.style.display = 'block';
+                    badgeEl.innerHTML = `<span style="background: #22c55e; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 5px;">ĐÚNG</span>`;
+                  } else if (betVal > 0) {
+                    badgeEl.style.display = 'block';
+                    badgeEl.innerHTML = `<span style="background: #facc15; color: black; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 5px;">[CƯỢC: ${betVal}đ]</span>`;
+                  } else {
+                    badgeEl.style.display = 'none';
+                  }
+                }
+              }
+
+              const scoredBanner = document.getElementById('p-v2-scored-banner');
+              if (scoredBanner) {
+                scoredBanner.style.display = v2.scored ? 'block' : 'none';
+                if (v2.scored) {
+                  scoredBanner.innerHTML = `KẾT QUẢ: Player ${v2.activePlayerTurn || 1} được cộng +${v2.awardedScore || 0} điểm từ Đáp án đúng ${optLabels[correctIdx - 1] || correctIdx}!`;
+                }
+              }
+              return;
+            }
 
             const renderOptionCard = (optText, optIdx) => {
               const oneBased = optIdx + 1;
               const betVal = bets[oneBased] || 0;
-              let bg = 'linear-gradient(135deg, #0284c7, #0369a1)'; // Blue
+              let bg = 'linear-gradient(135deg, #0284c7, #0369a1)';
               let color = '#ffffff';
               let border = '2px solid #38bdf8';
               let tag = '';
 
               if (betVal > 0) {
-                bg = 'linear-gradient(135deg, #9333ea, #7c3aed)'; // Tím
+                bg = 'linear-gradient(135deg, #9333ea, #7c3aed)';
                 border = '2px solid #d8b4fe';
-                tag = `<span style="background: #facc15; color: black; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 5px; margin-left: 6px;">[CƯỢC: ${betVal}đ]</span>`;
+                tag = `<span style="background: #facc15; color: black; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 5px;">[CƯỢC: ${betVal}đ]</span>`;
               }
 
               if (showAns) {
                 if (oneBased === correctIdx) {
-                  bg = '#facc15'; // Vàng
-                  color = '#000000'; // Chữ đen
+                  bg = '#facc15';
+                  color = '#000000';
                   border = '3px solid #ffffff';
-                  tag += `<span style="background: #22c55e; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 5px; margin-left: 6px;">ĐÚNG</span>`;
+                  tag = `<span style="background: #22c55e; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 5px;">ĐÚNG</span>`;
                 } else {
-                  bg = '#020617'; // Đen
-                  color = '#ffffff'; // Chữ trắng
+                  bg = '#020617';
+                  color = '#ffffff';
                   border = '2px solid #334155';
                 }
               }
 
-              const optLabels = ['A', 'B', 'C', 'D'];
               return `
-                <div style="background: ${bg}; color: ${color}; border: ${border}; border-radius: 10px; padding: 14px 16px; font-size: 15px; display: flex; align-items: center; justify-content: space-between; transition: all 0.3s ease;">
+                <div id="p-v2-opt-${optIdx}" style="background: ${bg}; color: ${color}; border: ${border}; border-radius: 10px; padding: 14px 16px; font-size: 15px; display: flex; align-items: center; justify-content: space-between;">
                   <div>
                     <b style="font-size: 16px; margin-right: 6px;">${optLabels[optIdx] || oneBased}.</b>
                     <span>${optText}</span>
                   </div>
-                  <div>${tag}</div>
+                  <div id="p-v2-bet-badge-${optIdx}">${tag}</div>
                 </div>
               `;
             };
 
             v2Container.innerHTML = `
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 14px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="background: #7c3aed; color: white; padding: 4px 10px; border-radius: 6px; font-size: 12px;">CHỦ ĐỀ: ${activeQ.topicName || ''}</span>
-                  <span style="background: ${isMyTurn ? '#eab308' : '#334155'}; color: ${isMyTurn ? 'black' : 'white'}; font-weight: bold; padding: 4px 10px; border-radius: 6px; font-size: 12px;">
-                    ${isMyTurn ? 'LƯỢT CỦA BẠN!' : `Lượt Player ${v2.activePlayerTurn || 1}`}
-                  </span>
+              <div id="player-v2-question-board" data-qkey="${currentQKey}">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 14px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="background: #7c3aed; color: white; padding: 4px 10px; border-radius: 6px; font-size: 12px;">CHỦ ĐỀ: ${activeQ.topicName || ''}</span>
+                    <span style="background: ${isMyTurn ? '#eab308' : '#334155'}; color: ${isMyTurn ? 'black' : 'white'}; font-weight: bold; padding: 4px 10px; border-radius: 6px; font-size: 12px;">
+                      ${isMyTurn ? 'LƯỢT CỦA BẠN!' : `Lượt Player ${v2.activePlayerTurn || 1}`}
+                    </span>
+                  </div>
+                  <div id="p-v2-timer-display" style="background: #0f172a; border: 2px solid #f59e0b; padding: 4px 14px; border-radius: 8px; font-size: 18px; color: ${v2.timerRunning ? '#ef4444' : '#facc15'}; font-weight: bold;">
+                    THỜI GIAN: ${(typeof window.calculateRemainingSeconds === "function") ? window.calculateRemainingSeconds(v2, 60, "v2") : (v2.timerSeconds ?? 60)}s
+                  </div>
                 </div>
-                <div style="background: #0f172a; border: 2px solid #f59e0b; padding: 4px 14px; border-radius: 8px; font-size: 18px; color: ${v2.timerRunning ? '#ef4444' : '#facc15'}; font-weight: bold;">
-                  THỜI GIAN: ${v2.timerSeconds ?? 60}s
+
+                <!-- Câu hỏi -->
+                <div style="background: #0f172a; border: 2px solid #0284c7; border-radius: 12px; padding: 16px 20px; font-size: 18px; color: #ffffff; line-height: 1.4; margin-bottom: 14px;">
+                  <b>CÂU HỎI:</b> ${activeQ.question}
+                </div>
+
+                <!-- Các đáp án -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  ${opts.map((o, idx) => renderOptionCard(o, idx)).join('')}
+                </div>
+
+                <div id="p-v2-scored-banner" style="display: ${v2.scored ? 'block' : 'none'}; margin-top: 12px; background: #064e3b; border: 2px solid #22c55e; border-radius: 10px; padding: 10px; font-size: 15px; color: #a7f3d0; text-align: center; font-weight: bold;">
+                  KẾT QUẢ: Player ${v2.activePlayerTurn || 1} được cộng +${v2.awardedScore || 0} điểm từ Đáp án đúng ${optLabels[correctIdx - 1] || correctIdx}!
                 </div>
               </div>
-
-              <!-- Câu hỏi -->
-              <div style="background: #0f172a; border: 2px solid #0284c7; border-radius: 12px; padding: 16px 20px; font-size: 18px; color: #ffffff; line-height: 1.4; margin-bottom: 14px;">
-                <b>CÂU HỎI:</b> ${activeQ.question}
-              </div>
-
-              <!-- Các đáp án -->
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                ${opts.map((o, idx) => renderOptionCard(o, idx)).join('')}
-              </div>
-
-              ${v2.scored ? `
-                <div style="margin-top: 12px; background: #064e3b; border: 2px solid #22c55e; border-radius: 10px; padding: 10px; font-size: 15px; color: #a7f3d0; text-align: center; font-weight: bold;">
-                  KẾT QUẢ: Player ${v2.activePlayerTurn || 1} được cộng +${v2.awardedScore || 0} điểm từ Đáp án đúng số ${correctIdx}!
-                </div>
-              ` : ''}
             `;
           }
         }
@@ -617,6 +763,7 @@
         const isOtherBuzzer = (bellRungBy && bellRungBy !== myPlayerId);
 
         if (!activeQ || !isVisible) {
+          lastRenderedV3Key = 'none';
           v3Container.innerHTML = `
             <div style="text-align: center; padding: 40px 20px; background: #0f172a; border-radius: 14px; border: 2px dashed #7c3aed;">
               <h3 style="font-size: 20px; color: #c084fc; margin: 12px 0 6px 0;">VÒNG 3: SO TÀI</h3>
@@ -625,6 +772,17 @@
           `;
           return;
         }
+
+        const currentV3Key = `${activeQ.index}_${isVisible}_${stage}_${allowed.join(',')}_${rungList.join(',')}_${bellRungBy}_${v3.isBellLocked}`;
+        const timerEl = document.getElementById('p-v3-timer-step-display');
+        if (timerEl && lastRenderedV3Key === currentV3Key) {
+          const displaySec = (typeof window.calculateRemainingSeconds === "function")
+            ? window.calculateRemainingSeconds(v3, 7, "v3")
+            : (v3.stepTimerSeconds ?? 7);
+          timerEl.textContent = `BƯỚC: ${displaySec}s`;
+          return;
+        }
+        lastRenderedV3Key = currentV3Key;
 
         const renderBox = (title, content, isRevealed, borderCol, bgGrad) => {
           return `
@@ -641,9 +799,6 @@
             </div>
           `;
         };
-
-        // Trạng thái nút chuông
-        let canBuzz = (!v3.isBellLocked && isAllowed && !hasRung && !bellRungBy);
 
         let bellAreaHtml = '';
 
@@ -684,7 +839,7 @@
           // Chuông đang mở và có thể bấm
           bellAreaHtml = `
             <div style="text-align: center;">
-              <button id="btn-player-buzzer" onclick="window.ringBuzzer(${myPlayerId})" class="btn" style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 4px solid #facc15; box-shadow: 0 0 35px rgba(239, 68, 68, 0.8); border-radius: 999px; padding: 22px 48px; font-size: 22px; font-weight: 900; letter-spacing: 1px; cursor: pointer; transition: all 0.1s ease; transform: scale(1.05); display: inline-flex; align-items: center; gap: 12px;">
+              <button id="btn-player-buzzer" class="btn" style="background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%); color: white; border: 4px solid #facc15; box-shadow: 0 0 35px rgba(239, 68, 68, 0.8); border-radius: 999px; padding: 22px 48px; font-size: 22px; font-weight: 900; letter-spacing: 1px; cursor: pointer; transition: all 0.1s ease; transform: scale(1.05); display: inline-flex; align-items: center; gap: 12px;">
                 BẤM CHUÔNG NGAY!
               </button>
               <div style="color: #4ade80; font-size: 14px; font-weight: bold; margin-top: 10px; animation: pulse 1s infinite;">
@@ -700,8 +855,8 @@
             <div style="display: flex; align-items: center; gap: 8px;">
               <span style="background: #7c3aed; color: white; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold;">CÂU HỎI SỐ ${activeQ.index || 1}</span>
             </div>
-            <div style="background: #0f172a; border: 2px solid #a855f7; padding: 4px 14px; border-radius: 8px; font-size: 18px; color: #c084fc; font-weight: bold;">
-              BƯỚC: ${v3.stepTimerSeconds ?? 7}s
+            <div style="background: #0f172a; border: 2px solid #a855f7; padding: 4px 14px; border-radius: 8px; font-size: 18px; color: #c084fc; font-weight: bold;" id="p-v3-timer-step-display">
+              BƯỚC: ${(typeof window.calculateRemainingSeconds === "function") ? window.calculateRemainingSeconds(v3, 7, "v3") : (v3.stepTimerSeconds ?? 7)}s
             </div>
           </div>
 
@@ -718,6 +873,11 @@
             ${bellAreaHtml}
           </div>
         `;
+
+        const buzzBtnV3 = document.getElementById('btn-player-buzzer');
+        if (buzzBtnV3) {
+          buzzBtnV3.onclick = (e) => { e.preventDefault(); window.ringBuzzer(myPlayerId); };
+        }
       }
 
       function renderPlayerVong4(state) {
@@ -729,20 +889,34 @@
         const gift = v4Data.gift || {};
         const clues = v4Data.clues || [];
         const v4 = state.vong4State || {};
-        const boxes = v4.boxes || [
-          { id: 1, name: 'Đỏ', color: '#ff0000', text: 'Ô SỐ 1', money: 0 },
-          { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true, money: 200000 },
-          { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', money: 300000 },
-          { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', money: 500000 },
-          { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', money: 0 },
-          { id: 6, name: 'Cam', color: '#ffa500', text: 'Ô SỐ 6', darkText: true, money: 1000000 }
-        ];
+        const boxes = (Array.isArray(v4.boxes) && v4.boxes.length === 6)
+          ? v4.boxes
+          : (window.getDefaultVong4Boxes ? window.getDefaultVong4Boxes() : [
+            { id: 1, name: 'Đỏ', color: '#ff0000', text: 'Ô SỐ 1', money: 0 },
+            { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true, money: 200000 },
+            { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', money: 300000 },
+            { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', money: 500000 },
+            { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', darkText: true, money: 0 },
+            { id: 6, name: 'Cam', color: '#ff7700', text: 'Ô SỐ 6', darkText: true, money: 1000000 }
+          ]);
         const totalMoney = typeof v4.totalMoney === 'number' ? v4.totalMoney : 8000000;
         const selectedId = v4.selectedBoxId;
 
-        const renderPlayerBox = (box) => {
+        const currentV4Key = `${selectedId}_${v4.showGiftClue}_${v4.showAnswer}_${v4.resultStatus}_${totalMoney}_${JSON.stringify(boxes)}`;
+        const timerV4El = document.getElementById('p-v4-timer-display');
+        if (timerV4El && lastRenderedV4Key === currentV4Key) {
+          const displaySec = (typeof window.calculateRemainingSeconds === "function")
+            ? window.calculateRemainingSeconds(v4, 120, "v4")
+            : (v4.timerSeconds ?? 120);
+          timerV4El.textContent = `120s: ${displaySec}s`;
+          timerV4El.style.color = v4.timerRunning ? '#ef4444' : '#facc15';
+          return;
+        }
+        lastRenderedV4Key = currentV4Key;
+
+        const renderPlayerBox = (box, bIdx) => {
           const isSelected = (box.id === selectedId);
-          const clueObj = clues.find(c => String(c.index) === String(box.id)) || { clue: `Gợi ý ô ${box.id}` };
+          const clueObj = (window.getClueForBox ? window.getClueForBox(clues, box.id, bIdx) : null) || clues.find(c => String(c.index) === String(box.id)) || { clue: `Gợi ý ô ${box.id}` };
           const isDarkText = box.darkText || (box.id === 2 || box.id === 5 || box.id === 6);
           const textColor = isDarkText ? '#000000' : '#ffffff';
           const moneyFormatted = (box.money || 0).toLocaleString('vi-VN');
@@ -785,8 +959,8 @@
               </span>
             </div>
 
-            <div style="background: #0f172a; border: 2px solid #eab308; padding: 6px 18px; border-radius: 10px; font-size: 20px; color: #facc15; font-weight: bold;">
-              120s: ${v4.timerSeconds ?? 120}s
+            <div style="background: #0f172a; border: 2px solid #eab308; padding: 6px 18px; border-radius: 10px; font-size: 20px; color: #facc15; font-weight: bold;" id="p-v4-timer-display">
+              120s: ${(typeof window.calculateRemainingSeconds === "function") ? window.calculateRemainingSeconds(v4, 120, "v4") : (v4.timerSeconds ?? 120)}s
             </div>
           </div>
 
@@ -807,20 +981,8 @@
 
           <!-- 6 Ô số màu sắc (1 - 6) -->
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 16px;">
-            ${boxes.map(b => renderPlayerBox(b)).join('')}
+            ${boxes.map((b, bIdx) => renderPlayerBox(b, bIdx)).join('')}
           </div>
-
-          <!-- Banner Kết quả Vòng 4 -->
-          ${v4.showAnswer ? `
-            <div style="background: ${v4.resultStatus === 'correct' ? '#064e3b' : '#450a0a'}; border: 2px solid ${v4.resultStatus === 'correct' ? '#22c55e' : '#ef4444'}; border-radius: 14px; padding: 14px 20px; text-align: center; color: white;">
-              <div style="font-size: 20px; font-weight: bold;">
-                ${v4.resultStatus === 'correct' ? 'THÍ SINH TRẢ LỜI ĐÚNG! GIỮ NGUYÊN TIỀN THƯỞNG!' : 'THÍ SINH TRẢ LỜI SAI! TIỀN THƯỞNG: 5.000.000 VNĐ!'}
-              </div>
-              <div style="font-size: 16px; margin-top: 4px; color: #facc15;">
-                Tổng tiền thưởng: <b>${totalMoney.toLocaleString('vi-VN')} VNĐ</b>
-              </div>
-            </div>
-          ` : ''}
         `;
       }
 
@@ -840,6 +1002,12 @@
 
         const isEligible = allowedList.includes(Number(pId));
         const isWinnerMe = (winner && String(winner.playerId) === String(pId));
+
+        const currentCHPKey = `${isLocked}_${winner ? winner.playerId : 'none'}_${isEligible}_${isWinnerMe}`;
+        if (lastRenderedCHPKey === currentCHPKey && document.getElementById('btn-player-chp-buzzer')) {
+          return;
+        }
+        lastRenderedCHPKey = currentCHPKey;
 
         let btnContent = '';
         let btnDisabled = true;
@@ -877,7 +1045,8 @@
 
         const buzzBtn = document.getElementById('btn-player-chp-buzzer');
         if (buzzBtn && !btnDisabled) {
-          buzzBtn.onclick = () => {
+          buzzBtn.onclick = (e) => {
+            e.preventDefault();
             if (typeof window.ringCHPBuzzer === 'function') {
               window.ringCHPBuzzer(pId);
             }

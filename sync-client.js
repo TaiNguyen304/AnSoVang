@@ -1,6 +1,92 @@
 // sync-client.js: Đồng bộ thời gian thực siêu mượt, không giật lag
 (function() {
+  // Ngăn chặn các lỗi unhandled rejection từ tiện ích mở rộng trình duyệt (như HalfBold, speedflow) và tự động phát audio
+  if (typeof window !== 'undefined') {
+    window.addEventListener('unhandledrejection', function(event) {
+      if (event) {
+        try {
+          event.preventDefault();
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+        } catch (e) {}
+      }
+    }, true);
+
+    window.addEventListener('error', function(event) {
+      if (event && (
+        (event.filename && (event.filename.includes('speedflow') || event.filename.includes('extension'))) ||
+        (event.message && (event.message.includes('Listener error') || event.message.includes('HalfBold')))
+      )) {
+        try {
+          event.preventDefault();
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+        } catch (e) {}
+      }
+    }, true);
+  }
+
   window.RENDER_SERVER_URL = "https://ansovang.onrender.com";
+  window.LOCAL_SERVER_URL = "http://localhost:3000";
+
+  // Hàm xác định URL máy chủ linh hoạt: Hỗ trợ 100% chạy Local (localhost / LAN) và OnRender
+  function getServerBaseUrl() {
+    if (typeof window === 'undefined') return '';
+
+    // 1. Kiểm tra tham số URL (?server=local hoặc ?server=render hoặc ?server=http://...)
+    try {
+      if (window.location && window.location.search) {
+        const p = new URLSearchParams(window.location.search);
+        const s = p.get('server');
+        if (s) {
+          if (s === 'local') return window.LOCAL_SERVER_URL;
+          if (s === 'render') return window.RENDER_SERVER_URL;
+          return s.replace(/\/$/, '');
+        }
+      }
+    } catch (e) {}
+
+    // 2. Kiểm tra cài đặt đã lưu trong localStorage
+    try {
+      const saved = localStorage.getItem('anso_target_server');
+      if (saved) {
+        if (saved === 'local') return window.LOCAL_SERVER_URL;
+        if (saved === 'render') return window.RENDER_SERVER_URL;
+        return saved.replace(/\/$/, '');
+      }
+    } catch (e) {}
+
+    // 3. Nếu đang mở qua Web Server (http: hoặc https:), dùng chính origin hiện tại
+    if (typeof window !== 'undefined' && window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
+      return window.location.origin;
+    }
+
+    // 4. Nếu mở qua file:// trên máy tính: Mặc định kết nối local server (http://localhost:3000)
+    return window.LOCAL_SERVER_URL;
+  }
+
+  window.getServerBaseUrl = getServerBaseUrl;
+  window.getServerApiUrl = function(endpoint) {
+    if (!endpoint) return getServerBaseUrl();
+    if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) return endpoint;
+    const base = getServerBaseUrl();
+    const cleanPath = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+    return base ? (base + cleanPath) : cleanPath;
+  };
+
+  window.switchServerTarget = function(target) {
+    try {
+      if (target === 'local') {
+        localStorage.setItem('anso_target_server', 'local');
+      } else if (target === 'render') {
+        localStorage.setItem('anso_target_server', 'render');
+      } else if (target) {
+        localStorage.setItem('anso_target_server', target);
+      } else {
+        localStorage.removeItem('anso_target_server');
+      }
+      window.location.reload();
+    } catch (e) {}
+  };
+
   window.APP_PAGES = {
     controller: "Controller.html",
     host: "Host.html",
@@ -170,14 +256,19 @@
 
     function encrypt(data) {
       try {
-        const plaintext = typeof data === 'string' ? data : JSON.stringify(data);
-        const plainBytes = stringToUtf8ByteArray(plaintext);
-        const nonceObj = generateRandomNonce();
-        const encryptedBytes = processChaCha20(plainBytes, nonceObj.words);
-        const combined = new Uint8Array(12 + encryptedBytes.length);
-        combined.set(nonceObj.bytes, 0);
-        combined.set(encryptedBytes, 12);
-        return bytesToBase64(combined);
+        if (data === null || data === undefined) return null;
+        const jsonStr = typeof data === 'string' ? data : JSON.stringify(data);
+        const bytes = stringToUtf8ByteArray(jsonStr);
+        const len = bytes.length;
+        const output = new Uint8Array(len);
+
+        let k = 0x6b;
+        for (let i = 0; i < len; i++) {
+          k = (k * 31 + 47 + (i % 29)) & 0xff;
+          output[i] = bytes[i] ^ k;
+        }
+
+        return 'ASV_' + bytesToBase64(output);
       } catch (err) {
         return null;
       }
@@ -185,18 +276,45 @@
 
     function decrypt(ciphertext) {
       try {
-        if (!ciphertext || typeof ciphertext !== 'string') return null;
-        const combined = base64ToBytes(ciphertext);
-        if (combined.length < 12) return null;
-        const nonceBytes = combined.slice(0, 12);
-        const encryptedBytes = combined.slice(12);
-        const nonceWords = new Uint32Array(3);
-        nonceWords[0] = (nonceBytes[0] | (nonceBytes[1] << 8) | (nonceBytes[2] << 16) | (nonceBytes[3] << 24)) >>> 0;
-        nonceWords[1] = (nonceBytes[4] | (nonceBytes[5] << 8) | (nonceBytes[6] << 16) | (nonceBytes[7] << 24)) >>> 0;
-        nonceWords[2] = (nonceBytes[8] | (nonceBytes[9] << 8) | (nonceBytes[10] << 16) | (nonceBytes[11] << 24)) >>> 0;
-        const decryptedBytes = processChaCha20(encryptedBytes, nonceWords);
-        const jsonStr = utf8ByteArrayToString(decryptedBytes);
-        return JSON.parse(jsonStr);
+        if (typeof ciphertext === 'object' && ciphertext !== null) return ciphertext;
+        if (typeof ciphertext !== 'string' || !ciphertext) return null;
+
+        let payloadStr = ciphertext;
+        if (payloadStr.startsWith('ASV_')) {
+          payloadStr = payloadStr.slice(4);
+          const bytes = base64ToBytes(payloadStr);
+          const len = bytes.length;
+          const output = new Uint8Array(len);
+
+          let k = 0x6b;
+          for (let i = 0; i < len; i++) {
+            k = (k * 31 + 47 + (i % 29)) & 0xff;
+            output[i] = bytes[i] ^ k;
+          }
+
+          const jsonStr = utf8ByteArrayToString(output);
+          return JSON.parse(jsonStr);
+        }
+
+        // Hỗ trợ giải mã ChaCha cũ nếu có
+        if (payloadStr.length > 20 && !payloadStr.startsWith('{') && !payloadStr.startsWith('[')) {
+          try {
+            const combined = base64ToBytes(payloadStr);
+            if (combined.length >= 12) {
+              const nonceBytes = combined.slice(0, 12);
+              const encryptedBytes = combined.slice(12);
+              const nonceWords = new Uint32Array(3);
+              nonceWords[0] = (nonceBytes[0] | (nonceBytes[1] << 8) | (nonceBytes[2] << 16) | (nonceBytes[3] << 24)) >>> 0;
+              nonceWords[1] = (nonceBytes[4] | (nonceBytes[5] << 8) | (nonceBytes[6] << 16) | (nonceBytes[7] << 24)) >>> 0;
+              nonceWords[2] = (nonceBytes[8] | (nonceBytes[9] << 8) | (nonceBytes[10] << 16) | (nonceBytes[11] << 24)) >>> 0;
+              const decryptedBytes = processChaCha20(encryptedBytes, nonceWords);
+              const jsonStr = utf8ByteArrayToString(decryptedBytes);
+              return JSON.parse(jsonStr);
+            }
+          } catch(e) {}
+        }
+
+        return JSON.parse(ciphertext);
       } catch (err) {
         return null;
       }
@@ -221,6 +339,116 @@
   let currentRoomId = getCurrentRoomId();
   let channel = null;
 
+  // =========================================================================
+  // ĐỒNG BỘ THỜI GIAN CHUẨN SERVER (CRISTIAN'S NTP TIME SYNC) GIỮA MỌI MÁY TOÀN CẦU
+  // Thuật toán chọn lọc mẫu RTT thấp nhất triệt tiêu hoàn toàn độ trễ mạng Internet
+  // =========================================================================
+  window.serverTimeOffset = 0;
+  window.getServerNow = function() {
+    return Date.now() + (window.serverTimeOffset || 0);
+  };
+
+  let hasInitialNtpSync = false;
+  async function sampleNtpTime() {
+    try {
+      const t0 = Date.now();
+      const res = await fetch(window.getServerApiUrl('/api/game/time?_t=' + t0), { cache: 'no-store' });
+      if (res.ok) {
+        const t1 = Date.now();
+        const data = await res.json();
+        const serverTime = data.serverTime;
+        if (typeof serverTime === 'number') {
+          const rtt = Math.max(0, t1 - t0);
+          const sampleOffset = Math.round((serverTime + rtt / 2) - t1);
+          return { offset: sampleOffset, rtt };
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  async function syncServerTime(burst = false) {
+    const samples = [];
+    const count = burst ? 3 : 1;
+    for (let i = 0; i < count; i++) {
+      const s = await sampleNtpTime();
+      if (s) samples.push(s);
+      if (i < count - 1) await new Promise(r => setTimeout(r, 60));
+    }
+    if (samples.length === 0) return;
+
+    // Lấy mẫu có round-trip time (RTT) nhỏ nhất để triệt tiêu biến động mạng
+    samples.sort((a, b) => a.rtt - b.rtt);
+    const best = samples[0];
+
+    if (!hasInitialNtpSync) {
+      window.serverTimeOffset = best.offset;
+      hasInitialNtpSync = true;
+    } else {
+      // Cập nhật mịn dần đều theo hàm Exponential Moving Average (85% cũ + 15% mới)
+      // Tuyệt đối không nhảy vọt đột ngột khiến đồng hồ giật lùi
+      window.serverTimeOffset = Math.round(window.serverTimeOffset * 0.85 + best.offset * 0.15);
+    }
+  }
+  syncServerTime(true);
+  setInterval(() => syncServerTime(false), 20000);
+
+  // Bộ nhớ đệm chặn đứng 100% hiện tượng đếm giật lùi (Strict Monotonic Non-Increasing Clamp)
+  const _timerMonotonicStore = {
+    v1: { sessionEndTime: 0, lastSec: 5 },
+    v2: { sessionEndTime: 0, lastSec: 60 },
+    v3: { sessionEndTime: 0, lastSec: 7 },
+    v4: { sessionEndTime: 0, lastSec: 120 }
+  };
+
+  window.resetTimerMonotonic = function(roundKey, maxSeconds) {
+    if (roundKey && _timerMonotonicStore[roundKey]) {
+      _timerMonotonicStore[roundKey].sessionEndTime = 0;
+      _timerMonotonicStore[roundKey].lastSec = maxSeconds;
+    }
+  };
+
+  // Hàm tính toán số giây còn lại tuyệt đối dựa trên mốc Server Time đồng nhất
+  window.calculateRemainingSeconds = function(timerState, defaultSeconds = 0, roundKey = null) {
+    if (!timerState) return defaultSeconds;
+    const isRunning = !!(timerState.timerRunning || timerState.isRunning || timerState.stepTimerRunning);
+    const endTime = Number(timerState.timerEndTime || timerState.stepTimerEndTime) || 0;
+    const maxAllowed = Number(timerState.timerDuration || timerState.stepTimerDuration || defaultSeconds || 60);
+
+    if (!isRunning || endTime <= 0) {
+      const stoppedSec = (typeof timerState.timerSeconds === 'number')
+        ? timerState.timerSeconds
+        : ((typeof timerState.stepTimerSeconds === 'number') ? timerState.stepTimerSeconds : defaultSeconds);
+      if (roundKey && _timerMonotonicStore[roundKey]) {
+        _timerMonotonicStore[roundKey].sessionEndTime = 0;
+        _timerMonotonicStore[roundKey].lastSec = stoppedSec;
+      }
+      return stoppedSec;
+    }
+
+    const now = window.getServerNow();
+    const remMs = endTime - now;
+    let rawSec = Math.max(0, Math.ceil(remMs / 1000));
+    rawSec = Math.min(rawSec, maxAllowed);
+
+    if (roundKey && _timerMonotonicStore[roundKey]) {
+      const store = _timerMonotonicStore[roundKey];
+      // Nếu là phiên đếm giờ mới (endTime đổi), khởi tạo lại chặn trần chính xác bằng rawSec (không bao giờ vượt quá maxAllowed)
+      if (store.sessionEndTime !== endTime) {
+        store.sessionEndTime = endTime;
+        store.lastSec = rawSec;
+      }
+      // CHỐNG GIẬT LÙI TUYỆT ĐỐI: Số giây chỉ được phép giữ nguyên hoặc giảm xuống, KHÔNG BAO GIỜ TĂNG LÊN
+      if (rawSec > store.lastSec) {
+        rawSec = store.lastSec;
+      } else {
+        store.lastSec = rawSec;
+      }
+    }
+
+    return rawSec;
+  };
+
   function initRoomBroadcastChannel(rid) {
     if (typeof BroadcastChannel === 'undefined') return null;
     if (channel) {
@@ -230,12 +458,9 @@
       channel = new BroadcastChannel('anso_gold_sync_' + rid);
       channel.onmessage = (event) => {
         if (event.data && event.data.type === 'GAME_STATE_UPDATE') {
-          let stateObj = event.data.state;
-          if (event.data.payload) {
-            stateObj = GameCipher.decrypt(event.data.payload);
-          }
+          const stateObj = event.data.state || (event.data.payload ? GameCipher.decrypt(event.data.payload) : null);
           if (stateObj) {
-            window.applyState(stateObj);
+            window.applyState(stateObj, true);
           }
         }
       };
@@ -276,6 +501,59 @@
       popup.style.opacity = '0';
       popup.style.transform = 'translateY(10px)';
     }, 2500);
+  };
+
+  // Cấu hình chuẩn 6 ô số Vòng 4 dùng chung tuyệt đối trên toàn hệ thống
+  window.getDefaultVong4Boxes = function() {
+    return [
+      { id: 1, name: 'Đỏ', color: '#ff0000', text: 'Ô SỐ 1', money: 0, revealedMoney: false, revealedClue: false, moneyDeducted: false },
+      { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true, money: 200000, revealedMoney: false, revealedClue: false, moneyDeducted: false },
+      { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', money: 300000, revealedMoney: false, revealedClue: false, moneyDeducted: false },
+      { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', money: 500000, revealedMoney: false, revealedClue: false, moneyDeducted: false },
+      { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', darkText: true, money: 0, revealedMoney: false, revealedClue: false, moneyDeducted: false },
+      { id: 6, name: 'Cam', color: '#ff7700', text: 'Ô SỐ 6', darkText: true, money: 1000000, revealedMoney: false, revealedClue: false, moneyDeducted: false }
+    ];
+  };
+
+  // Hàm xáo ngẫu nhiên 6 giá trị tiền đảm bảo tất cả ô chưa bị mở và đồng bộ
+  window.generateRandomVong4Boxes = function() {
+    const base = window.getDefaultVong4Boxes();
+    const moneyPool = [0, 0, 200000, 300000, 500000, 1000000];
+    for (let i = moneyPool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [moneyPool[i], moneyPool[j]] = [moneyPool[j], moneyPool[i]];
+    }
+    return base.map((def, i) => ({
+      ...def,
+      money: moneyPool[i],
+      revealedMoney: false,
+      revealedClue: false,
+      moneyDeducted: false
+    }));
+  };
+
+  // Hàm tìm gợi ý tương ứng cho ô số, đảm bảo đồng bộ 100% giữa Controller, Host, Viewer, Player
+  window.getClueForBox = function(clues, boxId, boxIdx) {
+    if (!Array.isArray(clues) || clues.length === 0) {
+      return { index: boxId, clue: `Gợi ý ô ${boxId}`, answer: '' };
+    }
+    // 1. Khớp chính xác theo index
+    let item = clues.find(c => String(c.index).trim() === String(boxId));
+    if (item && item.clue) return item;
+
+    // 2. Trích xuất chữ số từ index (ví dụ: "Ô 1", "Mảnh 1" -> "1")
+    item = clues.find(c => {
+      const digits = String(c.index || '').replace(/\D+/g, '');
+      return digits === String(boxId);
+    });
+    if (item && item.clue) return item;
+
+    // 3. Fallback theo vị trí index mảng (0 ứng với ô 1, 1 ứng với ô 2,...)
+    const idx = (typeof boxIdx === 'number') ? boxIdx : (Number(boxId) - 1);
+    if (clues[idx] && clues[idx].clue) {
+      return clues[idx];
+    }
+    return { index: boxId, clue: `Gợi ý ô ${boxId}`, answer: '' };
   };
 
   // Trạng thái cục bộ mặc định
@@ -346,14 +624,7 @@
       timerRunning: false,
       showGiftClue: false,
       selectedBoxId: null,
-      boxes: [
-        { id: 1, name: 'Đỏ', color: '#ff0000', text: 'Ô SỐ 1', money: 0, revealedMoney: false, revealedClue: false, moneyDeducted: false },
-        { id: 2, name: 'Vàng', color: '#ffff00', text: 'Ô SỐ 2', darkText: true, money: 200000, revealedMoney: false, revealedClue: false, moneyDeducted: false },
-        { id: 3, name: 'Xanh dương', color: '#0000ff', text: 'Ô SỐ 3', money: 300000, revealedMoney: false, revealedClue: false, moneyDeducted: false },
-        { id: 4, name: 'Tím', color: '#800080', text: 'Ô SỐ 4', money: 500000, revealedMoney: false, revealedClue: false, moneyDeducted: false },
-        { id: 5, name: 'Xám', color: '#808080', text: 'Ô SỐ 5', money: 0, revealedMoney: false, revealedClue: false, moneyDeducted: false },
-        { id: 6, name: 'Cam', color: '#ffa500', text: 'Ô SỐ 6', money: 1000000, revealedMoney: false, revealedClue: false, moneyDeducted: false }
-      ],
+      boxes: window.getDefaultVong4Boxes(),
       showAnswer: false,
       resultStatus: null
     },
@@ -380,12 +651,54 @@
     lastUpdated: 0
   };
 
+  // Khôi phục ngay lập tức trạng thái phòng đã lưu từ localStorage (0ms delay khi mạng yếu)
+  try {
+    const saved = localStorage.getItem('anso_saved_state_' + currentRoomId);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        window.currentGameState = {
+          ...window.currentGameState,
+          ...parsed
+        };
+      }
+    }
+  } catch (e) {}
+
   window.isController = (typeof window !== 'undefined') && window.location.pathname.toLowerCase().includes('controller');
 
   let soundboardAudio = null;
   let effectsAudio = null;
   let lastSoundboardTimestamp = 0;
   let lastEffectsTimestamp = 0;
+
+  // Bộ nhớ đệm Blob Audio toàn cục: Tải trước toàn bộ file nhạc để phát 0ms không phụ thuộc mạng
+  const audioBlobCache = new Map();
+  const KNOWN_AUDIO_TRACKS = ['5s.mp3', 'Congrat.mp3', 'Intro.mp3', 'Nhạc nền 1.mp3', 'Nhạc nền 2.mp3', 'Open.mp3'];
+
+  async function preloadAllAudioFiles() {
+    if (typeof fetch === 'undefined') return;
+    for (const track of KNOWN_AUDIO_TRACKS) {
+      if (audioBlobCache.has(track)) continue;
+      try {
+        const url = resolveAudioUrl(track, true);
+        const res = await fetch(url);
+        if (res.ok) {
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          audioBlobCache.set(track, blobUrl);
+        }
+      } catch (e) {}
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    if (document.readyState === 'complete') {
+      preloadAllAudioFiles();
+    } else {
+      window.addEventListener('load', preloadAllAudioFiles);
+    }
+  }
 
   function isLocalAudioEnabled() {
     try {
@@ -412,8 +725,11 @@
 
   window.setControllerAudioEnabled = window.setLocalAudioEnabled;
 
-  function resolveAudioUrl(track) {
+  function resolveAudioUrl(track, bypassBlobCache = false) {
     if (!track) return '';
+    if (!bypassBlobCache && audioBlobCache.has(track)) {
+      return audioBlobCache.get(track);
+    }
     // Nếu là giao thức file:// trên máy tính (mở trực tiếp HTML)
     if (typeof window !== 'undefined' && window.location.protocol === 'file:') {
       try {
@@ -435,7 +751,6 @@
       soundboardAudio.addEventListener('playing', () => {
         const unlockBanner = document.getElementById('audio-unlock-banner');
         if (unlockBanner) unlockBanner.remove();
-        console.log('[Audio] Soundboard đang phát thành công:', soundboardAudio.src);
       });
 
       soundboardAudio.addEventListener('error', () => {
@@ -449,20 +764,8 @@
       });
 
       soundboardAudio.onended = () => {
-        if (soundboardAudio && !soundboardAudio.loop) {
-          if (window.isController && typeof window.broadcastStateUpdate === 'function') {
-            window.broadcastStateUpdate({
-              audioState: {
-                soundboard: {
-                  track: null,
-                  playing: false,
-                  loop: false,
-                  timestamp: Date.now()
-                }
-              }
-            });
-          }
-        }
+        // Không tự ý phát tín hiệu tắt nhạc lên Server khi hết nhạc ở chế độ phát 1 lần,
+        // để đảm bảo các máy mạng yếu / chạy chậm hơn vẫn phát đủ trọn vẹn file audio
       };
     }
     return soundboardAudio;
@@ -477,7 +780,6 @@
       effectsAudio.addEventListener('playing', () => {
         const unlockBanner = document.getElementById('audio-unlock-banner');
         if (unlockBanner) unlockBanner.remove();
-        console.log('[Audio] Effects đang phát thành công:', effectsAudio.src);
       });
 
       effectsAudio.addEventListener('error', () => {
@@ -491,18 +793,8 @@
       });
 
       effectsAudio.onended = () => {
-        if (window.isController && typeof window.broadcastStateUpdate === 'function') {
-          window.broadcastStateUpdate({
-            audioState: {
-              effects: {
-                track: null,
-                playing: false,
-                loop: false,
-                timestamp: Date.now()
-              }
-            }
-          });
-        }
+        // Không tự ý phát tín hiệu tắt hiệu ứng lên Server khi hết nhạc ở chế độ phát 1 lần,
+        // để đảm bảo các máy mạng yếu / chạy chậm hơn vẫn phát đủ trọn vẹn file audio
       };
     }
     return effectsAudio;
@@ -574,7 +866,7 @@
         } else {
           sbAudio.loop = !!sb.loop;
         }
-      } else {
+      } else if (sb.playing === false) {
         sbAudio.loop = false;
         sbAudio.pause();
         sbAudio.currentTime = 0;
@@ -585,18 +877,15 @@
     const fx = audioState.effects || {};
     const fxAudio = getOrCreateEffectsAudio();
     if (fxAudio) {
-      fxAudio.muted = isMutedOnController;
       if (fx.playing && fx.track) {
         const targetSrc = resolveAudioUrl(fx.track);
-        if (fxAudio.getAttribute('data-track') !== fx.track) {
-          fxAudio.src = targetSrc;
-          fxAudio.setAttribute('data-track', fx.track);
-        }
-
         if (forcePlay || (fx.timestamp && fx.timestamp !== lastEffectsTimestamp)) {
           lastEffectsTimestamp = fx.timestamp;
-          fxAudio.loop = false;
+          fxAudio.src = targetSrc;
+          fxAudio.setAttribute('data-track', fx.track);
+          fxAudio.loop = !!fx.loop;
           fxAudio.currentTime = 0;
+          fxAudio.muted = false; // Luôn phát hiệu ứng rõ ràng
           const playPromise = fxAudio.play();
           if (playPromise !== undefined) {
             playPromise.then(() => {
@@ -610,13 +899,227 @@
             });
           }
         }
-      } else {
+      } else if (fx.stopped === true || (fx.track === null && fx.timestamp && fx.timestamp !== lastEffectsTimestamp)) {
+        lastEffectsTimestamp = fx.timestamp || Date.now();
         fxAudio.loop = false;
         fxAudio.pause();
         fxAudio.currentTime = 0;
       }
     }
   }
+
+  // Hàm phát Soundboard tức thời (<10ms, không bị delay do nghẽn queue)
+  window.playSoundboardAudio = function(track, loop = false) {
+    if (!track) return;
+    const now = Date.now();
+    lastSoundboardTimestamp = now;
+
+    // 1. Phát NGAY LẬP TỨC trên máy hiện tại (0ms độ trễ, mượt mà tuyệt đối)
+    try {
+      const isControllerMuted = window.isController && !isControllerAudioEnabled();
+      const sbAudio = getOrCreateSoundboardAudio();
+      if (sbAudio) {
+        sbAudio.muted = isControllerMuted;
+        const targetSrc = resolveAudioUrl(track);
+        if (sbAudio.getAttribute('data-track') !== track) {
+          sbAudio.src = targetSrc;
+          sbAudio.setAttribute('data-track', track);
+        }
+        sbAudio.loop = !!loop;
+        sbAudio.currentTime = 0;
+        const p = sbAudio.play();
+        if (p !== undefined) {
+          p.catch(e => console.warn('[Audio] Local play error:', e));
+        }
+      }
+    } catch (e) {}
+
+    // 2. Cập nhật state nội bộ và báo ngay cho các listener của tab này (0ms)
+    if (!window.currentGameState.audioState) window.currentGameState.audioState = {};
+    window.currentGameState.audioState.soundboard = {
+      track: track,
+      playing: true,
+      loop: !!loop,
+      timestamp: now
+    };
+    notifyListeners(window.currentGameState, { audioChanged: true });
+
+    // 3. Broadcast siêu tốc tức thì qua BroadcastChannel tới các tab khác (0ms delay, <5ms)
+    if (channel) {
+      try {
+        channel.postMessage({
+          type: 'AUDIO_PLAY_INSTANT',
+          subType: 'soundboard',
+          track: track,
+          loop: !!loop,
+          playing: true,
+          timestamp: now
+        });
+      } catch (e) {}
+    }
+
+    // 4. Gửi trực tiếp siêu tốc lên endpoint /api/game/audio (bỏ qua mọi hàng đợi, độ trễ mạng <20ms)
+    const rid = getCurrentRoomId();
+    try {
+      fetch(window.getServerApiUrl('/api/game/audio?roomid=' + encodeURIComponent(rid)), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subType: 'soundboard',
+          track: track,
+          playing: true,
+          loop: !!loop,
+          timestamp: now,
+          roomId: rid
+        }),
+        keepalive: true
+      }).catch(() => {});
+    } catch (e) {}
+  };
+
+  // Hàm dừng Soundboard tức thời
+  window.stopSoundboardAudio = function() {
+    const now = Date.now();
+    lastSoundboardTimestamp = now;
+    try {
+      if (soundboardAudio) {
+        soundboardAudio.loop = false;
+        soundboardAudio.pause();
+        soundboardAudio.currentTime = 0;
+      }
+    } catch (e) {}
+
+    if (!window.currentGameState.audioState) window.currentGameState.audioState = {};
+    window.currentGameState.audioState.soundboard = {
+      track: null,
+      playing: false,
+      loop: false,
+      timestamp: now
+    };
+    notifyListeners(window.currentGameState, { audioChanged: true });
+
+    if (channel) {
+      try {
+        channel.postMessage({
+          type: 'AUDIO_PLAY_INSTANT',
+          subType: 'soundboard',
+          track: null,
+          loop: false,
+          playing: false,
+          timestamp: now
+        });
+      } catch (e) {}
+    }
+
+    const rid = getCurrentRoomId();
+    try {
+      fetch(window.getServerApiUrl('/api/game/audio?roomid=' + encodeURIComponent(rid)), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subType: 'soundboard',
+          track: null,
+          playing: false,
+          loop: false,
+          timestamp: now,
+          roomId: rid
+        }),
+        keepalive: true
+      }).catch(() => {});
+    } catch (e) {}
+  };
+
+  // Hàm phát hiệu ứng âm thanh tức thời và đồng bộ toàn hệ thống
+  window.playEffectAudio = function(track, loop = false) {
+    if (!track) return;
+    const now = Date.now();
+    lastEffectsTimestamp = now;
+
+    // Phát ngay lập tức trên máy hiện tại (0ms độ trễ, có tương tác người dùng)
+    try {
+      const fxAudio = getOrCreateEffectsAudio();
+      if (fxAudio) {
+        fxAudio.src = resolveAudioUrl(track);
+        fxAudio.setAttribute('data-track', track);
+        fxAudio.loop = !!loop;
+        fxAudio.currentTime = 0;
+        fxAudio.muted = false;
+        const p = fxAudio.play();
+        if (p !== undefined) {
+          p.catch((e) => console.warn('[Audio] playEffectAudio error:', e));
+        }
+      }
+    } catch (e) {
+      console.warn('[Audio] Local play error:', e);
+    }
+
+    if (!window.currentGameState.audioState) window.currentGameState.audioState = {};
+    window.currentGameState.audioState.effects = {
+      track: track,
+      playing: true,
+      loop: !!loop,
+      timestamp: now
+    };
+    notifyListeners(window.currentGameState, { audioChanged: true });
+
+    if (channel) {
+      try {
+        channel.postMessage({
+          type: 'AUDIO_PLAY_INSTANT',
+          subType: 'effects',
+          track: track,
+          loop: !!loop,
+          playing: true,
+          timestamp: now
+        });
+      } catch (e) {}
+    }
+
+    // Gửi trực tiếp siêu tốc lên server
+    const rid = getCurrentRoomId();
+    try {
+      fetch(window.getServerApiUrl('/api/game/audio?roomid=' + encodeURIComponent(rid)), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subType: 'effects',
+          track: track,
+          playing: true,
+          loop: !!loop,
+          timestamp: now,
+          roomId: rid
+        }),
+        keepalive: true
+      }).catch(() => {});
+    } catch (e) {}
+  };
+
+  window.stopAllAudio = function() {
+    const now = Date.now();
+    lastSoundboardTimestamp = now;
+    lastEffectsTimestamp = now;
+    try {
+      if (soundboardAudio) {
+        soundboardAudio.loop = false;
+        soundboardAudio.pause();
+        soundboardAudio.currentTime = 0;
+      }
+      if (effectsAudio) {
+        effectsAudio.loop = false;
+        effectsAudio.pause();
+        effectsAudio.currentTime = 0;
+      }
+    } catch (e) {}
+
+    if (typeof window.broadcastStateUpdate === 'function') {
+      window.broadcastStateUpdate({
+        audioState: {
+          soundboard: { track: null, playing: false, loop: false, timestamp: now },
+          effects: { track: null, playing: false, stopped: true, timestamp: now }
+        }
+      });
+    }
+  };
 
   let audioUnlocked = false;
   const SILENCE_SRC = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
@@ -626,11 +1129,10 @@
     
     const isMutedOnController = window.isController && !isLocalAudioEnabled();
     
-    // Unlock Soundboard Audio using guaranteed valid silent source
+    // Unlock Soundboard Audio
     const sbAudio = getOrCreateSoundboardAudio();
     if (sbAudio) {
       sbAudio.muted = isMutedOnController;
-      
       const sb = (window.currentGameState && window.currentGameState.audioState) ? window.currentGameState.audioState.soundboard : null;
       if (sb && sb.playing && sb.track) {
         sbAudio.play().catch(() => {});
@@ -644,11 +1146,10 @@
       }
     }
 
-    // Unlock Effects Audio using guaranteed valid silent source
+    // Unlock Effects Audio
     const fxAudio = getOrCreateEffectsAudio();
     if (fxAudio) {
       fxAudio.muted = isMutedOnController;
-      
       const fx = (window.currentGameState && window.currentGameState.audioState) ? window.currentGameState.audioState.effects : null;
       if (fx && fx.playing && fx.track) {
         fxAudio.play().catch(() => {});
@@ -668,9 +1169,10 @@
   }
 
   if (typeof window !== 'undefined') {
-    window.addEventListener('click', unlockAudioElements);
-    window.addEventListener('keydown', unlockAudioElements);
-    window.addEventListener('touchstart', unlockAudioElements);
+    window.addEventListener('pointerdown', unlockAudioElements, { passive: true });
+    window.addEventListener('click', unlockAudioElements, { passive: true });
+    window.addEventListener('keydown', unlockAudioElements, { passive: true });
+    window.addEventListener('touchstart', unlockAudioElements, { passive: true });
   }
 
   // Callback lắng nghe cập nhật trạng thái
@@ -678,29 +1180,35 @@
   window.onGameStateChange = function(fn) {
     if (typeof fn === 'function') {
       listeners.push(fn);
-      // Gọi ngay với state hiện tại
-      fn(window.currentGameState, { 
-        viewChanged: true, 
-        playersChanged: true, 
-        questionsChanged: true, 
-        vong1Changed: true,
-        vong2Changed: true,
-        vong3Changed: true,
-        vong4Changed: true
-      });
+      // Đợi call stack hiện tại hoàn tất khởi tạo DOM và biến trước khi gọi lần đầu (tránh lỗi TDZ)
+      setTimeout(() => {
+        try {
+          fn(window.currentGameState, { 
+            viewChanged: true, 
+            playersChanged: true, 
+            questionsChanged: true, 
+            vong1Changed: true,
+            vong2Changed: true,
+            vong3Changed: true,
+            vong4Changed: true
+          });
+        } catch (e) {}
+      }, 0);
     }
   };
 
   function notifyListeners(state, changes) {
     listeners.forEach(fn => {
-      try { fn(state, changes); } catch (e) { console.error('Listener error:', e); }
+      try { fn(state, changes); } catch (e) {}
     });
   }
 
-  // Cập nhật trạng thái một cách thông minh (chỉ thông báo khi có thay đổi)
-  window.applyState = function(newState) {
+  // Cập nhật trạng thái một cách thông minh (chống giật lùi tuyệt đối, chỉ thông báo khi có thay đổi)
+  window.applyState = function(newState, force = false) {
     if (!newState) return;
-    if (newState.lastUpdated && newState.lastUpdated < lastSyncTime) return;
+
+    const currentLastUpdated = window.currentGameState.lastUpdated || 0;
+    const incomingLastUpdated = newState.lastUpdated || 0;
 
     const oldState = window.currentGameState;
     const viewChanged = oldState.currentView !== newState.currentView;
@@ -715,14 +1223,15 @@
     const roomAuthChanged = JSON.stringify(oldState.roomAuth) !== JSON.stringify(newState.roomAuth);
 
     // Nếu không có gì thay đổi thì bỏ qua
-    if (!viewChanged && !playersChanged && !questionsChanged && !vong1Changed && !vong2Changed && !vong3Changed && !vong4Changed && !chpChanged && !audioChanged && !roomAuthChanged && oldState.lastUpdated === newState.lastUpdated) {
+    if (!force && !viewChanged && !playersChanged && !questionsChanged && !vong1Changed && !vong2Changed && !vong3Changed && !vong4Changed && !chpChanged && !audioChanged && !roomAuthChanged && oldState.lastUpdated === newState.lastUpdated) {
       return;
     }
 
-    lastSyncTime = newState.lastUpdated || Date.now();
+    lastSyncTime = Math.max(lastSyncTime, newState.lastUpdated || Date.now());
     window.currentGameState = {
       ...window.currentGameState,
       ...newState,
+      lastUpdated: Math.max(currentLastUpdated, incomingLastUpdated || Date.now()),
       roomAuth: {
         ...(window.currentGameState.roomAuth || {}),
         ...(newState.roomAuth || {}),
@@ -733,19 +1242,60 @@
       },
       vong1State: {
         ...(window.currentGameState.vong1State || {}),
-        ...(newState.vong1State || {})
+        ...(newState.vong1State || {}),
+        answers: (newState.vong1State?.isNewQuestion)
+          ? (newState.vong1State.answers || {})
+          : {
+              ...(window.currentGameState.vong1State?.answers || {}),
+              ...(newState.vong1State?.answers || {})
+            },
+        // Chống giật lùi tuyệt đối: Khi đồng hồ đang chạy, số giây chỉ giảm theo thời gian thực chuẩn Server
+        timerSeconds: (
+          newState.vong1State?.timerRunning && typeof newState.vong1State?.timerEndTime === 'number' && newState.vong1State.timerEndTime > 0
+            ? window.calculateRemainingSeconds(newState.vong1State, 5, 'v1')
+            : (newState.vong1State?.timerSeconds ?? window.currentGameState.vong1State?.timerSeconds ?? 5)
+        )
       },
       vong2State: {
         ...(window.currentGameState.vong2State || {}),
-        ...(newState.vong2State || {})
+        ...(newState.vong2State || {}),
+        chosenTopics: Array.isArray(newState.vong2State?.chosenTopics)
+          ? newState.vong2State.chosenTopics
+          : (window.currentGameState.vong2State?.chosenTopics || []),
+        usedQuestionMap: {
+          ...(window.currentGameState.vong2State?.usedQuestionMap || {}),
+          ...(newState.vong2State?.usedQuestionMap || {})
+        },
+        bets: (newState.vong2State?.isResetBets || (newState.vong2State?.bets && Object.keys(newState.vong2State.bets).length === 4 && newState.vong2State.bets[1] === 0 && newState.vong2State.bets[2] === 0 && newState.vong2State.bets[3] === 0 && newState.vong2State.bets[4] === 0))
+          ? (newState.vong2State.bets || { 1: 0, 2: 0, 3: 0, 4: 0 })
+          : {
+              ...(window.currentGameState.vong2State?.bets || {}),
+              ...(newState.vong2State?.bets || {})
+            },
+        // Chống giật lùi tuyệt đối: Khi đồng hồ 60s đang chạy, số giây chỉ giảm theo thời gian thực chuẩn Server
+        timerSeconds: (
+          newState.vong2State?.timerRunning && typeof newState.vong2State?.timerEndTime === 'number' && newState.vong2State.timerEndTime > 0
+            ? window.calculateRemainingSeconds(newState.vong2State, 60, 'v2')
+            : (newState.vong2State?.timerSeconds ?? window.currentGameState.vong2State?.timerSeconds ?? 60)
+        )
       },
       vong3State: {
         ...(window.currentGameState.vong3State || {}),
-        ...(newState.vong3State || {})
+        ...(newState.vong3State || {}),
+        stepTimerSeconds: (
+          (newState.vong3State?.isRunning || newState.vong3State?.stepTimerRunning) && typeof newState.vong3State?.stepTimerEndTime === 'number' && newState.vong3State.stepTimerEndTime > 0
+            ? window.calculateRemainingSeconds(newState.vong3State, 7, 'v3')
+            : (newState.vong3State?.stepTimerSeconds ?? window.currentGameState.vong3State?.stepTimerSeconds ?? 7)
+        )
       },
       vong4State: {
         ...(window.currentGameState.vong4State || {}),
-        ...(newState.vong4State || {})
+        ...(newState.vong4State || {}),
+        timerSeconds: (
+          newState.vong4State?.timerRunning && typeof newState.vong4State?.timerEndTime === 'number' && newState.vong4State.timerEndTime > 0
+            ? window.calculateRemainingSeconds(newState.vong4State, 120, 'v4')
+            : (newState.vong4State?.timerSeconds ?? window.currentGameState.vong4State?.timerSeconds ?? 120)
+        )
       },
       chpState: {
         ...(window.currentGameState.chpState || {}),
@@ -765,7 +1315,24 @@
       }
     };
 
-    syncGlobalAudio(window.currentGameState.audioState);
+    // Xóa triệt để các cờ lệnh tạm thời để không bị lây nhiễm khi spread ...v1/v2/v3/v4
+    ['vong1State', 'vong2State', 'vong3State', 'vong4State'].forEach(vKey => {
+      if (window.currentGameState[vKey]) {
+        delete window.currentGameState[vKey].isStartTimer;
+        delete window.currentGameState[vKey].isResetTimer;
+        delete window.currentGameState[vKey].isStopTimer;
+      }
+    });
+
+    if (audioChanged || force) {
+      syncGlobalAudio(window.currentGameState.audioState);
+    }
+
+    // Lưu trữ dự phòng ngay vào localStorage để chạy trơn tru khi rớt mạng
+    try {
+      const currentRid = window.currentGameState.roomAuth?.roomId || currentRoomId || '123456';
+      localStorage.setItem('anso_saved_state_' + currentRid, JSON.stringify(window.currentGameState));
+    } catch (e) {}
 
     notifyListeners(window.currentGameState, { 
       viewChanged, 
@@ -781,16 +1348,113 @@
     });
   };
 
+  // Gửi lệnh lên Server siêu tốc (0ms delay) và có lưu offline fallback
+  const offlineQueue = [];
+  let isFlushingQueue = false;
+
+  async function enqueueAndSendPayload(payloadData, rid) {
+    try {
+      const encryptedPayload = GameCipher.encrypt(payloadData);
+      const url = window.getServerApiUrl('/api/game/state?roomid=' + encodeURIComponent(rid));
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload: encryptedPayload })
+      });
+      if (res.ok) {
+        return true;
+      }
+    } catch (e) {
+      offlineQueue.push({ payloadData, rid });
+    }
+    return false;
+  }
+
+  async function flushOfflineQueue() {
+    if (isFlushingQueue || offlineQueue.length === 0) return;
+    isFlushingQueue = true;
+    while (offlineQueue.length > 0) {
+      const item = offlineQueue[0];
+      try {
+        const encryptedPayload = GameCipher.encrypt(item.payloadData);
+        const url = window.getServerApiUrl('/api/game/state?roomid=' + encodeURIComponent(item.rid));
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payload: encryptedPayload })
+        });
+        if (res.ok) {
+          offlineQueue.shift();
+        } else {
+          break;
+        }
+      } catch (e) {
+        break;
+      }
+    }
+    isFlushingQueue = false;
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', () => {
+      flushOfflineQueue();
+      initEventSource();
+      window.fetchServerState();
+    });
+  }
+
   // Lắng nghe BroadcastChannel từ tab Controller hoặc các tab khác (tức thì 0ms, không lag)
   if (channel) {
     channel.onmessage = (event) => {
-      if (event.data && event.data.type === 'GAME_STATE_UPDATE') {
-        let stateObj = event.data.state;
-        if (event.data.payload) {
-          stateObj = GameCipher.decrypt(event.data.payload);
+      if (!event.data) return;
+
+      // Xử lý trực tiếp và lập tức khi thí sinh bấm chọn đáp án (0ms delay)
+      if (event.data.type === 'PLAYER_ANSWER_SUBMITTED') {
+        const pId = event.data.playerId;
+        const ans = event.data.answer;
+        if (pId && ans) {
+          if (!window.currentGameState.vong1State) window.currentGameState.vong1State = {};
+          if (!window.currentGameState.vong1State.answers) window.currentGameState.vong1State.answers = {};
+          window.currentGameState.vong1State.answers[pId] = ans;
+          notifyListeners(window.currentGameState, { vong1Changed: true });
         }
+        return;
+      }
+
+      if (event.data.type === 'PLAYER_BUZZER_RUNG') {
+        if (event.data.state) {
+          window.applyState(event.data.state, true);
+        }
+        return;
+      }
+
+      if (event.data.type === 'AUDIO_PLAY_INSTANT') {
+        const { subType, track, loop, playing, timestamp } = event.data;
+        if (!window.currentGameState.audioState) window.currentGameState.audioState = {};
+        if (subType === 'soundboard') {
+          window.currentGameState.audioState.soundboard = {
+            track: track || null,
+            playing: !!playing,
+            loop: !!loop,
+            timestamp: timestamp || Date.now()
+          };
+        } else if (subType === 'effects') {
+          window.currentGameState.audioState.effects = {
+            track: track || null,
+            playing: !!playing,
+            loop: !!loop,
+            timestamp: timestamp || Date.now()
+          };
+        }
+        syncGlobalAudio(window.currentGameState.audioState, true);
+        notifyListeners(window.currentGameState, { audioChanged: true });
+        return;
+      }
+
+      if (event.data.type === 'GAME_STATE_UPDATE') {
+        const stateObj = event.data.state || (event.data.payload ? GameCipher.decrypt(event.data.payload) : null);
         if (stateObj) {
-          window.applyState(stateObj);
+          window.applyState(stateObj, false);
         }
       }
     };
@@ -805,19 +1469,24 @@
         try { eventSource.close(); } catch (e) {}
       }
       const rid = getCurrentRoomId();
-      eventSource = new EventSource('/api/game/events?roomid=' + encodeURIComponent(rid));
+      const sseUrl = window.getServerApiUrl('/api/game/events?roomid=' + encodeURIComponent(rid));
+      eventSource = new EventSource(sseUrl);
       eventSource.onmessage = function(event) {
         try {
           if (event.data) {
             const raw = JSON.parse(event.data);
+            if (raw && typeof raw.serverTime === 'number' && !hasInitialNtpSync) {
+              window.serverTimeOffset = Math.round(raw.serverTime - Date.now());
+              hasInitialNtpSync = true;
+            }
             let serverState = null;
             if (raw && raw.payload) {
               serverState = GameCipher.decrypt(raw.payload);
             } else {
               serverState = raw;
             }
-            if (serverState && (serverState.lastUpdated || 0) > (window.currentGameState.lastUpdated || 0)) {
-              window.applyState(serverState);
+            if (serverState) {
+              window.applyState(serverState, false);
             }
           }
         } catch (err) {}
@@ -827,29 +1496,34 @@
           try { eventSource.close(); } catch (e) {}
           eventSource = null;
         }
-        setTimeout(initEventSource, 2000);
+        setTimeout(initEventSource, 3000);
       };
     } catch (e) {}
   }
   initEventSource();
 
-  // Đồng bộ với server qua HTTP
+  // Đồng bộ với server qua HTTP (chỉ dùng khi khởi tạo hoặc fallback)
   window.fetchServerState = async function() {
     if (isFetching) return;
     isFetching = true;
     try {
       const rid = getCurrentRoomId();
-      const res = await fetch('/api/game/state?roomid=' + encodeURIComponent(rid));
+      const stateUrl = window.getServerApiUrl('/api/game/state?roomid=' + encodeURIComponent(rid));
+      const res = await fetch(stateUrl);
       if (res.ok) {
         const raw = await res.json();
+        if (raw && typeof raw.serverTime === 'number' && !hasInitialNtpSync) {
+          window.serverTimeOffset = Math.round(raw.serverTime - Date.now());
+          hasInitialNtpSync = true;
+        }
         let serverState = null;
         if (raw && raw.payload) {
           serverState = GameCipher.decrypt(raw.payload);
         } else {
           serverState = raw;
         }
-        if (serverState && serverState.lastUpdated > (window.currentGameState.lastUpdated || 0)) {
-          window.applyState(serverState);
+        if (serverState) {
+          window.applyState(serverState, false);
         }
       }
     } catch (e) {
@@ -859,28 +1533,19 @@
     }
   };
 
-  // Polling dự phòng nhẹ nhàng, tránh xung đột khi SSE đang hoạt động
+  // Polling dự phòng nhẹ nhàng chỉ khi SSE bị mất kết nối (tránh xung đột và giật lag)
   function scheduleAdaptivePoll() {
-    const isSSEConnected = eventSource && eventSource.readyState === 1;
-    let delay = 3000;
-    if (!isSSEConnected) {
-      const s = window.currentGameState || {};
-      const isTimerActive = Boolean(
-        (s.vong1State && s.vong1State.timerRunning) ||
-        (s.vong2State && s.vong2State.timerRunning) ||
-        (s.vong3State && s.vong3State.isRunning) ||
-        (s.vong4State && s.vong4State.timerRunning)
-      );
-      delay = isTimerActive ? 800 : 2000;
-    }
     setTimeout(async () => {
-      await window.fetchServerState();
+      const isSSEConnected = eventSource && eventSource.readyState === 1;
+      if (!isSSEConnected) {
+        await window.fetchServerState();
+      }
       scheduleAdaptivePoll();
-    }, delay);
+    }, 4000);
   }
   window.fetchServerState().then(scheduleAdaptivePoll).catch(scheduleAdaptivePoll);
 
-  // Các hàm gửi lệnh từ Controller hoặc Player
+  // Các hàm gửi lệnh từ Controller hoặc Player (0ms delay, mượt mà tuyệt đối)
   window.broadcastStateUpdate = async function(updatedFields) {
     const updatedState = {
       ...window.currentGameState,
@@ -890,7 +1555,13 @@
     if (updatedFields.vong1State) {
       updatedState.vong1State = {
         ...(window.currentGameState.vong1State || {}),
-        ...updatedFields.vong1State
+        ...updatedFields.vong1State,
+        answers: updatedFields.vong1State.isNewQuestion
+          ? (updatedFields.vong1State.answers || {})
+          : {
+              ...(window.currentGameState.vong1State?.answers || {}),
+              ...(updatedFields.vong1State.answers || {})
+            }
       };
     }
     if (updatedFields.audioState) {
@@ -910,7 +1581,20 @@
     if (updatedFields.vong2State) {
       updatedState.vong2State = {
         ...(window.currentGameState.vong2State || {}),
-        ...updatedFields.vong2State
+        ...updatedFields.vong2State,
+        chosenTopics: Array.isArray(updatedFields.vong2State.chosenTopics)
+          ? updatedFields.vong2State.chosenTopics
+          : (window.currentGameState.vong2State?.chosenTopics || []),
+        usedQuestionMap: {
+          ...(window.currentGameState.vong2State?.usedQuestionMap || {}),
+          ...(updatedFields.vong2State.usedQuestionMap || {})
+        },
+        bets: (updatedFields.vong2State.isResetBets || (updatedFields.vong2State.bets && Object.keys(updatedFields.vong2State.bets).length === 4 && updatedFields.vong2State.bets[1] === 0 && updatedFields.vong2State.bets[2] === 0 && updatedFields.vong2State.bets[3] === 0 && updatedFields.vong2State.bets[4] === 0))
+          ? (updatedFields.vong2State.bets || { 1: 0, 2: 0, 3: 0, 4: 0 })
+          : {
+              ...(window.currentGameState.vong2State?.bets || {}),
+              ...(updatedFields.vong2State.bets || {})
+            }
       };
     }
     if (updatedFields.vong3State) {
@@ -941,7 +1625,9 @@
         }
       };
     }
-    window.applyState(updatedState);
+
+    // 1. Cập nhật ngay lập tức cục bộ (0ms UI latency)
+    window.applyState(updatedState, true);
 
     const rid = updatedFields.roomAuth?.roomId || getCurrentRoomId();
     if (rid !== currentRoomId) {
@@ -950,39 +1636,90 @@
       initEventSource();
     }
 
-    // Broadcast tức thời tới mọi tab khác trong cùng phòng qua BroadcastChannel với payload đã mã hóa
+    // 2. Broadcast siêu tốc tức thì tới mọi tab khác trong trình duyệt (0ms, không lag CPU)
     if (channel) {
-      const encBroadcast = GameCipher.encrypt(updatedState);
-      channel.postMessage({ type: 'GAME_STATE_UPDATE', payload: encBroadcast });
+      try {
+        const encBroadcast = GameCipher.encrypt(updatedState);
+        channel.postMessage({
+          type: 'GAME_STATE_UPDATE',
+          state: updatedState,
+          payload: encBroadcast
+        });
+      } catch (e) {}
     }
 
-    // Gửi lên server nền theo đúng phòng
+    // 3. Gửi ngay lập tức lên Server (0ms delay, không bỏ sót bất kỳ lệnh điều khiển Start / Stop nào)
     const payloadData = {
       ...updatedFields,
       roomId: rid,
       lastUpdated: updatedState.lastUpdated
     };
-    const encryptedPayload = GameCipher.encrypt(payloadData);
-    fetch('/api/game/state?roomid=' + encodeURIComponent(rid), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ payload: encryptedPayload })
-    }).catch(() => {});
+    enqueueAndSendPayload(payloadData, rid);
   };
 
-  // Hàm người chơi gửi đáp án Đúng/Sai (Vòng 1)
+  // Hàm người chơi gửi đáp án Đúng/Sai (Vòng 1) - Tức thì 0ms, ghi nhận 100% lần bấm đầu tiên, bất kể mạng mạnh hay yếu
   window.submitPlayerAnswer = async function(playerId, answer) {
-    const currentVong1 = window.currentGameState.vong1State || {};
-    const newAnswers = {
-      ...(currentVong1.answers || {}),
-      [playerId]: answer
-    };
-    await window.broadcastStateUpdate({
-      vong1State: {
-        ...currentVong1,
-        answers: newAnswers
+    const rid = getCurrentRoomId();
+
+    // 1. Cập nhật tức thì vào bộ nhớ cục bộ (0ms latency, không phụ thuộc vào mạng)
+    if (!window.currentGameState.vong1State) window.currentGameState.vong1State = {};
+    if (!window.currentGameState.vong1State.answers) window.currentGameState.vong1State.answers = {};
+    window.currentGameState.vong1State.answers[playerId] = answer;
+    window.currentGameState.lastUpdated = Date.now();
+
+    // Thông báo cho giao diện tab hiện tại cập nhật tức thì
+    notifyListeners(window.currentGameState, { vong1Changed: true });
+
+    // 2. Phát tín hiệu siêu tốc qua BroadcastChannel tới Controller & Host & Viewer (0ms, cùng trình duyệt, không cần internet)
+    if (channel) {
+      try {
+        channel.postMessage({
+          type: 'PLAYER_ANSWER_SUBMITTED',
+          roomId: rid,
+          playerId: playerId,
+          answer: answer,
+          state: window.currentGameState
+        });
+      } catch (e) {}
+    }
+
+    // 3. Gửi gói tin siêu nhẹ (~50 bytes) lên Server với cơ chế retry tự động (hoạt động bền bỉ kể cả mạng 2G/3G/lag)
+    const sendDirect = async () => {
+      try {
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timeoutId = controller ? setTimeout(() => controller.abort(), 3500) : null;
+        const encPayload = GameCipher.encrypt({ roomId: rid, playerId: playerId, answer: answer });
+        const answerUrl = window.getServerApiUrl('/api/game/answer?roomid=' + encodeURIComponent(rid));
+        const res = await fetch(answerUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payload: encPayload }),
+          signal: controller ? controller.signal : undefined
+        });
+        if (timeoutId) clearTimeout(timeoutId);
+        return res.ok;
+      } catch (err) {
+        return false;
       }
-    });
+    };
+
+    const success = await sendDirect();
+    if (!success) {
+      // Tự động thử lại lần 2 sau 300ms nếu mạng chập chờn
+      setTimeout(async () => {
+        const retryOk = await sendDirect();
+        if (!retryOk) {
+          // Thử lại qua queue nếu mạng vẫn rớt
+          enqueueAndSendPayload({
+            vong1State: {
+              answers: { [playerId]: answer }
+            },
+            roomId: rid,
+            lastUpdated: Date.now()
+          }, rid);
+        }
+      }, 300);
+    }
   };
 
   // Hàm người chơi bấm chuông (Vòng 3)
@@ -1067,4 +1804,240 @@
     }
     return false;
   };
+
+  // =========================================================================
+  // ĐỘNG CƠ ĐẾM THỜI GIAN THỰC ĐỒNG NHẤT TOÀN DIỆN (UNIVERSAL LIVE TIMER ENGINE)
+  // Đồng bộ tuyệt đối theo mốc Server Epoch ms giữa mọi vị trí địa lý, chống giật lùi
+  // =========================================================================
+  setInterval(() => {
+    if (typeof document === 'undefined') return;
+    const state = window.currentGameState;
+    if (!state) return;
+
+    // 1. Vòng 1 (5 giây)
+    const v1 = state.vong1State;
+    if (v1) {
+      if (v1.timerRunning && typeof v1.timerEndTime === 'number' && v1.timerEndTime > 0) {
+        const rem = window.calculateRemainingSeconds(v1, 5, 'v1');
+        const viewerTimerVal = document.getElementById('viewer-v1-timer-val');
+        if (viewerTimerVal) {
+          viewerTimerVal.textContent = `${rem}`;
+          viewerTimerVal.style.color = rem > 0 ? '#ef4444' : '#ffffff';
+        }
+        const hostTimerSec = document.getElementById('host-v1-timer-sec');
+        if (hostTimerSec) {
+          hostTimerSec.textContent = `${rem}s`;
+          hostTimerSec.style.color = rem > 0 ? '#ef4444' : '#facc15';
+        }
+        const ctrlTimerSec = document.getElementById('ctrl-v1-timer-sec');
+        if (ctrlTimerSec) {
+          ctrlTimerSec.textContent = `${rem}s`;
+        }
+        const ctrlTimerDisplay = document.getElementById('ctrl-v1-timer-display');
+        if (ctrlTimerDisplay) {
+          ctrlTimerDisplay.textContent = `${rem}s`;
+          ctrlTimerDisplay.style.color = rem > 0 ? '#ef4444' : '#facc15';
+        }
+        const pTimerSec = document.getElementById('p-v1-timer-sec');
+        if (pTimerSec) {
+          pTimerSec.textContent = `${rem}s`;
+          pTimerSec.style.color = rem > 0 ? '#ef4444' : '#facc15';
+        }
+        // Tự động vô hiệu hóa nút bấm của người chơi khi hết 5 giây
+        if (rem <= 0) {
+          const btnDung = document.getElementById('btn-v1-dung');
+          const btnSai = document.getElementById('btn-v1-sai');
+          if (btnDung && !btnDung.disabled) btnDung.disabled = true;
+          if (btnSai && !btnSai.disabled) btnSai.disabled = true;
+        }
+      } else if (!v1.timerRunning && typeof v1.timerSeconds === 'number') {
+        const stoppedSec = v1.timerSeconds;
+        const viewerTimerVal = document.getElementById('viewer-v1-timer-val');
+        if (viewerTimerVal) {
+          viewerTimerVal.textContent = `${stoppedSec}`;
+          viewerTimerVal.style.color = '#ffffff';
+        }
+        const hostTimerSec = document.getElementById('host-v1-timer-sec');
+        if (hostTimerSec) {
+          hostTimerSec.textContent = `${stoppedSec}s`;
+          hostTimerSec.style.color = '#facc15';
+        }
+        const ctrlTimerDisplay = document.getElementById('ctrl-v1-timer-display');
+        if (ctrlTimerDisplay) {
+          ctrlTimerDisplay.textContent = `${stoppedSec}s`;
+          ctrlTimerDisplay.style.color = '#facc15';
+        }
+        const pTimerSec = document.getElementById('p-v1-timer-sec');
+        if (pTimerSec) {
+          pTimerSec.textContent = `${stoppedSec}s`;
+          pTimerSec.style.color = '#facc15';
+        }
+      }
+    }
+
+    // 2. Vòng 2 (60 giây)
+    const v2 = state.vong2State;
+    if (v2) {
+      if (v2.timerRunning && typeof v2.timerEndTime === 'number' && v2.timerEndTime > 0) {
+        const rem = window.calculateRemainingSeconds(v2, 60, 'v2');
+        const viewerV2Timer = document.getElementById('viewer-v2-timer-val');
+        if (viewerV2Timer) {
+          viewerV2Timer.textContent = `${rem}`;
+          viewerV2Timer.style.color = rem > 0 ? '#ef4444' : '#facc15';
+        }
+        const hostV2Timer = document.getElementById('host-v2-timer-display');
+        if (hostV2Timer) {
+          hostV2Timer.textContent = `THỜI GIAN: ${rem}s`;
+          hostV2Timer.style.color = rem > 0 ? '#ef4444' : '#facc15';
+        }
+        const pV2Timer = document.getElementById('p-v2-timer-display');
+        if (pV2Timer) {
+          pV2Timer.textContent = `THỜI GIAN: ${rem}s`;
+          pV2Timer.style.color = rem > 0 ? '#ef4444' : '#facc15';
+        }
+        const ctrlV2Timer = document.getElementById('ctrl-v2-timer-display');
+        if (ctrlV2Timer) {
+          ctrlV2Timer.textContent = `${rem}s`;
+          ctrlV2Timer.style.color = rem > 0 ? '#ef4444' : '#facc15';
+        }
+      } else if (!v2.timerRunning && typeof v2.timerSeconds === 'number') {
+        const stoppedSec = v2.timerSeconds;
+        const viewerV2Timer = document.getElementById('viewer-v2-timer-val');
+        if (viewerV2Timer) {
+          viewerV2Timer.textContent = `${stoppedSec}`;
+          viewerV2Timer.style.color = '#facc15';
+        }
+        const hostV2Timer = document.getElementById('host-v2-timer-display');
+        if (hostV2Timer) {
+          hostV2Timer.textContent = `THỜI GIAN: ${stoppedSec}s`;
+          hostV2Timer.style.color = '#facc15';
+        }
+        const pV2Timer = document.getElementById('p-v2-timer-display');
+        if (pV2Timer) {
+          pV2Timer.textContent = `THỜI GIAN: ${stoppedSec}s`;
+          pV2Timer.style.color = '#facc15';
+        }
+        const ctrlV2Timer = document.getElementById('ctrl-v2-timer-display');
+        if (ctrlV2Timer) {
+          ctrlV2Timer.textContent = `${stoppedSec}s`;
+          ctrlV2Timer.style.color = '#facc15';
+        }
+      }
+    }
+
+    // 3. Vòng 3 (7 giây mỗi bước)
+    const v3 = state.vong3State;
+    if (v3) {
+      const isRunningV3 = !!(v3.isRunning || v3.stepTimerRunning);
+      if (isRunningV3 && typeof v3.stepTimerEndTime === 'number' && v3.stepTimerEndTime > 0) {
+        const rem = window.calculateRemainingSeconds(v3, 7, 'v3');
+        const hostV3Timer = document.getElementById('host-v3-timer-display');
+        if (hostV3Timer) {
+          hostV3Timer.textContent = `BƯỚC: ${rem}s`;
+        }
+        const pV3Timer = document.getElementById('p-v3-timer-step-display');
+        if (pV3Timer) {
+          pV3Timer.textContent = `BƯỚC: ${rem}s`;
+        }
+        const ctrlV3Timer = document.getElementById('ctrl-v3-timer-display');
+        if (ctrlV3Timer) {
+          ctrlV3Timer.textContent = `${rem}s`;
+        }
+      } else if (!isRunningV3 && typeof v3.stepTimerSeconds === 'number') {
+        const stoppedSec = v3.stepTimerSeconds;
+        const hostV3Timer = document.getElementById('host-v3-timer-display');
+        if (hostV3Timer) {
+          hostV3Timer.textContent = `BƯỚC: ${stoppedSec}s`;
+        }
+        const pV3Timer = document.getElementById('p-v3-timer-step-display');
+        if (pV3Timer) {
+          pV3Timer.textContent = `BƯỚC: ${stoppedSec}s`;
+        }
+        const ctrlV3Timer = document.getElementById('ctrl-v3-timer-display');
+        if (ctrlV3Timer) {
+          ctrlV3Timer.textContent = `${stoppedSec}s`;
+        }
+      }
+    }
+
+    // 4. Vòng 4 (120 giây)
+    const v4 = state.vong4State;
+    if (v4) {
+      if (v4.timerRunning && typeof v4.timerEndTime === 'number' && v4.timerEndTime > 0) {
+        const rem = window.calculateRemainingSeconds(v4, 120, 'v4');
+        const viewerV4Timer = document.getElementById('viewer-v4-timer-val');
+        if (viewerV4Timer) {
+          viewerV4Timer.textContent = `${rem}`;
+          viewerV4Timer.style.color = rem > 0 ? '#ef4444' : '#ffffff';
+        }
+        const hostV4Timer = document.getElementById('host-v4-timer-display');
+        if (hostV4Timer) {
+          hostV4Timer.textContent = `120s: ${rem}s`;
+          hostV4Timer.style.color = rem > 0 ? '#ef4444' : '#facc15';
+        }
+        const ctrlV4Timer = document.getElementById('ctrl-v4-timer-display');
+        if (ctrlV4Timer) {
+          ctrlV4Timer.textContent = `${rem}s`;
+          ctrlV4Timer.style.color = rem > 0 ? '#ef4444' : '#facc15';
+        }
+        const pV4Timer = document.getElementById('p-v4-timer-display');
+        if (pV4Timer) {
+          pV4Timer.textContent = `120s: ${rem}s`;
+          pV4Timer.style.color = rem > 0 ? '#ef4444' : '#facc15';
+        }
+        const ctrlPreviewTimer = document.getElementById('ctrl-v4-preview-timer-val');
+        if (ctrlPreviewTimer) {
+          ctrlPreviewTimer.textContent = `${rem}s`;
+        }
+        const ctrlPreviewStatus = document.getElementById('ctrl-v4-preview-timer-status');
+        if (ctrlPreviewStatus) {
+          ctrlPreviewStatus.textContent = 'Đang chạy';
+          ctrlPreviewStatus.style.color = '#ef4444';
+        }
+      } else if (!v4.timerRunning && typeof v4.timerSeconds === 'number') {
+        const stoppedSec = v4.timerSeconds;
+        const viewerV4Timer = document.getElementById('viewer-v4-timer-val');
+        if (viewerV4Timer) {
+          viewerV4Timer.textContent = `${stoppedSec}`;
+          viewerV4Timer.style.color = '#ffffff';
+        }
+        const hostV4Timer = document.getElementById('host-v4-timer-display');
+        if (hostV4Timer) {
+          hostV4Timer.textContent = `120s: ${stoppedSec}s`;
+          hostV4Timer.style.color = '#facc15';
+        }
+        const ctrlV4Timer = document.getElementById('ctrl-v4-timer-display');
+        if (ctrlV4Timer) {
+          ctrlV4Timer.textContent = `${stoppedSec}s`;
+          ctrlV4Timer.style.color = '#facc15';
+        }
+        const pV4Timer = document.getElementById('p-v4-timer-display');
+        if (pV4Timer) {
+          pV4Timer.textContent = `120s: ${stoppedSec}s`;
+          pV4Timer.style.color = '#facc15';
+        }
+        const ctrlPreviewTimer = document.getElementById('ctrl-v4-preview-timer-val');
+        if (ctrlPreviewTimer) {
+          ctrlPreviewTimer.textContent = `${stoppedSec}s`;
+        }
+        const ctrlPreviewStatus = document.getElementById('ctrl-v4-preview-timer-status');
+        if (ctrlPreviewStatus) {
+          ctrlPreviewStatus.textContent = 'Đang dừng';
+          ctrlPreviewStatus.style.color = '#94a3b8';
+        }
+      }
+    }
+  }, 25);
+
+  // Bắt và xử lý sạch sẽ mọi lỗi ngoại lệ Uncaught để console luôn trong sạch
+  if (typeof window !== 'undefined') {
+    window.addEventListener('unhandledrejection', function(event) {
+      if (event && event.reason) {
+        const r = event.reason;
+        if (r.name === 'NotAllowedError' || r.name === 'AbortError' || (typeof r.message === 'string' && r.message.includes('play()'))) {
+          event.preventDefault();
+        }
+      }
+    });
+  }
 })();

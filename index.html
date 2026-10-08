@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>An Số Vàng Hub</title>
-    <meta name="description" content="Hệ thống web đa trang kết nối với máy chủ An Số Vàng trên Render, hỗ trợ bảo mật DevTools và tối ưu hiển thị." />
-    <meta property="og:title" content="An Số Vàng Hub" />
-    <meta property="og:description" content="Hệ thống web đa trang kết nối với máy chủ An Số Vàng trên Render, hỗ trợ bảo mật DevTools và tối ưu hiển thị." />
+    <title>Ẩn Số Vàng</title>
+    <meta name="description" content="Hệ thống web đa trang kết nối với máy chủ Ẩn Số Vàng trên Render, hỗ trợ bảo mật DevTools và tối ưu hiển thị." />
+    <meta property="og:title" content="Ẩn Số Vàng Hub" />
+    <meta property="og:description" content="Hệ thống web đa trang kết nối với máy chủ Ẩn Số Vàng trên Render, hỗ trợ bảo mật DevTools và tối ưu hiển thị." />
 
     <!-- 100% font-weight là bold cho tất cả các phần tử -->
     <style>
@@ -29,6 +29,10 @@
       /* Nút bấm và hiệu ứng hover */
       button, .btn, a.btn, input[type='button'], input[type='submit'], input[type='reset'] {
         cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
         transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
         outline: none;
         will-change: background-color, color, box-shadow;
@@ -143,12 +147,38 @@
         <button type="submit" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: 1.5px solid #38bdf8; border-radius: 8px; padding: 10px; font-size: 13px; text-transform: uppercase; margin-top: 4px;">
           VÀO PHÒNG THI ĐẤU
         </button>
+
+        <!-- Tùy chọn máy chủ: Chạy Local hoặc OnRender -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding-top: 10px; border-top: 1px solid #1e293b; font-size: 11px; color: #94a3b8;">
+          <span id="server-status-label">Máy chủ: <b style="color: #38bdf8;">Đang xác định...</b></span>
+          <select id="server-select-switch" style="background: #1e293b; color: #facc15; border: 1px solid #475569; border-radius: 6px; padding: 3px 6px; font-size: 11px; cursor: pointer;">
+            <option value="auto">Tự động nhận diện</option>
+            <option value="local">Local (localhost:3000)</option>
+            <option value="render">OnRender (Cloud)</option>
+          </select>
+        </div>
       </form>
     </div>
 
     <script>
       const form = document.getElementById('login-form');
       const errBox = document.getElementById('login-error-box');
+
+      const serverSwitch = document.getElementById('server-select-switch');
+      const serverLabel = document.getElementById('server-status-label');
+      if (serverSwitch && serverLabel) {
+        const currentTarget = localStorage.getItem('anso_target_server') || 'auto';
+        serverSwitch.value = currentTarget;
+        const currentUrl = (window.getServerBaseUrl ? window.getServerBaseUrl() : window.location.origin) || 'Localhost:3000';
+        serverLabel.innerHTML = `Máy chủ: <b style="color: #38bdf8;">${currentUrl.replace(/^https?:\/\//, '')}</b>`;
+
+        serverSwitch.addEventListener('change', (e) => {
+          const val = e.target.value;
+          if (window.switchServerTarget) {
+            window.switchServerTarget(val === 'auto' ? '' : val);
+          }
+        });
+      }
 
       function showError(msg) {
         errBox.textContent = msg;
