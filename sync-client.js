@@ -995,82 +995,100 @@
     }
   }
 
-  function syncGlobalAudio(audioState, forcePlay = false) {
-    if (!audioState) return;
-
+  function syncSoundboardAudio(sb, forcePlay = false) {
+    if (!sb) return;
     const isMutedOnController = window.isController && !isControllerAudioEnabled();
-
-    // 1. Synchronize Soundboard (BGM)
-    const sb = audioState.soundboard || {};
     const sbAudio = getOrCreateSoundboardAudio();
-    if (sbAudio) {
-      sbAudio.muted = isMutedOnController;
-      if (sb.playing && sb.track) {
-        const targetSrc = resolveAudioUrl(sb.track);
-        if (sbAudio.getAttribute('data-track') !== sb.track) {
-          sbAudio.src = targetSrc;
-          sbAudio.setAttribute('data-track', sb.track);
-        }
+    if (!sbAudio) return;
 
-        if (forcePlay || (sb.timestamp && sb.timestamp !== lastSoundboardTimestamp)) {
-          lastSoundboardTimestamp = sb.timestamp;
-          sbAudio.loop = !!sb.loop;
+    sbAudio.muted = isMutedOnController;
+
+    if (sb.playing && sb.track) {
+      const isSameTrack = sbAudio.getAttribute('data-track') === sb.track;
+      const isCurrentlyPlaying = !sbAudio.paused && isSameTrack && sbAudio.currentTime > 0;
+      const targetSrc = resolveAudioUrl(sb.track);
+
+      if (!isSameTrack) {
+        sbAudio.src = targetSrc;
+        sbAudio.setAttribute('data-track', sb.track);
+      }
+      sbAudio.loop = !!sb.loop;
+
+      const isNewSoundboardTimestamp = sb.timestamp && Number(sb.timestamp) !== Number(lastSoundboardTimestamp);
+
+      // KHÔNG BAO GIỜ reset lại từ đầu (currentTime = 0) nếu:
+      // Bản nhạc đó đang phát dở dang (isCurrentlyPlaying), đúng track đó (isSameTrack),
+      // và không phải là lệnh đổi bài mới hoặc bấm phát lại bài mới rõ ràng.
+      if (!isCurrentlyPlaying || !isSameTrack || (forcePlay && isNewSoundboardTimestamp)) {
+        if (sb.timestamp) lastSoundboardTimestamp = Number(sb.timestamp);
+        if (!isSameTrack || !isCurrentlyPlaying || (forcePlay && isNewSoundboardTimestamp)) {
           sbAudio.currentTime = 0;
-          const playPromise = sbAudio.play();
-          if (playPromise !== undefined) {
-            playPromise.then(() => {
-              const banner = document.getElementById('audio-unlock-banner');
-              if (banner) banner.remove();
-              audioUnlocked = true;
-            }).catch((err) => {
-              if (err && err.name === 'NotAllowedError') {
-                showAutoplayNotice(sb.track);
-              }
-            });
-          }
-        } else {
-          sbAudio.loop = !!sb.loop;
         }
-      } else if (sb.playing === false) {
-        sbAudio.loop = false;
-        sbAudio.pause();
-        sbAudio.currentTime = 0;
+        const playPromise = sbAudio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            const banner = document.getElementById('audio-unlock-banner');
+            if (banner) banner.remove();
+            audioUnlocked = true;
+          }).catch((err) => {
+            if (err && err.name === 'NotAllowedError') {
+              showAutoplayNotice(sb.track);
+            }
+          });
+        }
       }
+    } else if (sb.playing === false) {
+      sbAudio.loop = false;
+      sbAudio.pause();
+      sbAudio.currentTime = 0;
     }
+  }
 
-    // 2. Synchronize Game Effects (SFX)
-    const fx = audioState.effects || {};
+  function syncEffectsAudio(fx, forcePlay = false) {
+    if (!fx) return;
     const fxAudio = getOrCreateEffectsAudio();
-    if (fxAudio) {
-      if (fx.playing && fx.track) {
-        const targetSrc = resolveAudioUrl(fx.track);
-        const fxTime = Number(fx.timestamp) || Date.now();
-        if (forcePlay || (fxTime !== lastEffectsTimestamp)) {
-          lastEffectsTimestamp = fxTime;
-          fxAudio.src = targetSrc;
-          fxAudio.setAttribute('data-track', fx.track);
-          fxAudio.loop = !!fx.loop;
-          fxAudio.currentTime = 0;
-          fxAudio.muted = false; // Luôn phát hiệu ứng rõ ràng
-          const playPromise = fxAudio.play();
-          if (playPromise !== undefined) {
-            playPromise.then(() => {
-              const banner = document.getElementById('audio-unlock-banner');
-              if (banner) banner.remove();
-              audioUnlocked = true;
-            }).catch((err) => {
-              if (err && err.name === 'NotAllowedError') {
-                showAutoplayNotice(fx.track);
-              }
-            });
-          }
-        }
-      } else if (fx.stopped === true || (fx.track === null && fx.timestamp && fx.timestamp !== lastEffectsTimestamp)) {
-        lastEffectsTimestamp = fx.timestamp || Date.now();
-        fxAudio.loop = false;
-        fxAudio.pause();
+    if (!fxAudio) return;
+
+    if (fx.playing && fx.track) {
+      const targetSrc = resolveAudioUrl(fx.track);
+      const fxTime = Number(fx.timestamp) || Date.now();
+      const isNewEffect = fxTime !== lastEffectsTimestamp;
+
+      if (forcePlay || isNewEffect) {
+        lastEffectsTimestamp = fxTime;
+        fxAudio.src = targetSrc;
+        fxAudio.setAttribute('data-track', fx.track);
+        fxAudio.loop = !!fx.loop;
         fxAudio.currentTime = 0;
+        fxAudio.muted = false; // Luôn phát hiệu ứng rõ ràng
+        const playPromise = fxAudio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            const banner = document.getElementById('audio-unlock-banner');
+            if (banner) banner.remove();
+            audioUnlocked = true;
+          }).catch((err) => {
+            if (err && err.name === 'NotAllowedError') {
+              showAutoplayNotice(fx.track);
+            }
+          });
+        }
       }
+    } else if (fx.stopped === true || (fx.track === null && fx.timestamp && Number(fx.timestamp) !== lastEffectsTimestamp)) {
+      lastEffectsTimestamp = Number(fx.timestamp) || Date.now();
+      fxAudio.loop = false;
+      fxAudio.pause();
+      fxAudio.currentTime = 0;
+    }
+  }
+
+  function syncGlobalAudio(audioState) {
+    if (!audioState) return;
+    if (audioState.soundboard) {
+      syncSoundboardAudio(audioState.soundboard, false);
+    }
+    if (audioState.effects) {
+      syncEffectsAudio(audioState.effects, false);
     }
   }
 
@@ -1604,6 +1622,7 @@
             loop: !!loop,
             timestamp: timestamp || Date.now()
           };
+          syncSoundboardAudio(window.currentGameState.audioState.soundboard, true);
         } else if (subType === 'effects') {
           window.currentGameState.audioState.effects = {
             track: track || null,
@@ -1611,8 +1630,8 @@
             loop: !!loop,
             timestamp: timestamp || Date.now()
           };
+          syncEffectsAudio(window.currentGameState.audioState.effects, true);
         }
-        syncGlobalAudio(window.currentGameState.audioState, true);
         notifyListeners(window.currentGameState, { audioChanged: true });
         return;
       }
@@ -1858,6 +1877,18 @@
       roomId: rid,
       lastUpdated: updatedState.lastUpdated
     };
+    if (updatedState.audioState) {
+      payloadData.audioState = {
+        soundboard: {
+          ...(window.currentGameState.audioState?.soundboard || {}),
+          ...(updatedFields.audioState?.soundboard || {})
+        },
+        effects: {
+          ...(window.currentGameState.audioState?.effects || {}),
+          ...(updatedFields.audioState?.effects || {})
+        }
+      };
+    }
     enqueueAndSendPayload(payloadData, rid);
   };
 

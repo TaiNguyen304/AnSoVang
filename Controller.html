@@ -2367,6 +2367,9 @@
             scored: false
           },
           audioState: {
+            soundboard: {
+              ...(window.currentGameState.audioState?.soundboard || {})
+            },
             effects: {
               track: '5s.mp3',
               playing: true,
@@ -2437,6 +2440,9 @@
             scored: false
           },
           audioState: {
+            soundboard: {
+              ...(window.currentGameState.audioState?.soundboard || {})
+            },
             effects: {
               track: '5s.mp3',
               playing: true,

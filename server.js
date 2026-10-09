@@ -645,14 +645,13 @@ app.post('/api/game/state', (req, res) => {
   if (data.audioState) {
     gameState.audioState = {
       ...(gameState.audioState || {}),
-      ...data.audioState,
       soundboard: {
         ...(gameState.audioState?.soundboard || {}),
         ...(data.audioState.soundboard || {})
       },
       effects: {
         ...(gameState.audioState?.effects || {}),
-        ...(data.audioState?.effects || {})
+        ...(data.audioState.effects || {})
       }
     };
   }
