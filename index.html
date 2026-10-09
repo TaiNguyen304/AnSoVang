@@ -81,12 +81,12 @@
             return false;
           }
           const isCmdOrCtrl = e.ctrlKey || e.metaKey;
-          if (isCmdOrCtrl && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
+          if (isCmdOrCtrl && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c', 'K', 'k'].includes(e.key)) {
             e.preventDefault();
             e.stopPropagation();
             return false;
           }
-          if (isCmdOrCtrl && ['u', 'U', 's', 'S'].includes(e.key)) {
+          if (isCmdOrCtrl && ['u', 'U', 's', 'S', 'p', 'P'].includes(e.key)) {
             e.preventDefault();
             e.stopPropagation();
             return false;
@@ -94,6 +94,12 @@
         }, true);
 
         window.addEventListener('contextmenu', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }, true);
+
+        window.addEventListener('dragstart', function (e) {
           e.preventDefault();
           return false;
         }, true);

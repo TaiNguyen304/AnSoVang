@@ -24,6 +24,42 @@
     }, true);
   }
 
+  // 1. Chống mở DevTools, phím tắt soi code và chuột phải toàn diện
+  function disableDevTools() {
+    if (typeof window === 'undefined') return;
+    window.addEventListener('keydown', function(e) {
+      if (e.key === 'F12' || e.keyCode === 123) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      const isCmdOrCtrl = e.ctrlKey || e.metaKey;
+      if (isCmdOrCtrl && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c', 'K', 'k'].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      if (isCmdOrCtrl && ['u', 'U', 's', 'S', 'p', 'P'].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    }, true);
+
+    window.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }, true);
+
+    window.addEventListener('dragstart', function(e) {
+      e.preventDefault();
+      return false;
+    }, true);
+  }
+  disableDevTools();
+  window.disableDevTools = disableDevTools;
+
   window.RENDER_SERVER_URL = "https://ansovang.onrender.com";
   window.LOCAL_SERVER_URL = "http://localhost:3000";
 
@@ -97,9 +133,90 @@
     viewer: "Viewer.html"
   };
 
-  // Bộ mã hóa / giải mã 256-bit độc lập bảo vệ toàn bộ dữ liệu gói tin
+  // Bộ mã hóa / giải mã bảo mật bất đối xứng (Asymmetric Cryptography) X25519 + ChaCha20
   const GameCipher = (function() {
-    const SECRET_KEY = 'ASV_2026_SECRET_SECURE_KEY_@#918273645';
+    const P25519 = (1n << 255n) - 19n;
+    const A24 = 121665n;
+    const BASE_POINT_BYTES = new Uint8Array(32);
+    BASE_POINT_BYTES[0] = 9;
+
+    function x25519(scalarBytes, uPointBytes) {
+      let k = 0n;
+      for (let i = 0; i < 32; i++) {
+        k |= BigInt(scalarBytes[i]) << BigInt(8 * i);
+      }
+      k &= (1n << 254n) - 8n;
+      k |= 1n << 254n;
+
+      let u = 0n;
+      for (let i = 0; i < 32; i++) {
+        u |= BigInt(uPointBytes[i]) << BigInt(8 * i);
+      }
+      u = u % P25519;
+
+      let x1 = u;
+      let x2 = 1n, z2 = 0n;
+      let x3 = u, z3 = 1n;
+      let swap = 0n;
+
+      const mod = (n) => ((n % P25519) + P25519) % P25519;
+      const inv = (n) => {
+        let base = mod(n), exp = P25519 - 2n, res = 1n;
+        while (exp > 0n) {
+          if (exp & 1n) res = mod(res * base);
+          base = mod(base * base);
+          exp >>= 1n;
+        }
+        return res;
+      };
+
+      for (let t = 254; t >= 0; t--) {
+        const kt = (k >> BigInt(t)) & 1n;
+        swap ^= kt;
+        if (swap) {
+          [x2, x3] = [x3, x2];
+          [z2, z3] = [z3, z2];
+        }
+        swap = kt;
+
+        const A = mod(x2 + z2);
+        const AA = mod(A * A);
+        const B = mod(x2 - z2);
+        const BB = mod(B * B);
+        const E = mod(AA - BB);
+        const C = mod(x3 + z3);
+        const D = mod(x3 - z3);
+        const DA = mod(D * A);
+        const CB = mod(C * B);
+        x3 = mod((DA + CB) ** 2n);
+        z3 = mod(x1 * ((DA - CB) ** 2n));
+        x2 = mod(AA * BB);
+        z2 = mod(E * (AA + mod(A24 * E)));
+      }
+
+      if (swap) {
+        [x2, x3] = [x3, x2];
+        [z2, z3] = [z3, z2];
+      }
+
+      const result = mod(x2 * inv(z2));
+      const out = new Uint8Array(32);
+      let temp = result;
+      for (let i = 0; i < 32; i++) {
+        out[i] = Number(temp & 0xffn);
+        temp >>= 8n;
+      }
+      return out;
+    }
+
+    const PLAYER_VIEWER_PRIVATE_SEED = [
+      0xb4, 0x82, 0x19, 0xf6, 0x43, 0x7c, 0x22, 0xa9,
+      0x55, 0x3d, 0xee, 0x12, 0x90, 0x48, 0x71, 0xbc,
+      0x99, 0x11, 0x6e, 0xfa, 0x24, 0x88, 0xd3, 0x5a,
+      0x47, 0x0c, 0x9f, 0x3e, 0xb2, 0x81, 0x54, 0x6d
+    ];
+    const ASV_PLAYER_PRIVATE_KEY = new Uint8Array(PLAYER_VIEWER_PRIVATE_SEED);
+    const ASV_PLAYER_PUBLIC_KEY = x25519(ASV_PLAYER_PRIVATE_KEY, BASE_POINT_BYTES);
 
     function stringToUtf8ByteArray(str) {
       if (typeof TextEncoder !== 'undefined') {
@@ -155,6 +272,9 @@
     }
 
     function bytesToBase64(bytes) {
+      if (typeof Buffer !== 'undefined') {
+        return Buffer.from(bytes).toString('base64');
+      }
       let binary = '';
       const len = bytes.byteLength;
       for (let i = 0; i < len; i++) {
@@ -164,6 +284,9 @@
     }
 
     function base64ToBytes(base64) {
+      if (typeof Buffer !== 'undefined') {
+        return new Uint8Array(Buffer.from(base64, 'base64'));
+      }
       const binary = atob(base64);
       const len = binary.length;
       const bytes = new Uint8Array(len);
@@ -173,20 +296,29 @@
       return bytes;
     }
 
-    function deriveKey(secret) {
+    function getRandomBytes(len) {
+      const bytes = new Uint8Array(len);
+      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        crypto.getRandomValues(bytes);
+      } else {
+        for (let i = 0; i < len; i++) {
+          bytes[i] = Math.floor(Math.random() * 256);
+        }
+      }
+      return bytes;
+    }
+
+    function deriveSessionKey(sharedSecretBytes) {
       const key = new Uint32Array(8);
-      const utf = stringToUtf8ByteArray(secret);
       for (let i = 0; i < 8; i++) {
         key[i] = 0x6a09e667 ^ (i * 0xbb67ae85);
       }
-      for (let i = 0; i < utf.length; i++) {
+      for (let i = 0; i < sharedSecretBytes.length; i++) {
         const idx = i % 8;
-        key[idx] = (key[idx] * 31 + utf[i] + ((key[(idx + 1) % 8] << 5) | (key[(idx + 1) % 8] >>> 27))) >>> 0;
+        key[idx] = (key[idx] * 31 + sharedSecretBytes[i] + ((key[(idx + 1) % 8] << 5) | (key[(idx + 1) % 8] >>> 27))) >>> 0;
       }
       return key;
     }
-
-    const MASTER_KEY = deriveKey(SECRET_KEY);
 
     function quarterRound(x, a, b, c, d) {
       x[a] = (x[a] + x[b]) >>> 0; x[d] = ((x[d] ^ x[a]) << 16 | (x[d] ^ x[a]) >>> 16) >>> 0;
@@ -195,12 +327,12 @@
       x[c] = (x[c] + x[d]) >>> 0; x[b] = ((x[b] ^ x[c]) << 7  | (x[b] ^ x[c]) >>> 25) >>> 0;
     }
 
-    function chacha20Block(key, counter, nonce) {
+    function chacha20Block(key, counter, nonceWords) {
       const state = new Uint32Array(16);
       state[0] = 0x61707865; state[1] = 0x3320646e; state[2] = 0x79622d32; state[3] = 0x6b206574;
       for (let i = 0; i < 8; i++) state[4 + i] = key[i];
       state[12] = counter;
-      state[13] = nonce[0]; state[14] = nonce[1]; state[15] = nonce[2];
+      state[13] = nonceWords[0]; state[14] = nonceWords[1]; state[15] = nonceWords[2];
 
       const working = new Uint32Array(state);
       for (let i = 0; i < 10; i++) {
@@ -225,12 +357,12 @@
       return output;
     }
 
-    function processChaCha20(bytes, nonceWords) {
+    function processChaCha(bytes, keyWords, nonceWords) {
       const out = new Uint8Array(bytes.length);
       let counter = 1;
       let offset = 0;
       while (offset < bytes.length) {
-        const block = chacha20Block(MASTER_KEY, counter++, nonceWords);
+        const block = chacha20Block(keyWords, counter++, nonceWords);
         const chunkSize = Math.min(64, bytes.length - offset);
         for (let i = 0; i < chunkSize; i++) {
           out[offset + i] = bytes[offset + i] ^ block[i];
@@ -240,38 +372,85 @@
       return out;
     }
 
-    function generateRandomNonce() {
-      const nonce = new Uint8Array(12);
-      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-        crypto.getRandomValues(nonce);
-      } else {
-        for (let i = 0; i < 12; i++) nonce[i] = Math.floor(Math.random() * 256);
-      }
-      const words = new Uint32Array(3);
-      words[0] = (nonce[0] | (nonce[1] << 8) | (nonce[2] << 16) | (nonce[3] << 24)) >>> 0;
-      words[1] = (nonce[4] | (nonce[5] << 8) | (nonce[6] << 16) | (nonce[7] << 24)) >>> 0;
-      words[2] = (nonce[8] | (nonce[9] << 8) | (nonce[10] << 16) | (nonce[11] << 24)) >>> 0;
-      return { bytes: nonce, words: words };
-    }
-
-    function encrypt(data) {
+    function asymmetricEncrypt(data, recipientPublicKey = ASV_PLAYER_PUBLIC_KEY) {
       try {
         if (data === null || data === undefined) return null;
         const jsonStr = typeof data === 'string' ? data : JSON.stringify(data);
-        const bytes = stringToUtf8ByteArray(jsonStr);
+        const plaintextBytes = stringToUtf8ByteArray(jsonStr);
+
+        const ephemeralPriv = getRandomBytes(32);
+        const ephemeralPub = x25519(ephemeralPriv, BASE_POINT_BYTES);
+        const sharedSecret = x25519(ephemeralPriv, recipientPublicKey);
+        const sessionKey = deriveSessionKey(sharedSecret);
+
+        const nonceBytes = getRandomBytes(12);
+        const nonceWords = new Uint32Array(3);
+        nonceWords[0] = (nonceBytes[0] | (nonceBytes[1] << 8) | (nonceBytes[2] << 16) | (nonceBytes[3] << 24)) >>> 0;
+        nonceWords[1] = (nonceBytes[4] | (nonceBytes[5] << 8) | (nonceBytes[6] << 16) | (nonceBytes[7] << 24)) >>> 0;
+        nonceWords[2] = (nonceBytes[8] | (nonceBytes[9] << 8) | (nonceBytes[10] << 16) | (nonceBytes[11] << 24)) >>> 0;
+
+        const cipherBytes = processChaCha(plaintextBytes, sessionKey, nonceWords);
+        const combined = new Uint8Array(32 + 12 + cipherBytes.length);
+        combined.set(ephemeralPub, 0);
+        combined.set(nonceBytes, 32);
+        combined.set(cipherBytes, 44);
+
+        return 'ASV_ASYM_' + bytesToBase64(combined);
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function asymmetricDecrypt(ciphertext, recipientPrivateKey = ASV_PLAYER_PRIVATE_KEY) {
+      try {
+        if (!ciphertext || typeof ciphertext !== 'string') return null;
+        let b64 = ciphertext;
+        if (b64.startsWith('ASV_ASYM_')) {
+          b64 = b64.slice(9);
+        }
+        const combined = base64ToBytes(b64);
+        if (combined.length < 44) return null;
+
+        const ephemeralPub = combined.slice(0, 32);
+        const nonceBytes = combined.slice(32, 44);
+        const cipherBytes = combined.slice(44);
+
+        const sharedSecret = x25519(recipientPrivateKey, ephemeralPub);
+        const sessionKey = deriveSessionKey(sharedSecret);
+
+        const nonceWords = new Uint32Array(3);
+        nonceWords[0] = (nonceBytes[0] | (nonceBytes[1] << 8) | (nonceBytes[2] << 16) | (nonceBytes[3] << 24)) >>> 0;
+        nonceWords[1] = (nonceBytes[4] | (nonceBytes[5] << 8) | (nonceBytes[6] << 16) | (nonceBytes[7] << 24)) >>> 0;
+        nonceWords[2] = (nonceBytes[8] | (nonceBytes[9] << 8) | (nonceBytes[10] << 16) | (nonceBytes[11] << 24)) >>> 0;
+
+        const decryptedBytes = processChaCha(cipherBytes, sessionKey, nonceWords);
+        const jsonStr = utf8ByteArrayToString(decryptedBytes);
+        return JSON.parse(jsonStr);
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function decryptLegacyXOR(payloadStr) {
+      try {
+        const cleanB64 = payloadStr.startsWith('ASV_') ? payloadStr.slice(4) : payloadStr;
+        const bytes = base64ToBytes(cleanB64);
         const len = bytes.length;
         const output = new Uint8Array(len);
-
         let k = 0x6b;
         for (let i = 0; i < len; i++) {
           k = (k * 31 + 47 + (i % 29)) & 0xff;
           output[i] = bytes[i] ^ k;
         }
-
-        return 'ASV_' + bytesToBase64(output);
-      } catch (err) {
+        const jsonStr = utf8ByteArrayToString(output);
+        return JSON.parse(jsonStr);
+      } catch (e) {
         return null;
       }
+    }
+
+    function encrypt(data) {
+      return asymmetricEncrypt(data, ASV_PLAYER_PUBLIC_KEY);
     }
 
     function decrypt(ciphertext) {
@@ -279,48 +458,26 @@
         if (typeof ciphertext === 'object' && ciphertext !== null) return ciphertext;
         if (typeof ciphertext !== 'string' || !ciphertext) return null;
 
-        let payloadStr = ciphertext;
-        if (payloadStr.startsWith('ASV_')) {
-          payloadStr = payloadStr.slice(4);
-          const bytes = base64ToBytes(payloadStr);
-          const len = bytes.length;
-          const output = new Uint8Array(len);
-
-          let k = 0x6b;
-          for (let i = 0; i < len; i++) {
-            k = (k * 31 + 47 + (i % 29)) & 0xff;
-            output[i] = bytes[i] ^ k;
-          }
-
-          const jsonStr = utf8ByteArrayToString(output);
-          return JSON.parse(jsonStr);
+        if (ciphertext.startsWith('ASV_ASYM_')) {
+          return asymmetricDecrypt(ciphertext, ASV_PLAYER_PRIVATE_KEY);
         }
-
-        // Hỗ trợ giải mã ChaCha cũ nếu có
-        if (payloadStr.length > 20 && !payloadStr.startsWith('{') && !payloadStr.startsWith('[')) {
-          try {
-            const combined = base64ToBytes(payloadStr);
-            if (combined.length >= 12) {
-              const nonceBytes = combined.slice(0, 12);
-              const encryptedBytes = combined.slice(12);
-              const nonceWords = new Uint32Array(3);
-              nonceWords[0] = (nonceBytes[0] | (nonceBytes[1] << 8) | (nonceBytes[2] << 16) | (nonceBytes[3] << 24)) >>> 0;
-              nonceWords[1] = (nonceBytes[4] | (nonceBytes[5] << 8) | (nonceBytes[6] << 16) | (nonceBytes[7] << 24)) >>> 0;
-              nonceWords[2] = (nonceBytes[8] | (nonceBytes[9] << 8) | (nonceBytes[10] << 16) | (nonceBytes[11] << 24)) >>> 0;
-              const decryptedBytes = processChaCha20(encryptedBytes, nonceWords);
-              const jsonStr = utf8ByteArrayToString(decryptedBytes);
-              return JSON.parse(jsonStr);
-            }
-          } catch(e) {}
+        if (ciphertext.startsWith('ASV_')) {
+          return decryptLegacyXOR(ciphertext);
         }
-
         return JSON.parse(ciphertext);
       } catch (err) {
         return null;
       }
     }
 
-    return { encrypt, decrypt };
+    return {
+      ASV_PLAYER_PUBLIC_KEY,
+      ASV_PLAYER_PRIVATE_KEY,
+      asymmetricEncrypt,
+      asymmetricDecrypt,
+      encrypt,
+      decrypt
+    };
   })();
 
   window.GameCipher = GameCipher;
@@ -682,8 +839,14 @@
       if (audioBlobCache.has(track)) continue;
       try {
         const url = resolveAudioUrl(track, true);
-        const res = await fetch(url);
-        if (res.ok) {
+        let res = await fetch(url).catch(() => null);
+        if (!res || !res.ok) {
+          const serverBase = (typeof window.getServerBaseUrl === 'function') ? window.getServerBaseUrl() : '';
+          if (serverBase) {
+            res = await fetch(window.getServerApiUrl('/' + encodeURIComponent(track))).catch(() => null);
+          }
+        }
+        if (res && res.ok) {
           const blob = await res.blob();
           const blobUrl = URL.createObjectURL(blob);
           audioBlobCache.set(track, blobUrl);
@@ -786,7 +949,9 @@
         if (effectsAudio && effectsAudio.src && !effectsAudio.src.includes('fallback=1')) {
           const track = effectsAudio.getAttribute('data-track');
           try {
-            effectsAudio.src = resolveAudioUrl(track) + '?fallback=1';
+            const serverBase = typeof window.getServerBaseUrl === 'function' ? window.getServerBaseUrl() : '';
+            const fallbackUrl = serverBase ? (serverBase + '/' + encodeURIComponent(track)) : ('./' + encodeURIComponent(track));
+            effectsAudio.src = fallbackUrl + '?fallback=1';
             effectsAudio.play().catch(() => {});
           } catch (e) {}
         }
@@ -879,8 +1044,9 @@
     if (fxAudio) {
       if (fx.playing && fx.track) {
         const targetSrc = resolveAudioUrl(fx.track);
-        if (forcePlay || (fx.timestamp && fx.timestamp !== lastEffectsTimestamp)) {
-          lastEffectsTimestamp = fx.timestamp;
+        const fxTime = Number(fx.timestamp) || Date.now();
+        if (forcePlay || (fxTime !== lastEffectsTimestamp)) {
+          lastEffectsTimestamp = fxTime;
           fxAudio.src = targetSrc;
           fxAudio.setAttribute('data-track', fx.track);
           fxAudio.loop = !!fx.loop;
@@ -1648,7 +1814,45 @@
       } catch (e) {}
     }
 
-    // 3. Gửi ngay lập tức lên Server (0ms delay, không bỏ sót bất kỳ lệnh điều khiển Start / Stop nào)
+    // 3. Nếu có cập nhật hiệu ứng âm thanh (Effects), gửi đồng thời tới /api/game/audio để OnRender server và Local server cập nhật ngay
+    if (updatedFields.audioState && updatedFields.audioState.effects) {
+      const fx = updatedFields.audioState.effects;
+      if (fx.playing && fx.track) {
+        try {
+          fetch(window.getServerApiUrl('/api/game/audio?roomid=' + encodeURIComponent(rid)), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subType: 'effects',
+              track: fx.track,
+              playing: true,
+              loop: !!fx.loop,
+              timestamp: fx.timestamp || Date.now(),
+              roomId: rid
+            }),
+            keepalive: true
+          }).catch(() => {});
+        } catch (e) {}
+      } else if (fx.playing === false || fx.stopped === true) {
+        try {
+          fetch(window.getServerApiUrl('/api/game/audio?roomid=' + encodeURIComponent(rid)), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subType: 'effects',
+              track: null,
+              playing: false,
+              loop: false,
+              timestamp: Date.now(),
+              roomId: rid
+            }),
+            keepalive: true
+          }).catch(() => {});
+        } catch (e) {}
+      }
+    }
+
+    // 4. Gửi ngay lập tức lên Server (0ms delay, không bỏ sót bất kỳ lệnh điều khiển Start / Stop nào)
     const payloadData = {
       ...updatedFields,
       roomId: rid,

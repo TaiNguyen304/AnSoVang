@@ -651,7 +651,8 @@ app.post('/api/game/state', (req, res) => {
         ...(data.audioState.soundboard || {})
       },
       effects: {
-        ...(gameState.audioState?.effects || {})
+        ...(gameState.audioState?.effects || {}),
+        ...(data.audioState?.effects || {})
       }
     };
   }
