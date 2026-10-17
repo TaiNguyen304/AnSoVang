@@ -211,6 +211,7 @@
             <option value="render">Máy chủ: OnRender</option>
           </select>
           <span style="font-size: 11px; color: #94a3b8; margin-right: 2px; margin-left: 4px;">Mở trang:</span>
+          <a id="link-open-hub" href="/" class="btn" style="text-decoration: none; background: #1e293b; color: #facc15; border: 1px solid #eab308; padding: 4px 7px; border-radius: 6px; font-size: 11px;">Hub</a>
           <a id="link-open-host" href="/Host.html?roomid=123456" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f8fafc; padding: 4px 7px; border-radius: 6px; font-size: 11px;">Host</a>
           <a id="link-open-viewer" href="/Viewer.html?roomid=123456" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #f8fafc; padding: 4px 7px; border-radius: 6px; font-size: 11px;">Viewer</a>
           <a id="link-open-p1" href="/Player1.html?roomid=123456&auth=1111" target="_blank" class="btn" style="text-decoration: none; background: #334155; color: #38bdf8; padding: 4px 7px; border-radius: 6px; font-size: 11px;">P1</a>
@@ -1685,15 +1686,18 @@
           }
         }
 
-        // 5. Kết quả Đúng / Sai
+        // 5. Kết quả Đúng / Sai & Trạng thái trừ tiền
         const resultStatusEl = document.getElementById('ctrl-v4-result-status');
         if (resultStatusEl) {
+          const isDeductLocked = (v4.showAnswer === true || v4.resultStatus === 'correct' || v4.resultStatus === 'wrong' || v4.canDeductMoney === false);
           if (v4.resultStatus === 'correct') {
-            resultStatusEl.innerHTML = `<b style="color: #4ade80;"> ĐÚNG (Giữ ${ (v4.totalMoney || 0).toLocaleString('vi-VN') }đ)</b>`;
+            resultStatusEl.innerHTML = `<b style="color: #4ade80;"> ĐÚNG (Giữ ${(v4.totalMoney || 0).toLocaleString('vi-VN')}đ - Khóa trừ tiền)</b>`;
           } else if (v4.resultStatus === 'wrong') {
-            resultStatusEl.innerHTML = `<b style="color: #ef4444;"> SAI (5.000.000đ)</b>`;
+            resultStatusEl.innerHTML = `<b style="color: #ef4444;"> SAI (5.000.000đ - Khóa trừ tiền)</b>`;
           } else {
-            resultStatusEl.innerHTML = `<span style="color: #cbd5e1;">---</span>`;
+            resultStatusEl.innerHTML = isDeductLocked
+              ? `<b style="color: #f87171;">Khóa trừ tiền</b>`
+              : `<span style="color: #cbd5e1;">---</span>`;
           }
         }
 
@@ -3604,7 +3608,7 @@
         });
       });
 
-      // 3. NÚT: HIỆN SỐ TIỀN TƯƠNG ỨNG (Hiện số tiền của ô được chọn và trừ vào tổng tiền)
+      // 3. NÚT: HIỆN SỐ TIỀN TƯƠNG ỨNG (Hiện số tiền của ô được chọn; chỉ trừ tiền trước khi chốt đáp án)
       document.getElementById('btn-v4-show-money').addEventListener('click', async () => {
         const v4 = window.currentGameState.vong4State || {};
         const selectedId = v4.selectedBoxId;
@@ -3626,9 +3630,25 @@
 
         targetBox.revealedMoney = true;
         let newTotal = typeof v4.totalMoney === 'number' ? v4.totalMoney : 8000000;
-        if (!targetBox.moneyDeducted) {
-          newTotal = Math.max(0, newTotal - targetBox.money);
-          targetBox.moneyDeducted = true;
+
+        // KIỂM TRA QUYỀN TRỪ TIỀN:
+        // Sau khi đáp án được hiện (Bấm nút Đúng hoặc Sai) thì khi mở các gợi ý / số tiền còn lại sẽ KHÔNG TRỪ TIỀN nữa.
+        // Chỉ khi reset vòng 4 thì sẽ khôi phục quyền trừ tiền khi mở gợi ý.
+        const isAnswerRevealed = (
+          v4.showAnswer === true ||
+          v4.resultStatus === 'correct' ||
+          v4.resultStatus === 'wrong' ||
+          v4.canDeductMoney === false
+        );
+
+        if (!isAnswerRevealed) {
+          if (!targetBox.moneyDeducted) {
+            newTotal = Math.max(0, newTotal - targetBox.money);
+            targetBox.moneyDeducted = true;
+          }
+        } else {
+          // Khi đáp án đã hiện: Giữ nguyên tổng tiền hiện tại, không trừ tiền nữa
+          targetBox.moneyDeducted = false;
         }
 
         const updatedV4 = {
@@ -3645,7 +3665,11 @@
           vong4State: updatedV4
         });
 
-        showNotification(`Ô ${selectedId} (${targetBox.name}): ${targetBox.money.toLocaleString('vi-VN')} VNĐ! Đã trừ vào tổng tiền, còn lại: ${newTotal.toLocaleString('vi-VN')} VNĐ.`);
+        if (isAnswerRevealed) {
+          showNotification(`Ô ${selectedId} (${targetBox.name}): ${targetBox.money.toLocaleString('vi-VN')} VNĐ! (Đã hiện đáp án - Không trừ tiền, giữ nguyên: ${newTotal.toLocaleString('vi-VN')} VNĐ)`);
+        } else {
+          showNotification(`Ô ${selectedId} (${targetBox.name}): ${targetBox.money.toLocaleString('vi-VN')} VNĐ! Đã trừ vào tổng tiền, còn lại: ${newTotal.toLocaleString('vi-VN')} VNĐ.`);
+        }
       });
 
       // 4. NÚT: HIỆN NỘI DUNG GỢI Ý (Mở nội dung gợi ý của ô được chọn)
@@ -3696,7 +3720,8 @@
           showAnswer: false,
           resultStatus: null,
           selectedBoxId: null,
-          isResetVong4: true
+          isResetVong4: true,
+          canDeductMoney: true
         };
         window.currentGameState.vong4State = updatedV4;
         window._lastControllerPreviewKey = '';
@@ -3884,7 +3909,8 @@
           timerSeconds: remSec,
           timerEndTime: 0,
           showAnswer: true,
-          resultStatus: 'correct'
+          resultStatus: 'correct',
+          canDeductMoney: false
         };
         window.currentGameState.vong4State = updatedV4;
         window._lastControllerPreviewKey = '';
@@ -3903,7 +3929,7 @@
           }
         });
 
-        showNotification(`ĐÚNG! Phát nhạc Congrat & giữ nguyên tiền thưởng: ${currentTotal.toLocaleString('vi-VN')} VNĐ!`);
+        showNotification(`ĐÚNG! Phát nhạc Congrat & chốt tiền thưởng: ${currentTotal.toLocaleString('vi-VN')} VNĐ (Đã khóa trừ tiền khi mở các ô còn lại)!`);
       });
 
       // 10. NÚT: SAI (Hiện đáp án đúng, số tiền tổng trở thành 5.000.000)
@@ -3922,7 +3948,8 @@
           timerEndTime: 0,
           showAnswer: true,
           resultStatus: 'wrong',
-          totalMoney: 5000000
+          totalMoney: 5000000,
+          canDeductMoney: false
         };
         window.currentGameState.vong4State = updatedV4;
         window._lastControllerPreviewKey = '';
@@ -3949,7 +3976,7 @@
           }
         });
 
-        showNotification('SAI! Phát nhạc SaiV4 & số tiền tổng chuyển thành 5.000.000 VNĐ!');
+        showNotification('SAI! Phát nhạc SaiV4 & số tiền chốt là 5.000.000 VNĐ (Đã khóa trừ tiền khi mở các ô còn lại)!');
       });
 
       // 11. NÚT: XÁO TIỀN
@@ -3963,7 +3990,8 @@
           isResetVong4: true,
           showGiftClue: v4.showGiftClue ?? false,
           showAnswer: false,
-          resultStatus: null
+          resultStatus: null,
+          canDeductMoney: true
         };
         window.currentGameState.vong4State = updatedV4;
         window._lastControllerPreviewKey = '';
@@ -4001,7 +4029,8 @@
           resultStatus: null,
           selectedBoxId: null,
           boxes: defaultBoxes,
-          isResetVong4: true
+          isResetVong4: true,
+          canDeductMoney: true
         };
         window.currentGameState.vong4State = updatedV4;
         window._lastControllerPreviewKey = '';

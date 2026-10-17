@@ -95,7 +95,8 @@ function createDefaultGameState(roomId = '123456') {
         { id: 6, name: 'Cam', color: '#ff7700', text: 'Ô SỐ 6', darkText: true, money: 1000000, revealedMoney: false, revealedClue: false, moneyDeducted: false }
       ],
       showAnswer: false,
-      resultStatus: null
+      resultStatus: null,
+      canDeductMoney: true
     },
     chpState: {
       locked: true,
@@ -623,7 +624,8 @@ app.post('/api/game/state', (req, res) => {
         return {
           ...b,
           revealedMoney: b.revealedMoney !== undefined ? b.revealedMoney : (prevBox.revealedMoney || false),
-          revealedClue: b.revealedClue !== undefined ? b.revealedClue : (prevBox.revealedClue || false)
+          revealedClue: b.revealedClue !== undefined ? b.revealedClue : (prevBox.revealedClue || false),
+          moneyDeducted: b.moneyDeducted !== undefined ? b.moneyDeducted : (prevBox.moneyDeducted || false)
         };
       });
     }

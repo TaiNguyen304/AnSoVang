@@ -783,7 +783,8 @@
       selectedBoxId: null,
       boxes: window.getDefaultVong4Boxes(),
       showAnswer: false,
-      resultStatus: null
+      resultStatus: null,
+      canDeductMoney: true
     },
     chpState: {
       locked: true,
