@@ -783,8 +783,7 @@
       selectedBoxId: null,
       boxes: window.getDefaultVong4Boxes(),
       showAnswer: false,
-      resultStatus: null,
-      canDeductMoney: true
+      resultStatus: null
     },
     chpState: {
       locked: true,
@@ -800,6 +799,12 @@
         timestamp: 0
       },
       effects: {
+        track: null,
+        playing: false,
+        loop: false,
+        timestamp: 0
+      },
+      buzzer: {
         track: null,
         playing: false,
         loop: false,
@@ -827,12 +832,17 @@
 
   let soundboardAudio = null;
   let effectsAudio = null;
+  let buzzerAudio = null;
   let lastSoundboardTimestamp = 0;
   let lastEffectsTimestamp = 0;
+  let lastBuzzerTimestamp = 0;
 
   // Bộ nhớ đệm Blob Audio toàn cục: Tải trước toàn bộ file nhạc để phát 0ms không phụ thuộc mạng
   const audioBlobCache = new Map();
-  const KNOWN_AUDIO_TRACKS = ['5s.mp3', 'Congrat.mp3', 'Intro.mp3', 'Nhạc nền 1.mp3', 'Nhạc nền 2.mp3', 'Open.mp3'];
+  const KNOWN_AUDIO_TRACKS = [
+    '5s.mp3', 'Congrat.mp3', 'Intro.mp3', 'Nhạc nền 1.mp3', 'Nhạc nền 2.mp3', 'Open.mp3',
+    'Buzzer.mp3', 'Hetgio.mp3', 'Hiengoiy.mp3', 'Hiendapandung.mp3', 'MoGoiy.mp3', 'SaiV3.mp3'
+  ];
 
   async function preloadAllAudioFiles() {
     if (typeof fetch === 'undefined') return;
@@ -966,6 +976,32 @@
     return effectsAudio;
   }
 
+  function getOrCreateBuzzerAudio() {
+    if (!buzzerAudio && typeof Audio !== 'undefined') {
+      buzzerAudio = new Audio();
+      buzzerAudio.id = 'global-game-buzzer';
+      buzzerAudio.preload = 'auto';
+
+      buzzerAudio.addEventListener('playing', () => {
+        const unlockBanner = document.getElementById('audio-unlock-banner');
+        if (unlockBanner) unlockBanner.remove();
+      });
+
+      buzzerAudio.addEventListener('error', () => {
+        if (buzzerAudio && buzzerAudio.src && !buzzerAudio.src.includes('fallback=1')) {
+          const track = buzzerAudio.getAttribute('data-track');
+          try {
+            const serverBase = typeof window.getServerBaseUrl === 'function' ? window.getServerBaseUrl() : '';
+            const fallbackUrl = serverBase ? (serverBase + '/' + encodeURIComponent(track)) : ('./' + encodeURIComponent(track));
+            buzzerAudio.src = fallbackUrl + '?fallback=1';
+            buzzerAudio.play().catch(() => {});
+          } catch (e) {}
+        }
+      });
+    }
+    return buzzerAudio;
+  }
+
   function showAutoplayNotice(trackName) {
     if (window.isController) return; // Controller đã có tương tác người dùng khi bấm nút
     if (typeof document === 'undefined' || !document.body) return;
@@ -987,6 +1023,11 @@
           const fx = aState.effects || {};
           if (fx.playing) {
             const audio = getOrCreateEffectsAudio();
+            if (audio && audio.paused) audio.play().catch(() => {});
+          }
+          const bz = aState.buzzer || {};
+          if (bz.playing) {
+            const audio = getOrCreateBuzzerAudio();
             if (audio && audio.paused) audio.play().catch(() => {});
           }
         }
@@ -1083,6 +1124,44 @@
     }
   }
 
+  function syncBuzzerAudio(bz, forcePlay = false) {
+    if (!bz) return;
+    const bzAudio = getOrCreateBuzzerAudio();
+    if (!bzAudio) return;
+
+    if (bz.playing && bz.track) {
+      const targetSrc = resolveAudioUrl(bz.track);
+      const bzTime = Number(bz.timestamp) || Date.now();
+      const isNewBuzzer = bzTime !== lastBuzzerTimestamp;
+
+      if (forcePlay || isNewBuzzer) {
+        lastBuzzerTimestamp = bzTime;
+        bzAudio.src = targetSrc;
+        bzAudio.setAttribute('data-track', bz.track);
+        bzAudio.loop = !!bz.loop;
+        bzAudio.currentTime = 0;
+        bzAudio.muted = false; // Luôn phát chuông rõ ràng trên tất cả màn hình
+        const playPromise = bzAudio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            const banner = document.getElementById('audio-unlock-banner');
+            if (banner) banner.remove();
+            audioUnlocked = true;
+          }).catch((err) => {
+            if (err && err.name === 'NotAllowedError') {
+              showAutoplayNotice(bz.track);
+            }
+          });
+        }
+      }
+    } else if (bz.stopped === true || (bz.track === null && bz.timestamp && Number(bz.timestamp) !== lastBuzzerTimestamp)) {
+      lastBuzzerTimestamp = Number(bz.timestamp) || Date.now();
+      bzAudio.loop = false;
+      bzAudio.pause();
+      bzAudio.currentTime = 0;
+    }
+  }
+
   function syncGlobalAudio(audioState) {
     if (!audioState) return;
     if (audioState.soundboard) {
@@ -1090,6 +1169,9 @@
     }
     if (audioState.effects) {
       syncEffectsAudio(audioState.effects, false);
+    }
+    if (audioState.buzzer) {
+      syncBuzzerAudio(audioState.buzzer, false);
     }
   }
 
@@ -1279,10 +1361,127 @@
     } catch (e) {}
   };
 
+  // Hàm phát chuông Buzzer tức thời (Trường thứ 3: audioState.buzzer, độc lập hoàn toàn với Soundboard và Effects)
+  window.playBuzzerAudio = function(track = 'Buzzer.mp3', loop = false) {
+    if (!track) return;
+    const now = Date.now();
+    lastBuzzerTimestamp = now;
+
+    // Phát ngay lập tức trên máy hiện tại (0ms độ trễ)
+    try {
+      const bzAudio = getOrCreateBuzzerAudio();
+      if (bzAudio) {
+        bzAudio.src = resolveAudioUrl(track);
+        bzAudio.setAttribute('data-track', track);
+        bzAudio.loop = !!loop;
+        bzAudio.currentTime = 0;
+        bzAudio.muted = false;
+        const p = bzAudio.play();
+        if (p !== undefined) {
+          p.catch((e) => console.warn('[Audio] playBuzzerAudio error:', e));
+        }
+      }
+    } catch (e) {
+      console.warn('[Audio] Local play buzzer error:', e);
+    }
+
+    if (!window.currentGameState.audioState) window.currentGameState.audioState = {};
+    window.currentGameState.audioState.buzzer = {
+      track: track,
+      playing: true,
+      loop: !!loop,
+      timestamp: now
+    };
+    notifyListeners(window.currentGameState, { audioChanged: true });
+
+    if (channel) {
+      try {
+        channel.postMessage({
+          type: 'AUDIO_PLAY_INSTANT',
+          subType: 'buzzer',
+          track: track,
+          loop: !!loop,
+          playing: true,
+          timestamp: now
+        });
+      } catch (e) {}
+    }
+
+    // Gửi trực tiếp siêu tốc lên server
+    const rid = getCurrentRoomId();
+    try {
+      fetch(window.getServerApiUrl('/api/game/audio?roomid=' + encodeURIComponent(rid)), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subType: 'buzzer',
+          track: track,
+          playing: true,
+          loop: !!loop,
+          timestamp: now,
+          roomId: rid
+        }),
+        keepalive: true
+      }).catch(() => {});
+    } catch (e) {}
+  };
+
+  window.stopBuzzerAudio = function() {
+    const now = Date.now();
+    lastBuzzerTimestamp = now;
+    try {
+      if (buzzerAudio) {
+        buzzerAudio.loop = false;
+        buzzerAudio.pause();
+        buzzerAudio.currentTime = 0;
+      }
+    } catch (e) {}
+
+    if (!window.currentGameState.audioState) window.currentGameState.audioState = {};
+    window.currentGameState.audioState.buzzer = {
+      track: null,
+      playing: false,
+      loop: false,
+      timestamp: now
+    };
+    notifyListeners(window.currentGameState, { audioChanged: true });
+
+    if (channel) {
+      try {
+        channel.postMessage({
+          type: 'AUDIO_PLAY_INSTANT',
+          subType: 'buzzer',
+          track: null,
+          loop: false,
+          playing: false,
+          timestamp: now
+        });
+      } catch (e) {}
+    }
+
+    const rid = getCurrentRoomId();
+    try {
+      fetch(window.getServerApiUrl('/api/game/audio?roomid=' + encodeURIComponent(rid)), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subType: 'buzzer',
+          track: null,
+          playing: false,
+          loop: false,
+          timestamp: now,
+          roomId: rid
+        }),
+        keepalive: true
+      }).catch(() => {});
+    } catch (e) {}
+  };
+
   window.stopAllAudio = function() {
     const now = Date.now();
     lastSoundboardTimestamp = now;
     lastEffectsTimestamp = now;
+    lastBuzzerTimestamp = now;
     try {
       if (soundboardAudio) {
         soundboardAudio.loop = false;
@@ -1294,13 +1493,19 @@
         effectsAudio.pause();
         effectsAudio.currentTime = 0;
       }
+      if (buzzerAudio) {
+        buzzerAudio.loop = false;
+        buzzerAudio.pause();
+        buzzerAudio.currentTime = 0;
+      }
     } catch (e) {}
 
     if (typeof window.broadcastStateUpdate === 'function') {
       window.broadcastStateUpdate({
         audioState: {
           soundboard: { track: null, playing: false, loop: false, timestamp: now },
-          effects: { track: null, playing: false, stopped: true, timestamp: now }
+          effects: { track: null, playing: false, stopped: true, timestamp: now },
+          buzzer: { track: null, playing: false, stopped: true, timestamp: now }
         }
       });
     }
@@ -1344,6 +1549,23 @@
         fxAudio.play().then(() => {
           fxAudio.pause();
           fxAudio.src = originalSrc;
+        }).catch(() => {});
+      }
+    }
+
+    // Unlock Buzzer Audio (Trường thứ 3)
+    const bzAudio = getOrCreateBuzzerAudio();
+    if (bzAudio) {
+      bzAudio.muted = isMutedOnController;
+      const bz = (window.currentGameState && window.currentGameState.audioState) ? window.currentGameState.audioState.buzzer : null;
+      if (bz && bz.playing && bz.track) {
+        bzAudio.play().catch(() => {});
+      } else {
+        const originalSrc = bzAudio.src;
+        bzAudio.src = SILENCE_SRC;
+        bzAudio.play().then(() => {
+          bzAudio.pause();
+          bzAudio.src = originalSrc;
         }).catch(() => {});
       }
     }
@@ -1496,6 +1718,10 @@
         effects: {
           ...(window.currentGameState.audioState?.effects || {}),
           ...(newState.audioState?.effects || {})
+        },
+        buzzer: {
+          ...(window.currentGameState.audioState?.buzzer || {}),
+          ...(newState.audioState?.buzzer || {})
         }
       }
     };
@@ -1632,6 +1858,14 @@
             timestamp: timestamp || Date.now()
           };
           syncEffectsAudio(window.currentGameState.audioState.effects, true);
+        } else if (subType === 'buzzer') {
+          window.currentGameState.audioState.buzzer = {
+            track: track || null,
+            playing: !!playing,
+            loop: !!loop,
+            timestamp: timestamp || Date.now()
+          };
+          syncBuzzerAudio(window.currentGameState.audioState.buzzer, true);
         }
         notifyListeners(window.currentGameState, { audioChanged: true });
         return;
@@ -1761,6 +1995,10 @@
         effects: {
           ...(window.currentGameState.audioState?.effects || {}),
           ...(updatedFields.audioState.effects || {})
+        },
+        buzzer: {
+          ...(window.currentGameState.audioState?.buzzer || {}),
+          ...(updatedFields.audioState.buzzer || {})
         }
       };
     }
@@ -1872,6 +2110,44 @@
       }
     }
 
+    // 3b. Nếu có cập nhật âm thanh Chuông (Buzzer - Trường thứ 3), gửi đồng thời tới /api/game/audio
+    if (updatedFields.audioState && updatedFields.audioState.buzzer) {
+      const bz = updatedFields.audioState.buzzer;
+      if (bz.playing && bz.track) {
+        try {
+          fetch(window.getServerApiUrl('/api/game/audio?roomid=' + encodeURIComponent(rid)), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subType: 'buzzer',
+              track: bz.track,
+              playing: true,
+              loop: !!bz.loop,
+              timestamp: bz.timestamp || Date.now(),
+              roomId: rid
+            }),
+            keepalive: true
+          }).catch(() => {});
+        } catch (e) {}
+      } else if (bz.playing === false || bz.stopped === true) {
+        try {
+          fetch(window.getServerApiUrl('/api/game/audio?roomid=' + encodeURIComponent(rid)), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subType: 'buzzer',
+              track: null,
+              playing: false,
+              loop: false,
+              timestamp: Date.now(),
+              roomId: rid
+            }),
+            keepalive: true
+          }).catch(() => {});
+        } catch (e) {}
+      }
+    }
+
     // 4. Gửi ngay lập tức lên Server (0ms delay, không bỏ sót bất kỳ lệnh điều khiển Start / Stop nào)
     const payloadData = {
       ...updatedFields,
@@ -1887,6 +2163,10 @@
         effects: {
           ...(window.currentGameState.audioState?.effects || {}),
           ...(updatedFields.audioState?.effects || {})
+        },
+        buzzer: {
+          ...(window.currentGameState.audioState?.buzzer || {}),
+          ...(updatedFields.audioState?.buzzer || {})
         }
       };
     }
@@ -1982,8 +2262,23 @@
         try { window.renderCurrentView(); } catch(e) {}
       }
 
+      // Phát âm thanh Buzzer.mp3 thuộc trường thứ 3 (buzzer), không phải Soundboard hay effects
+      const buzzerNow = Date.now();
+      if (typeof window.playBuzzerAudio === 'function') {
+        window.playBuzzerAudio('Buzzer.mp3');
+      }
+
       await window.broadcastStateUpdate({
-        vong3State: payload
+        vong3State: payload,
+        audioState: {
+          ...(window.currentGameState.audioState || {}),
+          buzzer: {
+            track: 'Buzzer.mp3',
+            playing: true,
+            loop: false,
+            timestamp: buzzerNow
+          }
+        }
       });
       return true;
     }

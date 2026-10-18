@@ -10,6 +10,7 @@
       *, *::before, *::after {
         font-weight: bold !important;
         box-sizing: border-box;
+        border-radius: 0 !important;
       }
       html, body {
         width: 100vw;
@@ -49,11 +50,9 @@
       }
       ::-webkit-scrollbar-track {
         background: #0f172a;
-        border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb {
         background: #334155;
-        border-radius: 4px;
       }
       .view-container {
         display: none;
@@ -62,7 +61,6 @@
         overflow-y: auto;
         overflow-x: hidden;
         box-sizing: border-box;
-        border-radius: 14px;
         padding: 12px;
       }
       .view-container.active {
@@ -79,6 +77,9 @@
       .viewer-fixed-shape {
         box-sizing: border-box !important;
         overflow: hidden !important;
+      }
+      .viewer-fixed-shape.viewer-v2-option-card {
+        overflow: visible !important;
       }
       .viewer-fit-target {
         box-sizing: border-box;
@@ -144,7 +145,7 @@
     
     <!-- Màn hình thông báo khi thiếu tham số roomid -->
     <div id="auth-error-overlay" style="display: none; position: fixed; inset: 0; background: #0b1120; z-index: 999999; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center;">
-      <div style="background: #1e293b; border: 2px solid #ef4444; border-radius: 12px; padding: 24px 32px; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.7);">
+      <div style="background: #1e293b; border: 2px solid #ef4444; padding: 24px 32px; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.7);">
         <h2 style="color: #ef4444; margin: 0 0 12px 0; font-size: 18px;">KHÔNG THỂ TRUY CẬP</h2>
         <p id="auth-error-message" style="color: #f8fafc; font-size: 14px; margin: 0 0 16px 0; line-height: 1.5;">Vui lòng nhập tham số ?roomid=Mãphòng trên URL</p>
       </div>
@@ -163,7 +164,7 @@
           
             <!-- HÀNG TRÊN: Ô ĐỒNG HỒ (Bỏ chữ s, làm to ra, nằm hàng trên) -->
             <div id="viewer-v1-timer-row" style="display: flex; justify-content: center; align-items: center; width: 100%;">
-              <div id="viewer-v1-timer-box" class="viewer-fixed-shape" data-max-font="52" data-min-font="24" style="background: #000000; border: 3px solid #ffffff; width: 150px; height: 84px; min-width: 150px; max-width: 150px; min-height: 84px; max-height: 84px; border-radius: 18px; text-align: center; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.6); box-sizing: border-box; overflow: hidden; flex-shrink: 0;">
+              <div id="viewer-v1-timer-box" class="viewer-fixed-shape" data-max-font="52" data-min-font="24" style="background: #000000; border: 3px solid #ffffff; width: 150px; height: 84px; min-width: 150px; max-width: 150px; min-height: 84px; max-height: 84px; text-align: center; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.6); box-sizing: border-box; overflow: hidden; flex-shrink: 0;">
                 <span id="viewer-v1-timer-val" class="viewer-fit-target" style="font-size: 52px; color: #ffffff; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; display: inline-block; min-width: 60px; text-align: center;">5</span>
               </div>
             </div>
@@ -172,19 +173,19 @@
           <div id="viewer-v1-content-row" style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 20px; width: 100%; max-width: 1100px; margin: 0 auto; box-sizing: border-box;">
             
             <!-- Ô 1: Ô CÂU HỎI CHÍNH (Nền đen, chữ trắng, kích thước cố định tuyệt đối) -->
-            <div id="viewer-v1-box-q" class="viewer-fixed-shape" data-max-font="26" data-min-font="13" style="background: #000000; border: 2.5px solid #334155; border-radius: 16px; padding: 18px 24px; width: 720px; height: 160px; max-width: 720px; max-height: 160px; min-width: 720px; min-height: 160px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; color: #ffffff; box-sizing: border-box; overflow: hidden; flex-shrink: 0;">
+            <div id="viewer-v1-box-q" class="viewer-fixed-shape" data-max-font="26" data-min-font="13" style="background: #000000; border: 2.5px solid #334155; padding: 18px 24px; width: 720px; height: 160px; max-width: 720px; max-height: 160px; min-width: 720px; min-height: 160px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; color: #ffffff; box-sizing: border-box; overflow: hidden; flex-shrink: 0;">
               
               <!-- Nội dung câu hỏi (chữ trắng, tự động thu nhỏ nếu dài) -->
               <div id="viewer-v1-q-text" class="viewer-fit-target" style="font-size: 26px; color: #ffffff; line-height: 1.35; display: flex; align-items: center; justify-content: center; flex: 1; font-weight: bold; width: 100%; max-height: 100%; text-align: center; word-break: break-word; overflow-wrap: break-word;"></div>
             </div>
 
             <!-- Ô 2: Ô ĐÚNG (Nền đen, chữ trắng, kích thước cố định tuyệt đối) -->
-            <div id="viewer-v1-box-dung" class="viewer-fixed-shape" data-max-font="36" data-min-font="20" style="background: #000000; border: 2.5px solid #334155; border-radius: 16px; width: 170px; height: 160px; max-width: 170px; max-height: 160px; min-width: 170px; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; color: #ffffff; box-sizing: border-box; overflow: hidden;">
+            <div id="viewer-v1-box-dung" class="viewer-fixed-shape" data-max-font="36" data-min-font="20" style="background: #000000; border: 2.5px solid #334155; width: 170px; height: 160px; max-width: 170px; max-height: 160px; min-width: 170px; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; color: #ffffff; box-sizing: border-box; overflow: hidden;">
               <span id="viewer-v1-text-dung" class="viewer-fit-target" style="font-size: 36px; color: #ffffff; letter-spacing: 2px; font-weight: bold; text-align: center;">ĐÚNG</span>
             </div>
 
             <!-- Ô 3: Ô SAI (Nền đen, chữ trắng, kích thước cố định tuyệt đối) -->
-            <div id="viewer-v1-box-sai" class="viewer-fixed-shape" data-max-font="36" data-min-font="20" style="background: #000000; border: 2.5px solid #334155; border-radius: 16px; width: 170px; height: 160px; max-width: 170px; max-height: 160px; min-width: 170px; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; color: #ffffff; box-sizing: border-box; overflow: hidden;">
+            <div id="viewer-v1-box-sai" class="viewer-fixed-shape" data-max-font="36" data-min-font="20" style="background: #000000; border: 2.5px solid #334155; width: 170px; height: 160px; max-width: 170px; max-height: 160px; min-width: 170px; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; color: #ffffff; box-sizing: border-box; overflow: hidden;">
               <span id="viewer-v1-text-sai" class="viewer-fit-target" style="font-size: 36px; color: #ffffff; letter-spacing: 2px; font-weight: bold; text-align: center;">SAI</span>
             </div>
 
@@ -193,7 +194,7 @@
         </div>
 
         <!-- 3. VIEW VÒNG 2 (SÂN KHẤU ĐẶT CƯỢC THEO FORM TRUYỀN HÌNH) -->
-        <div id="view-vong2" class="view-container" style="background: transparent; border: none; border-radius: 16px; padding: 10px; display: none; width: 100%; height: 100%; box-sizing: border-box; justify-content: center; align-items: center;">
+        <div id="view-vong2" class="view-container" style="background: transparent; border: none; padding: 10px; display: none; width: 100%; height: 100%; box-sizing: border-box; justify-content: center; align-items: center;">
           <div id="viewer-v2-stage" style="color: #cbd5e1; font-size: 14px; text-align: center; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box;">Đang chuẩn bị vòng 2...</div>
         </div>
 
@@ -318,14 +319,24 @@
           const minFont = parseFloat(shape.getAttribute('data-min-font')) || 9;
 
           const maxH = shape.clientHeight;
-          const maxW = shape.clientWidth;
+          const isV2Opt = shape.classList.contains('viewer-v2-option-card');
+          const maxW = isV2Opt ? (shape.clientWidth * 0.8) : shape.clientWidth;
           if (maxH <= 0 || maxW <= 0) return;
+
+          // Cho các ô đáp án Vòng 2: kiểm tra kích thước của chính text (target) thay vì shape.scrollHeight
+          // vì badge cược nằm thò ra ngoài đáy ô làm phình scrollHeight của shape, gây co nhỏ chữ sai lệch
+          const checkFits = () => {
+            if (isV2Opt) {
+              return (target.scrollHeight <= (maxH - 6) && target.scrollWidth <= (maxW + 2));
+            }
+            return (shape.scrollHeight <= maxH && target.scrollWidth <= (maxW + 2));
+          };
 
           // Đặt lại font size lớn nhất để kiểm tra
           target.style.fontSize = maxFont + 'px';
 
           // Nếu kích thước hiện tại đã vừa khít không tràn thì giữ nguyên
-          if (shape.scrollHeight <= maxH && shape.scrollWidth <= maxW && target.scrollHeight <= maxH && target.scrollWidth <= maxW) {
+          if (checkFits()) {
             return;
           }
 
@@ -337,8 +348,7 @@
           for (let iter = 0; iter < 12; iter++) {
             const mid = (low + high) / 2;
             target.style.fontSize = mid + 'px';
-            const fits = (shape.scrollHeight <= maxH && shape.scrollWidth <= maxW && target.scrollHeight <= maxH && target.scrollWidth <= maxW);
-            if (fits) {
+            if (checkFits()) {
               best = mid;
               low = mid;
             } else {
@@ -512,20 +522,28 @@
         const scene = v2.scene || 'topics_board';
         const chosen = Array.isArray(v2.chosenTopics) ? v2.chosenTopics : [];
 
+        const viewV2Container = document.getElementById('view-vong2');
+
         if (scene === 'topics_board') {
+          if (viewV2Container) {
+            viewV2Container.style.justifyContent = 'center';
+            viewV2Container.style.paddingBottom = '10px';
+          }
+
           const currentTopicsKey = `topics_${chosen.join(',')}_${v2.selectedTopicIndex}`;
           if (stageEl.getAttribute('data-scene-key') === currentTopicsKey && stageEl.children.length > 0) {
             return; // Đã vẽ bảng chủ đề, không vẽ lại DOM để tránh giật lag
           }
           stageEl.setAttribute('data-scene-key', currentTopicsKey);
 
-          // Căn giữa toàn bộ bảng chủ đề theo cả chiều ngang và chiều dọc màn hình
+          // Căn giữa toàn bộ bảng chủ đề
           stageEl.style.display = 'flex';
           stageEl.style.flexDirection = 'column';
           stageEl.style.justifyContent = 'center';
           stageEl.style.alignItems = 'center';
           stageEl.style.width = '100%';
           stageEl.style.height = '100%';
+          stageEl.style.paddingBottom = '0px';
 
           // BẢNG 10 CHỦ ĐỀ SÂN KHẤU (2 - 3 - 3 - 2)
           const row1 = topics.slice(0, 2);
@@ -550,7 +568,7 @@
 
             // Tất cả 10 shape cố định cùng kích thước: chiều rộng 310px, chiều cao 86px
             return `
-              <div class="viewer-fixed-shape" data-max-font="22" data-min-font="11" style="background: ${bg}; border: ${border}; box-shadow: ${shadow}; color: #ffffff; padding: 10px 16px; border-radius: 14px; text-align: center; width: 310px; height: 86px; min-width: 310px; max-width: 310px; min-height: 86px; max-height: 86px; flex: none; flex-shrink: 0; display: flex; align-items: center; justify-content: center; ${scale} transition: all 0.3s ease; box-sizing: border-box; overflow: hidden;">
+              <div class="viewer-fixed-shape" data-max-font="22" data-min-font="11" style="background: ${bg}; border: ${border}; box-shadow: ${shadow}; color: #ffffff; padding: 10px 16px; text-align: center; width: 310px; height: 86px; min-width: 310px; max-width: 310px; min-height: 86px; max-height: 86px; flex: none; flex-shrink: 0; display: flex; align-items: center; justify-content: center; ${scale} transition: all 0.3s ease; box-sizing: border-box; overflow: hidden;">
                 <div class="viewer-fit-target" style="font-size: 22px; font-weight: 800; letter-spacing: 0.5px; line-height: 1.3; text-transform: uppercase; width: 100%; text-align: center; word-break: break-word; overflow-wrap: break-word;">
                   ${t.topic || ''}
                 </div>
@@ -581,13 +599,18 @@
           requestAnimationFrame(fitAllViewerShapes);
         } else {
           stageEl.removeAttribute('data-scene-key');
-          // BẢNG CÂU HỎI SÂN KHẤU (question_board)
+          if (viewV2Container) {
+            viewV2Container.style.justifyContent = 'flex-end';
+            viewV2Container.style.paddingBottom = '25px';
+          }
+          // BẢNG CÂU HỎI SÂN KHẤU (question_board - CĂN DƯỚI)
           stageEl.style.display = 'flex';
           stageEl.style.flexDirection = 'column';
           stageEl.style.justifyContent = 'flex-end';
-          stageEl.style.alignItems = 'stretch';
+          stageEl.style.alignItems = 'center';
           stageEl.style.width = '100%';
           stageEl.style.height = '100%';
+          stageEl.style.paddingBottom = '15px';
           const activeQ = v2.activeQuestion || {};
           const questionText = activeQ.question || '';
           const opts = (activeQ.options && activeQ.options.length > 0) ? activeQ.options : ['', '', '', ''];
@@ -606,7 +629,7 @@
           const currentQKey = `q_${activeQ.topicIndex}_${activeQ.questionIndex}_${questionText}`;
 
           if (existingBoard && existingBoard.getAttribute('data-qkey') === currentQKey) {
-            // Cập nhật mượt mà tại chỗ không vẽ lại DOM (loại bỏ hoàn toàn nhấp nháy / giật lùi)
+            // Cập nhật mượt mà tại chỗ không vẽ lại DOM (loại bỏ hoàn toàn nhấp nháy / giật lùi và giữ nguyên kích thước chữ khi cược)
             const timerValEl = document.getElementById('viewer-v2-timer-val');
             if (timerValEl) {
               const displaySec = (typeof window.calculateRemainingSeconds === 'function')
@@ -662,7 +685,6 @@
               }
             }
 
-            requestAnimationFrame(fitAllViewerShapes);
             return;
           }
 
@@ -696,14 +718,14 @@
             }
 
             return `
-              <div id="viewer-v2-opt-${optIdx}" class="viewer-fixed-shape" data-max-font="18" data-min-font="11" style="position: relative; background: ${bg}; color: ${color}; border: ${border}; box-shadow: ${shadow}; border-radius: 8px; padding: 6px 14px; width: 100%; height: 52px; min-height: 52px; max-height: 52px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: flex-start; gap: 12px; box-sizing: border-box; overflow: hidden; transition: background 0.2s, border 0.2s;">
-                <div style="background: rgba(0,0,0,0.35); border-radius: 4px; width: 34px; height: 34px; min-width: 34px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; color: ${showAns && oneBased === correctIdx ? '#000000' : '#ffffff'}; flex-shrink: 0;">
+              <div id="viewer-v2-opt-${optIdx}" class="viewer-fixed-shape viewer-v2-option-card" data-max-font="18" data-min-font="11" style="position: relative; background: ${bg}; color: ${color}; border: ${border}; box-shadow: ${shadow}; padding: 6px 14px; width: 100%; height: 52px; min-height: 52px; max-height: 52px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: flex-start; gap: 12px; box-sizing: border-box; overflow: visible !important; transition: background 0.2s, border 0.2s;">
+                <div style="background: rgba(0,0,0,0.35); width: 34px; height: 34px; min-width: 34px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; color: ${showAns && oneBased === correctIdx ? '#000000' : '#ffffff'}; flex-shrink: 0;">
                   ${optLetters[optIdx] || oneBased}
                 </div>
-                <div class="viewer-fit-target" style="letter-spacing: 0.5px; font-size: 18px; line-height: 1.25; flex: 1; word-break: break-word; overflow-wrap: break-word; text-align: left;">
+                <div class="viewer-fit-target" style="letter-spacing: 0.5px; font-size: 18px; line-height: 1.25; width: 80%; max-width: 80%; flex: 0 0 80%; word-break: break-word; overflow-wrap: break-word; text-align: left; overflow: hidden;">
                   ${optText || '&nbsp;'}
                 </div>
-                <div id="viewer-v2-bet-badge-${optIdx}" style="display: ${betVal > 0 ? 'block' : 'none'}; position: absolute; right: 14px; bottom: -6px; background: #0f172a; border: 1.5px solid #a855f7; color: #ffffff; padding: 2px 14px; border-radius: 4px; font-size: 14px; font-weight: 900; box-shadow: 0 4px 12px rgba(0,0,0,0.8); z-index: 5;">
+                <div id="viewer-v2-bet-badge-${optIdx}" style="display: ${betVal > 0 ? 'block' : 'none'}; position: absolute; right: 14px; bottom: 0; transform: translateY(50%); background: #0f172a; border: 1.5px solid #a855f7; color: #ffffff; padding: 2px 14px; font-size: 14px; font-weight: 900; box-shadow: 0 4px 12px rgba(0,0,0,0.8); z-index: 20; pointer-events: none;">
                   ${betVal}
                 </div>
               </div>
@@ -711,37 +733,37 @@
           };
 
           stageEl.innerHTML = `
-            <div id="viewer-v2-question-board" data-qkey="${currentQKey}" style="display: flex; flex-direction: row; gap: 24px; width: 100%; max-width: 1100px; margin: auto; height: 360px; min-height: 360px; max-height: 360px; align-items: flex-end; position: relative; box-sizing: border-box;">
+            <div id="viewer-v2-question-board" data-qkey="${currentQKey}" style="display: flex; flex-direction: row; gap: 24px; width: 100%; max-width: 1100px; margin: 0 auto; margin-top: auto; margin-bottom: 5px; align-items: flex-end; position: relative; box-sizing: border-box;">
 
-              <!-- CỘT BÊN TRÁI: Ô CÂU HỎI KÍCH THƯỚC CỐ ĐỊNH -->
-              <div style="width: 538px; height: 350px; min-width: 538px; max-width: 538px; min-height: 350px; max-height: 350px; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 8px; flex-shrink: 0; box-sizing: border-box;">
-                <div class="viewer-fixed-shape" data-max-font="22" data-min-font="12" style="background: linear-gradient(180deg, #111827, #030712); border: 2.5px solid #64748b; border-radius: 12px; padding: 20px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.9); text-align: left; width: 100%; height: 100%; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; justify-content: center;">
-                  <div id="viewer-v2-q-text" class="viewer-fit-target" style="font-size: 22px; color: #ffffff; line-height: 1.45; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); width: 100%; word-break: break-word; overflow-wrap: break-word;">
+              <!-- CỘT BÊN TRÁI: Ô CÂU HỎI KÍCH THƯỚC CỐ ĐỊNH, CHỈ TỐI ĐA 2 DÒNG, CĂN DƯỚI -->
+              <div style="width: 538px; min-width: 538px; max-width: 538px; display: flex; flex-direction: column; justify-content: flex-end; flex-shrink: 0; box-sizing: border-box;">
+                <div class="viewer-fixed-shape" data-max-font="22" data-min-font="12" style="background: linear-gradient(180deg, #111827, #030712); border: 2.5px solid #64748b; padding: 12px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.9); text-align: left; width: 100%; height: 86px; min-height: 86px; max-height: 86px; box-sizing: border-box; overflow: hidden; display: flex; align-items: center; justify-content: flex-start;">
+                  <div id="viewer-v2-q-text" class="viewer-fit-target" style="font-size: 22px; color: #ffffff; line-height: 1.35; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); width: 100%; word-break: break-word; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                     ${questionText}
                   </div>
                 </div>
               </div>
 
               <!-- CỘT BÊN PHẢI: CÁC Ô ĐÁP ÁN + HÀNG THỜI GIAN & ĐIỂM CÒN LẠI -->
-              <div style="width: 538px; height: 350px; min-width: 538px; max-width: 538px; min-height: 350px; max-height: 350px; display: flex; flex-direction: column; justify-content: space-between; background: rgba(5, 8, 16, 0.85); padding: 16px 20px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 35px rgba(0,0,0,0.8); box-sizing: border-box; overflow: hidden; flex-shrink: 0;">
+              <div style="width: 538px; min-width: 538px; max-width: 538px; display: flex; flex-direction: column; justify-content: space-between; background: rgba(5, 8, 16, 0.85); padding: 16px 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 35px rgba(0,0,0,0.8); box-sizing: border-box; overflow: visible; flex-shrink: 0;">
 
                 <!-- DANH SÁCH Ô ĐÁP ÁN (A, B, C, D) KÍCH THƯỚC CỐ ĐỊNH -->
-                <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+                <div style="display: flex; flex-direction: column; gap: 14px; width: 100%;">
                   ${opts.map((o, idx) => renderStageOption(o, idx)).join('')}
                 </div>
 
                 <!-- HÀNG Ở DƯỚI Ô ĐÁP ÁN THỨ 4: 1 HÀNG CHỨA 2 Ô (ĐỒNG HỒ & ĐIỂM CÒN LẠI) -->
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 6px; width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 16px; width: 100%;">
                   
                   <!-- Ô 1: Ô ĐẾM THỜI GIAN KÍCH THƯỚC CỐ ĐỊNH -->
-                  <div style="background: #020617; border: 2.5px solid #94a3b8; border-radius: 6px; padding: 4px 18px; width: 120px; height: 46px; min-width: 120px; max-width: 120px; min-height: 46px; max-height: 46px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.6); box-sizing: border-box; overflow: hidden;">
+                  <div style="background: #020617; border: 2.5px solid #94a3b8; padding: 4px 18px; width: 120px; height: 46px; min-width: 120px; max-width: 120px; min-height: 46px; max-height: 46px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.6); box-sizing: border-box; overflow: hidden;">
                     <span id="viewer-v2-timer-val" style="font-size: 30px; font-weight: 900; color: #ffffff; line-height: 1; font-variant-numeric: tabular-nums; display: inline-block; min-width: 44px; text-align: center;">
                       ${(typeof window.calculateRemainingSeconds === 'function') ? window.calculateRemainingSeconds(v2, 60, 'v2') : (v2.timerSeconds ?? 60)}
                     </span>
                   </div>
 
                   <!-- Ô 2: Ô CHỨA SỐ ĐIỂM CÒN LẠI KÍCH THƯỚC CỐ ĐỊNH -->
-                  <div style="background: #020617; border: 2.5px solid #94a3b8; border-radius: 6px; padding: 4px 22px; width: 150px; height: 46px; min-width: 150px; max-width: 150px; min-height: 46px; max-height: 46px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.6); box-sizing: border-box; overflow: hidden;">
+                  <div style="background: #020617; border: 2.5px solid #94a3b8; padding: 4px 22px; width: 150px; height: 46px; min-width: 150px; max-width: 150px; min-height: 46px; max-height: 46px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.6); box-sizing: border-box; overflow: hidden;">
                     <span id="viewer-v2-points-val" style="font-size: 30px; font-weight: 900; color: #ffffff; line-height: 1;">
                       ${remainingPoints}
                     </span>
@@ -805,7 +827,7 @@
           const minFont = fullWidth ? 13 : 11;
           const boxHeight = fullWidth ? '110px' : '160px';
           return `
-            <div class="viewer-fixed-shape" data-max-font="${maxFont}" data-min-font="${minFont}" style="background: ${bgCol}; border: 3px solid ${borderCol}; border-radius: 18px; padding: 12px 24px; transition: all 0.4s ease; box-shadow: 0 4px 20px rgba(0,0,0,0.6); text-align: center; ${fullWidth ? 'grid-column: span 3;' : ''} width: 100%; height: ${boxHeight}; min-height: ${boxHeight}; max-height: ${boxHeight}; box-sizing: border-box; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+            <div class="viewer-fixed-shape" data-max-font="${maxFont}" data-min-font="${minFont}" style="background: ${bgCol}; border: 3px solid ${borderCol}; padding: 12px 24px; transition: all 0.4s ease; box-shadow: 0 4px 20px rgba(0,0,0,0.6); text-align: center; ${fullWidth ? 'grid-column: span 3;' : ''} width: 100%; height: ${boxHeight}; min-height: ${boxHeight}; max-height: ${boxHeight}; box-sizing: border-box; overflow: hidden; display: flex; align-items: center; justify-content: center;">
               <div class="viewer-fit-target" style="font-size: ${maxFont}px; color: #ffffff; font-weight: bold; line-height: 1.35; width: 100%; display: flex; align-items: center; justify-content: center; text-align: center; word-break: break-word; overflow-wrap: break-word;">
                 ${isRevealed ? content : ''}
               </div>
@@ -919,8 +941,8 @@
             opacity = '0.55';
           }
 
-          return `
-            <div style="background: ${bg}; border: ${border}; border-radius: 8px; padding: 0 12px; text-align: center; font-size: 20px; font-weight: 900; color: ${color}; text-shadow: ${textShadow}; opacity: ${opacity}; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 10px rgba(0,0,0,0.5); width: 100%; height: 46px; min-height: 46px; max-height: 46px; box-sizing: border-box; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+            return `
+            <div style="background: ${bg}; border: ${border}; padding: 0 12px; text-align: center; font-size: 20px; font-weight: 900; color: ${color}; text-shadow: ${textShadow}; opacity: ${opacity}; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 10px rgba(0,0,0,0.5); width: 100%; height: 46px; min-height: 46px; max-height: 46px; box-sizing: border-box; overflow: hidden; display: flex; align-items: center; justify-content: center;">
               ${valFormatted}
             </div>
           `;
@@ -957,7 +979,7 @@
             <div style="position: relative; width: 100%; height: 46px; min-height: 46px; max-height: 46px; display: flex; align-items: center; justify-content: flex-end; box-sizing: border-box;">
               
               <!-- Ô màu sắc: Co giãn theo trạng thái chọn, chiều cao và kích thước cố định tuyệt đối -->
-              <div class="viewer-fixed-shape" data-max-font="18" data-min-font="10" style="position: absolute; right: 0; top: 0; bottom: 0; width: ${isExtended ? '100%' : '110px'}; height: 46px; min-height: 46px; max-height: 46px; background: ${box.color}; border: ${isSelected ? '3px solid #ffffff' : '2px solid rgba(255,255,255,0.4)'}; box-shadow: ${isSelected ? '0 0 25px rgba(255,255,255,0.8), inset 0 0 10px rgba(0,0,0,0.3)' : '0 4px 10px rgba(0,0,0,0.4)'}; border-radius: 8px; transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1); display: flex; align-items: center; justify-content: center; padding: 0 16px; box-sizing: border-box; overflow: hidden; z-index: ${isSelected ? '10' : '1'};">
+              <div class="viewer-fixed-shape" data-max-font="18" data-min-font="10" style="position: absolute; right: 0; top: 0; bottom: 0; width: ${isExtended ? '100%' : '110px'}; height: 46px; min-height: 46px; max-height: 46px; background: ${box.color}; border: ${isSelected ? '3px solid #ffffff' : '2px solid rgba(255,255,255,0.4)'}; box-shadow: ${isSelected ? '0 0 25px rgba(255,255,255,0.8), inset 0 0 10px rgba(0,0,0,0.3)' : '0 4px 10px rgba(0,0,0,0.4)'}; transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1); display: flex; align-items: center; justify-content: center; padding: 0 16px; box-sizing: border-box; overflow: hidden; z-index: ${isSelected ? '10' : '1'};">
                 ${innerText}
               </div>
 
@@ -973,7 +995,7 @@
               ${prizeLadder.map(val => renderLadderItem(val)).join('')}
 
               <!-- Ô ĐÁP ÁN BÊN DƯỚI CỘT TIỀN (Ô THỨ 7, KÍCH THƯỚC CỐ ĐỊNH) -->
-              <div class="viewer-fixed-shape" data-max-font="20" data-min-font="11" style="background: linear-gradient(180deg, #1e293b, #0f172a); border: 2px solid #94a3b8; border-radius: 8px; padding: 0 16px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.6); width: 100%; height: 46px; min-height: 46px; max-height: 46px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden;">
+              <div class="viewer-fixed-shape" data-max-font="20" data-min-font="11" style="background: linear-gradient(180deg, #1e293b, #0f172a); border: 2px solid #94a3b8; padding: 0 16px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.6); width: 100%; height: 46px; min-height: 46px; max-height: 46px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden;">
                 <span class="viewer-fit-target" style="font-size: 20px; font-weight: 900; color: #ffffff; text-shadow: 0 2px 8px rgba(0,0,0,0.9); letter-spacing: 0.5px; width: 100%; text-align: center; word-break: break-word; overflow-wrap: break-word;">
                   ${answerText}
                 </span>
@@ -984,7 +1006,7 @@
             <div style="width: 740px; min-width: 740px; max-width: 740px; display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; box-sizing: border-box;">
               
               <!-- Ô 1: GỢI Ý TẶNG (KÍCH THƯỚC CỐ ĐỊNH) -->
-              <div class="viewer-fixed-shape" data-max-font="20" data-min-font="11" style="background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%); border: 2px solid #38bdf8; border-radius: 8px; width: 100%; height: 46px; min-height: 46px; max-height: 46px; display: flex; align-items: center; justify-content: center; padding: 0 18px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4), inset 0 2px 4px rgba(255,255,255,0.3); box-sizing: border-box; overflow: hidden;">
+              <div class="viewer-fixed-shape" data-max-font="20" data-min-font="11" style="background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%); border: 2px solid #38bdf8; width: 100%; height: 46px; min-height: 46px; max-height: 46px; display: flex; align-items: center; justify-content: center; padding: 0 18px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4), inset 0 2px 4px rgba(255,255,255,0.3); box-sizing: border-box; overflow: hidden;">
                 <span class="viewer-fit-target" style="font-size: 20px; font-weight: 900; color: #ffffff; text-shadow: 0 2px 8px rgba(0,0,0,0.9); letter-spacing: 0.5px; width: 100%; text-align: center; word-break: break-word; overflow-wrap: break-word;">
                   ${giftClueText}
                 </span>
@@ -997,14 +1019,14 @@
               <div style="display: flex; justify-content: flex-end; align-items: center; gap: 16px; height: 46px; box-sizing: border-box;">
                 
                 <!-- HỘP ĐỒNG HỒ 120S KÍCH THƯỚC CỐ ĐỊNH -->
-                <div style="background: #000000; border: 3px solid #94a3b8; border-radius: 8px; height: 46px; min-height: 46px; max-height: 46px; width: 110px; min-width: 110px; max-width: 110px; text-align: center; box-shadow: inset 0 0 10px rgba(255,255,255,0.2), 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden;">
+                <div style="background: #000000; border: 3px solid #94a3b8; height: 46px; min-height: 46px; max-height: 46px; width: 110px; min-width: 110px; max-width: 110px; text-align: center; box-shadow: inset 0 0 10px rgba(255,255,255,0.2), 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden;">
                   <div id="viewer-v4-timer-val" style="font-size: 26px; font-weight: 900; color: #ffffff; font-family: monospace; letter-spacing: 2px; line-height: 1;">
                     ${(typeof window.calculateRemainingSeconds === 'function') ? window.calculateRemainingSeconds(v4, 120, 'v4') : (v4.timerSeconds ?? 120)}
                   </div>
                 </div>
 
                 <!-- HỘP TỔNG TIỀN THƯỞNG KÍCH THƯỚC CỐ ĐỊNH -->
-                <div style="background: #000000; border: 3px solid #facc15; border-radius: 8px; height: 46px; min-height: 46px; max-height: 46px; width: 260px; min-width: 260px; max-width: 260px; text-align: center; box-shadow: 0 0 20px rgba(250, 204, 21, 0.4), inset 0 0 10px rgba(250,204,21,0.2); display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden;">
+                <div style="background: #000000; border: 3px solid #facc15; height: 46px; min-height: 46px; max-height: 46px; width: 260px; min-width: 260px; max-width: 260px; text-align: center; box-shadow: 0 0 20px rgba(250, 204, 21, 0.4), inset 0 0 10px rgba(250,204,21,0.2); display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden;">
                   <div id="viewer-v4-money-val" style="font-size: 30px; font-weight: 900; color: #facc15; text-shadow: 0 0 12px rgba(250, 204, 21, 0.9); letter-spacing: 1px; line-height: 1;">
                     ${totalMoney.toLocaleString('vi-VN')}
                   </div>

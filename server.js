@@ -95,8 +95,7 @@ function createDefaultGameState(roomId = '123456') {
         { id: 6, name: 'Cam', color: '#ff7700', text: 'Ô SỐ 6', darkText: true, money: 1000000, revealedMoney: false, revealedClue: false, moneyDeducted: false }
       ],
       showAnswer: false,
-      resultStatus: null,
-      canDeductMoney: true
+      resultStatus: null
     },
     chpState: {
       locked: true,
@@ -112,6 +111,12 @@ function createDefaultGameState(roomId = '123456') {
         timestamp: 0
       },
       effects: {
+        track: null,
+        playing: false,
+        loop: false,
+        timestamp: 0
+      },
+      buzzer: {
         track: null,
         playing: false,
         loop: false,
@@ -624,8 +629,7 @@ app.post('/api/game/state', (req, res) => {
         return {
           ...b,
           revealedMoney: b.revealedMoney !== undefined ? b.revealedMoney : (prevBox.revealedMoney || false),
-          revealedClue: b.revealedClue !== undefined ? b.revealedClue : (prevBox.revealedClue || false),
-          moneyDeducted: b.moneyDeducted !== undefined ? b.moneyDeducted : (prevBox.moneyDeducted || false)
+          revealedClue: b.revealedClue !== undefined ? b.revealedClue : (prevBox.revealedClue || false)
         };
       });
     }
@@ -654,6 +658,10 @@ app.post('/api/game/state', (req, res) => {
       effects: {
         ...(gameState.audioState?.effects || {}),
         ...(data.audioState.effects || {})
+      },
+      buzzer: {
+        ...(gameState.audioState?.buzzer || {}),
+        ...(data.audioState.buzzer || {})
       }
     };
   }
@@ -707,7 +715,14 @@ app.post('/api/game/audio', (req, res) => {
 
   if (!gameState.audioState) gameState.audioState = {};
 
-  if (subType === 'effects') {
+  if (subType === 'buzzer') {
+    gameState.audioState.buzzer = {
+      track: data.track || null,
+      playing: !!data.playing,
+      loop: !!data.loop,
+      timestamp: data.timestamp || now
+    };
+  } else if (subType === 'effects') {
     gameState.audioState.effects = {
       track: data.track || null,
       playing: !!data.playing,
