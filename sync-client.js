@@ -2319,15 +2319,21 @@
       window.currentGameState.chpState = payload;
       notifyListeners(window.currentGameState, { chpChanged: true });
 
+      // Phát âm thanh Buzzer.mp3 ngay lập tức trên máy người bấm (0ms độ trễ)
+      const buzzerNow = Date.now();
+      if (typeof window.playBuzzerAudio === 'function') {
+        window.playBuzzerAudio('Buzzer.mp3');
+      }
+
       await window.broadcastStateUpdate({
         chpState: payload,
         audioState: {
           ...(window.currentGameState.audioState || {}),
-          effects: {
-            track: '5s.mp3',
+          buzzer: {
+            track: 'Buzzer.mp3',
             playing: true,
             loop: false,
-            timestamp: Date.now()
+            timestamp: buzzerNow
           }
         }
       });
