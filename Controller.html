@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Controller</title>
-    <meta name="description" content="Trang điều khiển Controller của gameshow Ẩn Số Vàng" />
 
     <!-- 100% font-weight là bold cho tất cả các phần tử -->
     <style>
@@ -3132,14 +3131,14 @@
       });
 
       // HÀM CHẠY BỘ ĐẾM BƯỚC VÒNG 3 CHUẨN XÁC TUYỆT ĐỐI (7S/BƯỚC ĐỒNG NHẤT, CHECK CHUÔNG 30MS)
-      function runVong3StepCountdown(initialSeconds, stage) {
+      function runVong3StepCountdown(initialSeconds, stage, targetEndTimeParam) {
         if (timerIntervalV3) {
           clearInterval(timerIntervalV3);
           timerIntervalV3 = null;
         }
 
         const startTime = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
-        const targetEndTime = startTime + initialSeconds * 1000;
+        const targetEndTime = targetEndTimeParam || (startTime + initialSeconds * 1000);
         let lastDispatched = initialSeconds;
 
         timerIntervalV3 = setInterval(async () => {
@@ -3187,7 +3186,7 @@
               if (typeof window.playEffectAudio === 'function') {
                 window.playEffectAudio('Hiengoiy.mp3');
               }
-              await window.broadcastStateUpdate({
+              const payload = {
                 vong3State: {
                   ...currentLiveV3,
                   revealedStage: 2,
@@ -3197,6 +3196,7 @@
                   stepTimerEndTime: nextEndTime,
                   isRunning: true,
                   stepTimerRunning: true,
+                  isStartTimer: true,
                   isBellLocked: false
                 },
                 audioState: {
@@ -3210,15 +3210,16 @@
                     timestamp: effectNow
                   }
                 }
-              });
+              };
+              runVong3StepCountdown(7, 2, nextEndTime);
+              window.broadcastStateUpdate(payload).catch(console.error);
               showNotification(' Hiện Gợi ý 1!');
-              runVong3StepCountdown(7, 2);
             } else if (nextStage === 3) {
               const effectNow = Date.now();
               if (typeof window.playEffectAudio === 'function') {
                 window.playEffectAudio('Hiengoiy.mp3');
               }
-              await window.broadcastStateUpdate({
+              const payload = {
                 vong3State: {
                   ...currentLiveV3,
                   revealedStage: 3,
@@ -3228,6 +3229,7 @@
                   stepTimerEndTime: nextEndTime,
                   isRunning: true,
                   stepTimerRunning: true,
+                  isStartTimer: true,
                   isBellLocked: false
                 },
                 audioState: {
@@ -3241,15 +3243,16 @@
                     timestamp: effectNow
                   }
                 }
-              });
+              };
+              runVong3StepCountdown(7, 3, nextEndTime);
+              window.broadcastStateUpdate(payload).catch(console.error);
               showNotification(' Hiện Gợi ý 2!');
-              runVong3StepCountdown(7, 3);
             } else if (nextStage === 4) {
               const effectNow = Date.now();
               if (typeof window.playEffectAudio === 'function') {
                 window.playEffectAudio('Hiengoiy.mp3');
               }
-              await window.broadcastStateUpdate({
+              const payload = {
                 vong3State: {
                   ...currentLiveV3,
                   revealedStage: 4,
@@ -3259,6 +3262,7 @@
                   stepTimerEndTime: nextEndTime,
                   isRunning: true,
                   stepTimerRunning: true,
+                  isStartTimer: true,
                   isBellLocked: false
                 },
                 audioState: {
@@ -3272,15 +3276,16 @@
                     timestamp: effectNow
                   }
                 }
-              });
+              };
+              runVong3StepCountdown(7, 4, nextEndTime);
+              window.broadcastStateUpdate(payload).catch(console.error);
               showNotification(' Hiện Gợi ý 3!');
-              runVong3StepCountdown(7, 4);
             } else {
               const effectNow = Date.now();
               if (typeof window.playEffectAudio === 'function') {
                 window.playEffectAudio('Hetgio.mp3');
               }
-              await window.broadcastStateUpdate({
+              const payload = {
                 vong3State: {
                   ...currentLiveV3,
                   revealedStage: 5,
@@ -3301,7 +3306,8 @@
                     timestamp: effectNow
                   }
                 }
-              });
+              };
+              window.broadcastStateUpdate(payload).catch(console.error);
               showNotification(' Hết 7 giây sau Gợi ý 3: Đã phát âm thanh Hết giờ và khóa chuông tất cả người chơi!');
             }
           }
@@ -3341,12 +3347,14 @@
         const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
         const endTime = now + secondsLeft * 1000;
 
+        runVong3StepCountdown(secondsLeft, currentStage, endTime);
         await window.broadcastStateUpdate({
           vong3State: {
             ...v3,
             revealedStage: currentStage,
             isRunning: true,
             stepTimerRunning: true,
+            isStartTimer: true,
             stepTimerSeconds: secondsLeft,
             stepTimerDuration: 7,
             stepTimerStartTime: now,
@@ -3357,7 +3365,6 @@
         });
 
         showNotification('Bắt đầu chạy Vòng 3: Hiện Chủ đề! Chuông đã mở!');
-        runVong3StepCountdown(secondsLeft, currentStage);
       });
 
       // 4. NÚT: TIẾP TỤC CHẠY CÂU HỎI (Tiếp tục chạy các gợi ý còn lại, chuông của người còn lại được mở lại)
@@ -3383,6 +3390,7 @@
         const now = (typeof window.getServerNow === 'function') ? window.getServerNow() : Date.now();
         const endTime = now + secondsLeft * 1000;
 
+        runVong3StepCountdown(secondsLeft, currentStage, endTime);
         await window.broadcastStateUpdate({
           vong3State: {
             ...v3,
@@ -3390,6 +3398,7 @@
             isBellLocked: false, // Chuông của người còn lại được mở lại
             isRunning: true,
             stepTimerRunning: true,
+            isStartTimer: true,
             stepTimerSeconds: secondsLeft,
             stepTimerDuration: 7,
             stepTimerStartTime: now,
@@ -3398,7 +3407,6 @@
         });
 
         showNotification(' Tiếp tục chạy câu hỏi! Chuông đã được mở lại cho người chơi còn lại!');
-        runVong3StepCountdown(secondsLeft, currentStage);
       });
 
       // 5. NÚT: ĐÓNG CÂU HỎI (Đóng câu hiện tại, tính là đã dùng)
@@ -3641,7 +3649,9 @@
 
         targetBox.revealedMoney = true;
         let newTotal = typeof v4.totalMoney === 'number' ? v4.totalMoney : 8000000;
-        if (!targetBox.moneyDeducted) {
+        const isAnswerRevealed = !!(v4.showAnswer || v4.resultStatus);
+
+        if (!isAnswerRevealed && !targetBox.moneyDeducted) {
           newTotal = Math.max(0, newTotal - targetBox.money);
           targetBox.moneyDeducted = true;
         }
@@ -3660,7 +3670,11 @@
           vong4State: updatedV4
         });
 
-        showNotification(`Ô ${selectedId} (${targetBox.name}): ${targetBox.money.toLocaleString('vi-VN')} VNĐ! Đã trừ vào tổng tiền, còn lại: ${newTotal.toLocaleString('vi-VN')} VNĐ.`);
+        if (isAnswerRevealed) {
+          showNotification(`Ô ${selectedId} (${targetBox.name}): ${targetBox.money.toLocaleString('vi-VN')} VNĐ! Đã hiện đáp án (${v4.resultStatus === 'correct' ? 'Đúng' : 'Sai'}), KHÔNG trừ vào tổng tiền (giữ nguyên: ${newTotal.toLocaleString('vi-VN')} VNĐ).`);
+        } else {
+          showNotification(`Ô ${selectedId} (${targetBox.name}): ${targetBox.money.toLocaleString('vi-VN')} VNĐ! Đã trừ vào tổng tiền, còn lại: ${newTotal.toLocaleString('vi-VN')} VNĐ.`);
+        }
       });
 
       // 4. NÚT: HIỆN NỘI DUNG GỢI Ý (Mở nội dung gợi ý của ô được chọn)

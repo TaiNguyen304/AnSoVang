@@ -505,8 +505,10 @@ app.post('/api/game/state', (req, res) => {
     if (isExplicitStart) {
       const dur = Number(nextV3.stepTimerDuration || nextV3.stepTimerSeconds || 7);
       nextV3.stepTimerDuration = dur;
-      nextV3.stepTimerStartTime = serverNow;
-      nextV3.stepTimerEndTime = (nextV3.isResetTimer && !isNowRunning) ? 0 : (serverNow + dur * 1000);
+      nextV3.stepTimerStartTime = Number(nextV3.stepTimerStartTime) || serverNow;
+      nextV3.stepTimerEndTime = (nextV3.isResetTimer && !isNowRunning)
+        ? 0
+        : (Number(nextV3.stepTimerEndTime) || (serverNow + dur * 1000));
       nextV3.stepTimerSeconds = dur;
       nextV3.stepTimerRunning = (nextV3.isResetTimer && !isNowRunning) ? false : true;
       nextV3.isRunning = nextV3.stepTimerRunning;
@@ -521,16 +523,18 @@ app.post('/api/game/state', (req, res) => {
       nextV3.stepTimerRunning = false;
       nextV3.isRunning = false;
     } else {
-      nextV3.isRunning = prevV3.isRunning || false;
-      nextV3.stepTimerRunning = prevV3.stepTimerRunning || false;
-      nextV3.stepTimerStartTime = prevV3.stepTimerStartTime || 0;
-      nextV3.stepTimerEndTime = prevV3.stepTimerEndTime || 0;
-      nextV3.stepTimerDuration = prevV3.stepTimerDuration || 7;
-      nextV3.stepTimerSeconds = (typeof prevV3.stepTimerSeconds === 'number') ? prevV3.stepTimerSeconds : 7;
+      nextV3.isRunning = (nextV3.isRunning !== undefined) ? nextV3.isRunning : (prevV3.isRunning || false);
+      nextV3.stepTimerRunning = (nextV3.stepTimerRunning !== undefined) ? nextV3.stepTimerRunning : (prevV3.stepTimerRunning || false);
+      nextV3.stepTimerStartTime = Number(nextV3.stepTimerStartTime) || prevV3.stepTimerStartTime || 0;
+      nextV3.stepTimerEndTime = Number(nextV3.stepTimerEndTime) || prevV3.stepTimerEndTime || 0;
+      nextV3.stepTimerDuration = Number(nextV3.stepTimerDuration) || prevV3.stepTimerDuration || 7;
+      nextV3.stepTimerSeconds = (typeof nextV3.stepTimerSeconds === 'number') ? nextV3.stepTimerSeconds : (typeof prevV3.stepTimerSeconds === 'number' ? prevV3.stepTimerSeconds : 7);
     }
 
     let newRevealedStage = nextV3.revealedStage;
-    if (!nextV3.isNewQuestion && typeof prevV3.revealedStage === 'number' && typeof nextV3.revealedStage === 'number') {
+    if (nextV3.revealedStage === 0) {
+      newRevealedStage = 0;
+    } else if (!nextV3.isNewQuestion && typeof prevV3.revealedStage === 'number' && typeof nextV3.revealedStage === 'number') {
       newRevealedStage = Math.max(prevV3.revealedStage, nextV3.revealedStage);
     }
 

@@ -1686,15 +1686,22 @@
             : (newState.vong2State?.timerSeconds ?? window.currentGameState.vong2State?.timerSeconds ?? 60)
         )
       },
-      vong3State: {
-        ...(window.currentGameState.vong3State || {}),
-        ...(newState.vong3State || {}),
-        stepTimerSeconds: (
-          (newState.vong3State?.isRunning || newState.vong3State?.stepTimerRunning) && typeof newState.vong3State?.stepTimerEndTime === 'number' && newState.vong3State.stepTimerEndTime > 0
-            ? window.calculateRemainingSeconds(newState.vong3State, 7, 'v3')
-            : (newState.vong3State?.stepTimerSeconds ?? window.currentGameState.vong3State?.stepTimerSeconds ?? 7)
-        )
-      },
+      vong3State: (() => {
+        const prevEnd = window.currentGameState.vong3State?.stepTimerEndTime;
+        const newEnd = newState.vong3State?.stepTimerEndTime;
+        if (typeof newEnd === 'number' && prevEnd !== newEnd && typeof window.resetTimerMonotonic === 'function') {
+          window.resetTimerMonotonic('v3', Number(newState.vong3State?.stepTimerDuration || 7));
+        }
+        return {
+          ...(window.currentGameState.vong3State || {}),
+          ...(newState.vong3State || {}),
+          stepTimerSeconds: (
+            (newState.vong3State?.isRunning || newState.vong3State?.stepTimerRunning) && typeof newState.vong3State?.stepTimerEndTime === 'number' && newState.vong3State.stepTimerEndTime > 0
+              ? window.calculateRemainingSeconds(newState.vong3State, 7, 'v3')
+              : (newState.vong3State?.stepTimerSeconds ?? window.currentGameState.vong3State?.stepTimerSeconds ?? 7)
+          )
+        };
+      })(),
       vong4State: {
         ...(window.currentGameState.vong4State || {}),
         ...(newState.vong4State || {}),

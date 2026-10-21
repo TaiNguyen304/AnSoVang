@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Viewer</title>
-    <meta name="description" content="Màn hình sân khấu Viewer kết nối máy chủ Ẩn Số Vàng" />
 
     <style>
       *, *::before, *::after {
@@ -803,7 +802,7 @@
         }
 
         const qIdx = activeQ.index || 1;
-        if (qIdx !== currentQIndex) {
+        if (qIdx !== currentQIndex || v3.revealedStage === 0) {
           currentQIndex = qIdx;
           maxStageForCurrentQ = v3.revealedStage || 0;
         } else {
