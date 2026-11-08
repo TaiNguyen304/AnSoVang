@@ -849,7 +849,7 @@
   const audioBlobCache = new Map();
   const KNOWN_AUDIO_TRACKS = [
     '5s.mp3', 'Congrat.mp3', 'Intro.mp3', 'Nhạc nền 1.mp3', 'Nhạc nền 2.mp3', 'Open.mp3',
-    'Buzzer.mp3', 'Hetgio.mp3', 'Hiengoiy.mp3', 'Hiendapandung.mp3', 'MoGoiy.mp3', 'SaiV3.mp3',
+    'Buzzer.mp3', 'Buzzer1.mp3', 'Hetgio.mp3', 'Hiengoiy.mp3', 'Hiendapandung.mp3', 'MoGoiy.mp3', 'SaiV3.mp3',
     '60s.mp3', '120s.mp3'
   ];
 
@@ -1453,7 +1453,7 @@
   };
 
   // Hàm phát chuông Buzzer tức thời (Trường thứ 3: audioState.buzzer, độc lập hoàn toàn với Soundboard và Effects)
-  window.playBuzzerAudio = function(track = 'Buzzer.mp3', loop = false) {
+  window.playBuzzerAudio = function(track = 'Buzzer1.mp3', loop = false) {
     if (!track) return;
     const now = Date.now();
     lastBuzzerTimestamp = now;
@@ -2563,10 +2563,10 @@
         try { window.renderCurrentView(); } catch(e) {}
       }
 
-      // Phát âm thanh Buzzer.mp3 thuộc trường thứ 3 (buzzer), không phải Soundboard hay effects
+      // Phát âm thanh Buzzer1.mp3 thuộc trường thứ 3 (buzzer), không phải Soundboard hay effects
       const buzzerNow = Date.now();
       if (typeof window.playBuzzerAudio === 'function') {
-        window.playBuzzerAudio('Buzzer.mp3');
+        window.playBuzzerAudio('Buzzer1.mp3');
       }
 
       await window.broadcastStateUpdate({
@@ -2574,7 +2574,7 @@
         audioState: {
           ...(window.currentGameState.audioState || {}),
           buzzer: {
-            track: 'Buzzer.mp3',
+            track: 'Buzzer1.mp3',
             playing: true,
             loop: false,
             timestamp: buzzerNow
@@ -2620,10 +2620,10 @@
       window.currentGameState.chpState = payload;
       notifyListeners(window.currentGameState, { chpChanged: true });
 
-      // Phát âm thanh Buzzer.mp3 ngay lập tức trên máy người bấm (0ms độ trễ)
+      // Phát âm thanh Buzzer1.mp3 ngay lập tức trên máy người bấm (0ms độ trễ)
       const buzzerNow = Date.now();
       if (typeof window.playBuzzerAudio === 'function') {
-        window.playBuzzerAudio('Buzzer.mp3');
+        window.playBuzzerAudio('Buzzer1.mp3');
       }
 
       await window.broadcastStateUpdate({
@@ -2631,7 +2631,7 @@
         audioState: {
           ...(window.currentGameState.audioState || {}),
           buzzer: {
-            track: 'Buzzer.mp3',
+            track: 'Buzzer1.mp3',
             playing: true,
             loop: false,
             timestamp: buzzerNow
