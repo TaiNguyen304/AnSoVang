@@ -8,8 +8,13 @@
     <style>
       *, *::before, *::after {
         font-weight: bold !important;
+        font-family: 'Segoe UI', sans-serif;
         box-sizing: border-box;
         border-radius: 0 !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
       }
       html, body {
         width: 100vw;
@@ -18,7 +23,7 @@
         padding: 0;
         overflow: hidden;
         box-sizing: border-box;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Segoe UI', sans-serif;
         background-color: linear-gradient(135deg, #0a192f, #020c1b);
         background: linear-gradient(135deg, #0a192f, #020c1b);
         color: #f8fafc;
@@ -134,6 +139,11 @@
           e.preventDefault();
           return false;
         }, true);
+
+        window.addEventListener('selectstart', function (e) {
+          e.preventDefault();
+          return false;
+        }, true);
       }
       disableDevTools();
       window.disableDevTools = disableDevTools;
@@ -207,8 +217,30 @@
           <div id="viewer-v4-stage" style="color: #cbd5e1; font-size: 14px; text-align: center; width: 100%; max-width: 1100px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; margin: auto;">Đang chuẩn bị vòng 4...</div>
         </div>
 
-        <!-- 6. VIEW CÂU HỎI PHỤ (CHP) - VIEW TRỐNG -->
-        <div id="view-chp" class="view-container" style="background: transparent; border: none; width: 100%; height: 100%; display: none;"></div>
+        <!-- 6. VIEW CÂU HỎI PHỤ (CHP) - ĐỒ HỌA TƯƠNG TỰ VÒNG 1 (CÂU HỎI + 2 Ô ĐÚNG / SAI) NHƯNG KHÔNG CÓ Ô ĐỒNG HỒ -->
+        <div id="view-chp" class="view-container" style="background: transparent; border: none; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 60px; box-sizing: border-box;">
+          <div id="viewer-chp-content-row" style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 20px; width: 100%; max-width: 1100px; margin: 0 auto; box-sizing: border-box;">
+            <!-- Ô 1: Ô CÂU HỎI PHỤ -->
+            <div id="viewer-chp-box-q" class="viewer-fixed-shape" data-max-font="26" data-min-font="13" style="background: #000000; border: 2.5px solid #334155; padding: 18px 24px; width: 720px; height: 160px; max-width: 720px; max-height: 160px; min-width: 720px; min-height: 160px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; color: #ffffff; box-sizing: border-box; overflow: hidden; flex-shrink: 0;">
+              <div id="viewer-chp-q-text" class="viewer-fit-target" style="font-size: 26px; color: #ffffff; line-height: 1.35; display: flex; align-items: center; justify-content: center; flex: 1; font-weight: bold; width: 100%; max-height: 100%; text-align: center; word-break: break-word; overflow-wrap: break-word;"></div>
+            </div>
+
+            <!-- Ô 2: Ô ĐÚNG -->
+            <div id="viewer-chp-box-dung" class="viewer-fixed-shape" data-max-font="36" data-min-font="20" style="background: #000000; border: 2.5px solid #334155; width: 170px; height: 160px; max-width: 170px; max-height: 160px; min-width: 170px; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; color: #ffffff; box-sizing: border-box; overflow: hidden;">
+              <span id="viewer-chp-text-dung" class="viewer-fit-target" style="font-size: 36px; color: #ffffff; letter-spacing: 2px; font-weight: bold; text-align: center;">ĐÚNG</span>
+            </div>
+
+            <!-- Ô 3: Ô SAI -->
+            <div id="viewer-chp-box-sai" class="viewer-fixed-shape" data-max-font="36" data-min-font="20" style="background: #000000; border: 2.5px solid #334155; width: 170px; height: 160px; max-width: 170px; max-height: 160px; min-width: 170px; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0; color: #ffffff; box-sizing: border-box; overflow: hidden;">
+              <span id="viewer-chp-text-sai" class="viewer-fit-target" style="font-size: 36px; color: #ffffff; letter-spacing: 2px; font-weight: bold; text-align: center;">SAI</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. VIEW KHÁN GIẢ -->
+        <div id="view-khangia" class="view-container" style="background: transparent; border: none; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; padding: 16px;">
+          <div id="viewer-kg-stage" style="width: 100%; max-width: 1100px; margin: auto; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; box-sizing: border-box;"></div>
+        </div>
 
       </div>
 
@@ -255,7 +287,8 @@
         vong2: 'view-vong2',
         vong3: 'view-vong3',
         vong4: 'view-vong4',
-        chp: 'view-chp'
+        chp: 'view-chp',
+        khangia: 'view-khangia'
       };
 
       window.switchViewerTo = async function(viewKey) {
@@ -268,7 +301,8 @@
         vong2: 'VÒNG 2: ĐẶT CƯỢC',
         vong3: 'VÒNG 3: SO TÀI',
         vong4: 'VÒNG 4: ẨN SỐ MAY MẮN',
-        chp: 'CÂU HỎI PHỤ'
+        chp: 'CÂU HỎI PHỤ',
+        khangia: 'VIEW KHÁN GIẢ'
       };
 
       window.onGameStateChange(function(state, changes) {
@@ -298,6 +332,7 @@
         try { renderViewerVong3(state); } catch (e) { console.error('Render V3 Error:', e); }
         try { renderViewerVong4(state); } catch (e) { console.error('Render V4 Error:', e); }
         try { renderViewerCHP(state); } catch (e) { console.error('Render CHP Error:', e); }
+        try { renderViewerKhanGia(state); } catch (e) { console.error('Render KhanGia Error:', e); }
 
         requestAnimationFrame(fitAllViewerShapes);
         setTimeout(fitAllViewerShapes, 30);
@@ -1022,7 +1057,7 @@
                 
                 <!-- HỘP ĐỒNG HỒ 120S KÍCH THƯỚC CỐ ĐỊNH -->
                 <div style="background: #000000; border: 3px solid #94a3b8; height: 46px; min-height: 46px; max-height: 46px; width: 110px; min-width: 110px; max-width: 110px; text-align: center; box-shadow: inset 0 0 10px rgba(255,255,255,0.2), 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden;">
-                  <div id="viewer-v4-timer-val" style="font-size: 26px; font-weight: 900; color: #ffffff; font-family: monospace; letter-spacing: 2px; line-height: 1;">
+                  <div id="viewer-v4-timer-val" style="font-size: 26px; font-weight: 900; color: #ffffff; font-family: 'Segoe UI', sans-serif; letter-spacing: 2px; line-height: 1;">
                     ${(typeof window.calculateRemainingSeconds === 'function') ? window.calculateRemainingSeconds(v4, 120, 'v4') : (v4.timerSeconds ?? 120)}
                   </div>
                 </div>
@@ -1044,7 +1079,204 @@
       }
 
       function renderViewerCHP(state) {
-        // View CHP trên Viewer là View trống
+        const chp = state.chpState || {};
+        const contentRow = document.getElementById('viewer-chp-content-row');
+        const boxQ = document.getElementById('viewer-chp-box-q');
+        const textQ = document.getElementById('viewer-chp-q-text');
+        const boxDung = document.getElementById('viewer-chp-box-dung');
+        const textDung = document.getElementById('viewer-chp-text-dung');
+        const boxSai = document.getElementById('viewer-chp-box-sai');
+        const textSai = document.getElementById('viewer-chp-text-sai');
+
+        if (!contentRow) return;
+
+        if (chp.showOnViewer === false) {
+          contentRow.style.display = 'none';
+          return;
+        }
+        contentRow.style.display = 'flex';
+
+        const resetDungSaiBoxes = () => {
+          if (boxDung && textDung) {
+            boxDung.style.background = '#000000';
+            boxDung.style.borderColor = '#334155';
+            boxDung.style.opacity = '1';
+            boxDung.style.boxShadow = 'none';
+            boxDung.style.transform = 'scale(1)';
+            textDung.style.color = '#ffffff';
+          }
+          if (boxSai && textSai) {
+            boxSai.style.background = '#000000';
+            boxSai.style.borderColor = '#334155';
+            boxSai.style.opacity = '1';
+            boxSai.style.boxShadow = 'none';
+            boxSai.style.transform = 'scale(1)';
+            textSai.style.color = '#ffffff';
+          }
+        };
+
+        if (chp.showQuestion && chp.activeQuestion) {
+          if (textQ) textQ.textContent = chp.activeQuestion.q || '';
+          if (boxQ) {
+            boxQ.style.background = '#000000';
+            boxQ.style.borderColor = '#334155';
+          }
+
+          if (chp.showAnswer) {
+            const ansNorm = String(chp.activeQuestion.a || '').trim().toLowerCase();
+            const isDung = ansNorm === 'đúng' || ansNorm === 'dung' || ansNorm.includes('đúng');
+            const isSai = ansNorm === 'sai' || ansNorm.includes('sai');
+
+            if (isDung && !isSai) {
+              if (boxDung && textDung) {
+                boxDung.style.background = '#000000';
+                boxDung.style.borderColor = '#facc15';
+                boxDung.style.boxShadow = '0 0 30px rgba(250, 204, 21, 0.6)';
+                boxDung.style.transform = 'scale(1.06)';
+                boxDung.style.opacity = '1';
+                textDung.style.color = '#facc15';
+              }
+              if (boxSai && textSai) {
+                boxSai.style.background = '#000000';
+                boxSai.style.borderColor = '#1e293b';
+                boxSai.style.opacity = '0.35';
+                boxSai.style.boxShadow = 'none';
+                boxSai.style.transform = 'scale(0.95)';
+                textSai.style.color = '#64748b';
+              }
+            } else if (isSai) {
+              if (boxSai && textSai) {
+                boxSai.style.background = '#000000';
+                boxSai.style.borderColor = '#facc15';
+                boxSai.style.boxShadow = '0 0 30px rgba(250, 204, 21, 0.6)';
+                boxSai.style.transform = 'scale(1.06)';
+                boxSai.style.opacity = '1';
+                textSai.style.color = '#facc15';
+              }
+              if (boxDung && textDung) {
+                boxDung.style.background = '#000000';
+                boxDung.style.borderColor = '#1e293b';
+                boxDung.style.opacity = '0.35';
+                boxDung.style.boxShadow = 'none';
+                boxDung.style.transform = 'scale(0.95)';
+                textDung.style.color = '#64748b';
+              }
+            } else {
+              resetDungSaiBoxes();
+            }
+          } else {
+            resetDungSaiBoxes();
+          }
+        } else {
+          if (textQ) textQ.textContent = '';
+          resetDungSaiBoxes();
+        }
+        requestAnimationFrame(fitAllViewerShapes);
+      }
+
+      function renderViewerKhanGia(state) {
+        const kg = state.khangiaState || {};
+        const stageEl = document.getElementById('viewer-kg-stage');
+        if (!stageEl) return;
+
+        if (kg.showOnViewer === false) {
+          stageEl.style.display = 'none';
+          return;
+        }
+        stageEl.style.display = 'flex';
+
+        const activeQ = (kg.showQuestion && kg.activeQuestion) ? kg.activeQuestion : null;
+        const questionText = activeQ ? (activeQ.question || '') : '';
+        // Vị trí câu luôn luôn ở ô đen lớn bên phải (Ô 2)
+        const box1Text = '';
+        const box2Text = questionText;
+
+        const opts = activeQ && Array.isArray(activeQ.options) ? activeQ.options : ['', '', ''];
+        const revealed = activeQ ? (kg.revealedOptions || {}) : {};
+        const selectedOpt = activeQ ? kg.selectedOption : null;
+        const gradedResults = activeQ ? (kg.gradedResults || {}) : {};
+        const optLetters = ['A', 'B', 'C'];
+
+        const renderOptionCard = (idx) => {
+          const oneBased = idx + 1;
+          const isRevealed = !!(activeQ && revealed[oneBased]);
+          const optText = isRevealed ? (opts[idx] || '') : '';
+          const gradeStatus = activeQ ? gradedResults[oneBased] : null; // 'correct' | 'wrong' | null
+          const isSelected = !!(activeQ && Number(selectedOpt) === oneBased);
+
+          // Màu giống Vòng 2: mặc định xanh dương, được chọn màu tím, đúng màu vàng, sai màu đen
+          let bg = 'linear-gradient(90deg, #0284c7 0%, #0369a1 100%)';
+          let color = '#ffffff';
+          let border = '1.5px solid #38bdf8';
+          let shadow = '0 4px 15px rgba(2,132,199,0.3)';
+          let badgeColor = '#ffffff';
+
+          if (gradeStatus === 'correct') {
+            bg = 'linear-gradient(90deg, #facc15 0%, #eab308 100%)';
+            color = '#000000';
+            border = '2px solid #ffffff';
+            shadow = '0 0 30px rgba(250,204,21,0.9)';
+            badgeColor = '#000000';
+          } else if (gradeStatus === 'wrong') {
+            bg = 'linear-gradient(90deg, #0f172a 0%, #000000 100%)';
+            color = '#64748b';
+            border = '1.5px solid #334155';
+            shadow = 'none';
+            badgeColor = '#64748b';
+          } else if (isSelected) {
+            bg = 'linear-gradient(90deg, #6d28d9 0%, #4c1d95 100%)';
+            color = '#ffffff';
+            border = '1.5px solid #c084fc';
+            shadow = '0 0 20px rgba(168,85,247,0.5)';
+            badgeColor = '#ffffff';
+          }
+
+          return `
+            <div id="viewer-kg-opt-${idx}" class="viewer-fixed-shape viewer-v2-option-card" data-max-font="18" data-min-font="11" style="position: relative; background: ${bg}; color: ${color}; border: ${border}; box-shadow: ${shadow}; padding: 6px 14px; width: 538px; min-width: 538px; max-width: 538px; height: 54px; min-height: 54px; max-height: 54px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: flex-start; gap: 12px; box-sizing: border-box; overflow: hidden; transition: background 0.2s, border 0.2s, box-shadow 0.2s;">
+              <div style="background: rgba(0,0,0,0.35); width: 34px; height: 34px; min-width: 34px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; color: ${badgeColor}; flex-shrink: 0;">
+                ${optLetters[idx]}
+              </div>
+              <div class="viewer-fit-target" style="letter-spacing: 0.4px; font-size: 18px; line-height: 1.25; width: 82%; max-width: 82%; flex: 0 0 82%; word-break: break-word; overflow-wrap: break-word; text-align: left; overflow: hidden;">
+                ${optText || '&nbsp;'}
+              </div>
+            </div>
+          `;
+        };
+
+        stageEl.innerHTML = `
+          <!-- KHỐI CHÍNH 2 CỘT: TRÁI = Ô ĐEN LỚN 1 (CAO BẰNG Ô ĐEN LỚN 2 + 3 Ô ĐÁP ÁN + KHOẢNG CÁCH), PHẢI = Ô ĐEN LỚN 2 + 3 Ô ĐÁP ÁN -->
+          <div style="display: grid; grid-template-columns: 538px 538px; gap: 24px; justify-content: center; align-items: stretch; width: 100%; max-width: 1100px; box-sizing: border-box;">
+            <!-- CỘT TRÁI: Ô ĐEN LỚN 1 (230 + 12 + 54 + 12 + 54 + 12 + 54 = 428px) -->
+            <div id="viewer-kg-black-1" class="viewer-fixed-shape" data-max-font="22" data-min-font="12" style="background: #000000; border: 2.5px solid #334155; padding: 16px 22px; width: 538px; height: 428px; min-width: 538px; max-width: 538px; min-height: 428px; max-height: 428px; display: flex; align-items: center; justify-content: flex-start; text-align: left; color: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.85); box-sizing: border-box; overflow: hidden;">
+              <div class="viewer-fit-target" style="font-size: 22px; color: #ffffff; line-height: 1.35; font-weight: bold; width: 100%; max-height: 100%; word-break: break-word; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 12; -webkit-box-orient: vertical; overflow: hidden;">
+                ${box1Text}
+              </div>
+            </div>
+
+            <!-- CỘT PHẢI: Ô ĐEN LỚN 2 (CÂU HỎI LUÔN Ở ĐÂY) + 3 Ô ĐÁP ÁN XẾP DỌC (GAP ĐỒNG NHẤT 12PX) -->
+            <div style="width: 538px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box;">
+              <div id="viewer-kg-black-2" class="viewer-fixed-shape" data-max-font="22" data-min-font="12" style="background: #000000; border: 2.5px solid #334155; padding: 16px 22px; width: 538px; height: 230px; min-width: 538px; max-width: 538px; min-height: 230px; max-height: 230px; display: flex; align-items: center; justify-content: flex-start; text-align: left; color: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.85); box-sizing: border-box; overflow: hidden;">
+                <div class="viewer-fit-target" style="font-size: 22px; color: #ffffff; line-height: 1.35; font-weight: bold; width: 100%; max-height: 100%; word-break: break-word; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden;">
+                  ${box2Text}
+                </div>
+              </div>
+              ${[0, 1, 2].map(idx => renderOptionCard(idx)).join('')}
+            </div>
+          </div>
+
+          <!-- HÀNG DƯỚI: CỘT TRÁI HIỆN SỐ 2.000.000 MÀU VÀNG KHÔNG VIỀN -->
+          <div style="display: grid; grid-template-columns: 538px 538px; gap: 24px; justify-content: center; width: 100%; max-width: 1100px; box-sizing: border-box; align-items: center;">
+            <div style="width: 538px; height: 84px; display: flex; align-items: center; justify-content: center;">
+              ${kg.showPrizeAmount !== false ? `
+                <div id="viewer-kg-prize-box" class="viewer-fixed-shape" data-max-font="48" data-min-font="24" style="background: #000000; border: none; width: 538px; height: 84px; min-width: 538px; max-width: 538px; min-height: 84px; max-height: 84px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden;">
+                  <span class="viewer-fit-target" style="font-size: 48px; font-weight: 900; color: #facc15; letter-spacing: 3px; font-variant-numeric: tabular-nums; text-shadow: 0 0 14px rgba(250, 204, 21, 0.65); line-height: 1;">2.000.000</span>
+                </div>
+              ` : ''}
+            </div>
+            <div style="width: 538px; height: 84px;"></div>
+          </div>
+        `;
+        requestAnimationFrame(fitAllViewerShapes);
       }
     </script>
   </body>

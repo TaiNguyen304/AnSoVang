@@ -9,6 +9,7 @@
     <style>
       *, *::before, *::after {
         font-weight: bold !important;
+        font-family: 'Segoe UI', sans-serif;
         box-sizing: border-box;
       }
       html, body {
@@ -17,7 +18,7 @@
         width: 100%;
         height: 100vh;
         overflow: hidden;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Segoe UI', sans-serif;
         background-color: #0b1120;
         color: #f8fafc;
       }
@@ -289,6 +290,10 @@
               <button id="btn-switch-chp" class="btn btn-switch" data-view="chp" style="background: linear-gradient(135deg, #d97706, #b45309); color: white; padding: 5px 6px; border-radius: 5px; font-size: 10px; border-left: 3px solid #fbbf24; border: 1.5px solid transparent; display: flex; align-items: center; justify-content: center;">
                 <span>View CHP</span>
               </button>
+
+              <button id="btn-switch-khangia" class="btn btn-switch" data-view="khangia" style="background: linear-gradient(135deg, #db2777, #9d174d); color: white; padding: 5px 6px; border-radius: 5px; font-size: 10px; border-left: 3px solid #f472b6; border: 1.5px solid transparent; display: flex; align-items: center; justify-content: center; grid-column: span 2;">
+                <span>View Khán giả</span>
+              </button>
             </div>
           </div>
 
@@ -338,8 +343,11 @@
               <button id="btn-sound-bg3" class="btn btn-sound" data-track="Nhạc nền 3.mp3" style="background: #0f172a; color: #fadadd; border: 1px solid #5c7339; padding: 5px 4px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center;">
                 Nhạc nền 3
               </button>
-              <button id="btn-sound-congrat" class="btn btn-sound" data-track="Congrat.mp3" style="background: #0f172a; color: #f43f5e; border: 1px solid #e11d48; padding: 5px 4px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; grid-column: span 2;">
+              <button id="btn-sound-congrat" class="btn btn-sound" data-track="Congrat.mp3" style="background: #0f172a; color: #f43f5e; border: 1px solid #e11d48; padding: 5px 4px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center;">
                  Congrat
+              </button>
+              <button id="btn-sound-2m" class="btn btn-sound" data-track="2M.mp3" style="background: #0f172a; color: #fbbf24; border: 1px solid #f59e0b; padding: 5px 4px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; grid-column: span 2;">
+                2M
               </button>
             </div>
 
@@ -378,6 +386,9 @@
               </button>
               <button class="btn btn-preview-view" data-view="chp" style="background: #334155; color: white; padding: 4px 8px; border-radius: 5px; font-size: 11px; border-bottom: 2px solid #fbbf24;">
                 Câu hỏi phụ
+              </button>
+              <button class="btn btn-preview-view" data-view="khangia" style="background: #334155; color: white; padding: 4px 8px; border-radius: 5px; font-size: 11px; border-bottom: 2px solid #f472b6;">
+                Khán giả
               </button>
             </div>
           </div>
@@ -730,6 +741,37 @@
 
           <!-- KHU VỰC ĐIỀU KHIỂN CHI TIẾT CÂU HỎI PHỤ (CHP) -->
           <div id="controller-chp-control-panel" style="background: #0f172a; border-radius: 8px; padding: 8px 10px; border: 1.5px solid #fbbf24; display: none; flex-direction: column; gap: 6px; flex-shrink: 0;">
+
+            <!-- Hàng 1: Các nút điều khiển câu hỏi & đồ họa Viewer -->
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;">
+              <button id="btn-chp-show-q" class="btn" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-weight: bold; padding: 6px 8px; border-radius: 5px; font-size: 11px;">
+                Hiện câu hỏi
+              </button>
+              <button id="btn-chp-show-ans" class="btn" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: white; font-weight: bold; padding: 6px 8px; border-radius: 5px; font-size: 11px;">
+                Hiện đáp án đúng
+              </button>
+              <button id="btn-chp-close-q" class="btn" style="background: #334155; color: #f87171; font-weight: bold; padding: 6px 8px; border-radius: 5px; font-size: 11px;">
+                Đóng câu
+              </button>
+              <button id="btn-chp-new-q" class="btn" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; font-weight: bold; padding: 6px 8px; border-radius: 5px; font-size: 11px;">
+                Câu hỏi mới
+              </button>
+              <button id="btn-chp-toggle-viewer" class="btn" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; font-weight: bold; padding: 6px 8px; border-radius: 5px; font-size: 10.5px; border: 1px solid #38bdf8;">
+                Đồ họa Viewer: HIỆN
+              </button>
+            </div>
+
+            <!-- Thanh hiển thị nội dung Câu hỏi phụ đang chọn -->
+            <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; border-left: 3px solid #38bdf8; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 10px; color: #38bdf8;" id="ctrl-chp-q-status">Chưa mở câu hỏi phụ</div>
+                <div id="ctrl-chp-q-text" style="font-size: 11.5px; color: #ffffff; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Bấm "Hiện câu hỏi" hoặc "Câu hỏi mới" để mở câu hỏi phụ.</div>
+              </div>
+              <div style="text-align: right; flex-shrink: 0; font-size: 11px;">
+                <span style="color: #94a3b8;">Đáp án:</span>
+                <b id="ctrl-chp-ans-text" style="color: #facc15;">---</b>
+              </div>
+            </div>
             
             <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
               
@@ -797,6 +839,64 @@
 
             <!-- Banner thông báo thí sinh bấm chuông CHP to, rõ ràng -->
             <div id="ctrl-chp-winner-banner" style="display: none; background: linear-gradient(135deg, #15803d, #166534); border: 2px solid #facc15; box-shadow: 0 0 15px rgba(250, 204, 21, 0.4); border-radius: 6px; padding: 8px 12px; align-items: center; justify-content: space-between;"></div>
+
+          </div>
+
+          <!-- KHU VỰC ĐIỀU KHIỂN CHI TIẾT VIEW KHÁN GIẢ -->
+          <div id="controller-khangia-control-panel" style="background: #0f172a; border-radius: 8px; padding: 8px 10px; border: 1.5px solid #ec4899; display: none; flex-direction: column; gap: 6px; flex-shrink: 0;">
+
+            <!-- Hàng 1: Hiện câu hỏi, Hiện đáp án A/B/C -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;">
+              <button id="btn-kg-show-q" class="btn" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-weight: bold; padding: 6px 8px; border-radius: 5px; font-size: 11px;">
+                Hiện câu hỏi
+              </button>
+              <button class="btn btn-kg-reveal" data-opt="1" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; font-weight: bold; padding: 6px 8px; border-radius: 5px; font-size: 11px;">
+                Hiện đáp án A
+              </button>
+              <button class="btn btn-kg-reveal" data-opt="2" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; font-weight: bold; padding: 6px 8px; border-radius: 5px; font-size: 11px;">
+                Hiện đáp án B
+              </button>
+              <button class="btn btn-kg-reveal" data-opt="3" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; font-weight: bold; padding: 6px 8px; border-radius: 5px; font-size: 11px;">
+                Hiện đáp án C
+              </button>
+            </div>
+
+            <!-- Hàng 2: Chọn A/B/C, Đúng hay Sai (Chấm điểm), Ẩn câu, Đóng câu -->
+            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px;">
+              <button class="btn btn-kg-select" data-opt="1" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
+                Chọn A
+              </button>
+              <button class="btn btn-kg-select" data-opt="2" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
+                Chọn B
+              </button>
+              <button class="btn btn-kg-select" data-opt="3" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
+                Chọn C
+              </button>
+              <button id="btn-kg-grade" class="btn" style="background: linear-gradient(135deg, #eab308, #ca8a04); color: #000000; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
+                Đúng hay Sai
+              </button>
+              <button id="btn-kg-hide-q" class="btn" style="background: #475569; color: white; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
+                Ẩn câu
+              </button>
+              <button id="btn-kg-close-q" class="btn" style="background: #334155; color: #f87171; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
+                Đóng câu
+              </button>
+            </div>
+
+            <!-- Thanh trạng thái câu hỏi Khán giả + vị trí ô đen -->
+            <div style="background: #1e293b; padding: 5px 10px; border-radius: 6px; border-left: 3px solid #ec4899; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px;">
+              <div style="flex: 1; min-width: 180px;">
+                <span style="color: #f472b6;" id="ctrl-kg-q-status">Chưa mở câu hỏi</span>
+                <span style="color: #94a3b8; margin-left: 8px;">| Đã chọn: <b id="ctrl-kg-selected-label" style="color: #c084fc;">Chưa chọn</b></span>
+                <span style="color: #94a3b8; margin-left: 8px;">| Đáp án đúng: <b id="ctrl-kg-correct-label" style="color: #4ade80;">---</b></span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <button id="btn-kg-toggle-prize" class="btn" style="padding: 3px 8px; font-size: 10.5px; border-radius: 4px; background: #eab308; color: #000000; border: 1px solid #facc15; font-weight: bold;">
+                  Số 2.000.000: HIỆN
+                </button>
+                <span style="font-size: 10px; color: #94a3b8;">Vị trí câu: <b style="color: #ec4899;">Ô 2 (Bên phải)</b></span>
+              </div>
+            </div>
 
           </div>
 
@@ -916,6 +1016,8 @@
             <button class="btn btn-q-tab" data-qtab="v2" style="background: #1e293b; color: #94a3b8; padding: 6px 12px; border-radius: 6px; font-size: 12px;">Vòng 2</button>
             <button class="btn btn-q-tab" data-qtab="v3" style="background: #1e293b; color: #94a3b8; padding: 6px 12px; border-radius: 6px; font-size: 12px;">Vòng 3</button>
             <button class="btn btn-q-tab" data-qtab="v4" style="background: #1e293b; color: #94a3b8; padding: 6px 12px; border-radius: 6px; font-size: 12px;">Vòng 4</button>
+            <button class="btn btn-q-tab" data-qtab="chp" style="background: #1e293b; color: #94a3b8; padding: 6px 12px; border-radius: 6px; font-size: 12px;">CHP</button>
+            <button class="btn btn-q-tab" data-qtab="khangia" style="background: #1e293b; color: #94a3b8; padding: 6px 12px; border-radius: 6px; font-size: 12px;">Khán giả</button>
           </div>
 
           <div id="qtab-content" style="min-height: 200px; color: #e2e8f0; font-size: 13px;">
@@ -1055,7 +1157,9 @@
         vong1: 'VÒNG 1: THỬ SỨC',
         vong2: 'VÒNG 2: ĐẶT CƯỢC',
         vong3: 'VÒNG 3: SO TÀI',
-        vong4: 'VÒNG 4: ẨN SỐ MAY MẮN'
+        vong4: 'VÒNG 4: ẨN SỐ MAY MẮN',
+        chp: 'CÂU HỎI PHỤ',
+        khangia: 'VIEW KHÁN GIẢ'
       };
 
       function parseExcelWorkbookWithoutHeaders(workbook) {
@@ -1164,11 +1268,76 @@
           }
         }
 
+        // 5. CÂU HỎI PHỤ (Sheet 5: CHP)
+        const chpSheetName = sheetNames.find(n => {
+          const low = String(n || '').trim().toLowerCase();
+          return low === 'chp' || low.includes('câu hỏi phụ') || low.includes('cau hoi phu');
+        }) || sheetNames[4];
+        const chpQuestions = [];
+        if (chpSheetName && workbook.Sheets[chpSheetName]) {
+          const s5Rows = XLSX.utils.sheet_to_json(workbook.Sheets[chpSheetName], { header: 1, defval: '' });
+          for (let r = 1; r < s5Rows.length; r++) {
+            const row = s5Rows[r];
+            if (!row || row.length === 0) continue;
+            const qText = String(row[0] || '').trim();
+            const aText = String(row[1] || '').trim();
+            if (!qText || qText.toLowerCase() === 'câu hỏi' || qText.toLowerCase() === 'stt') continue;
+            chpQuestions.push({ q: qText, a: aText });
+          }
+        }
+
+        // 6. VIEW KHÁN GIẢ (Sheet 6: Khán giả)
+        const kgSheetName = sheetNames.find(n => {
+          const low = String(n || '').trim().toLowerCase();
+          return low.includes('khán giả') || low.includes('khan gia');
+        }) || sheetNames[5];
+        const kgQuestions = [];
+        if (kgSheetName && workbook.Sheets[kgSheetName]) {
+          const s6Rows = XLSX.utils.sheet_to_json(workbook.Sheets[kgSheetName], { header: 1, defval: '' });
+          for (let r = 1; r < s6Rows.length; r++) {
+            const row = s6Rows[r];
+            if (!row || row.length === 0) continue;
+            const qText = String(row[0] || '').trim();
+            const opt1 = String(row[1] || '').trim();
+            const opt2 = String(row[2] || '').trim();
+            const opt3 = String(row[3] || '').trim();
+            const correctRaw = String(row[4] || '').trim();
+            if (!qText || qText.toLowerCase() === 'câu hỏi' || qText.toLowerCase() === 'stt') continue;
+
+            let correctIdx = 1;
+            const upperC = correctRaw.toUpperCase();
+            if (upperC === '1' || upperC === 'A' || upperC === 'ĐÁP ÁN 1' || upperC === 'ĐÁP ÁN A') {
+              correctIdx = 1;
+            } else if (upperC === '2' || upperC === 'B' || upperC === 'ĐÁP ÁN 2' || upperC === 'ĐÁP ÁN B') {
+              correctIdx = 2;
+            } else if (upperC === '3' || upperC === 'C' || upperC === 'ĐÁP ÁN 3' || upperC === 'ĐÁP ÁN C') {
+              correctIdx = 3;
+            } else if (correctRaw) {
+              const lowerRaw = correctRaw.toLowerCase();
+              const matchedIdx = [opt1, opt2, opt3].findIndex(o => o.toLowerCase() === lowerRaw);
+              if (matchedIdx !== -1) {
+                correctIdx = matchedIdx + 1;
+              } else {
+                const parsedInt = parseInt(correctRaw, 10);
+                if (parsedInt >= 1 && parsedInt <= 3) correctIdx = parsedInt;
+              }
+            }
+
+            kgQuestions.push({
+              question: qText,
+              options: [opt1, opt2, opt3],
+              correct: correctIdx
+            });
+          }
+        }
+
         return {
           vong1: { luot1: v1_luot1, luot2: v1_luot2 },
           vong2: v2_topics,
           vong3: v3_questions,
-          vong4: { gift: v4_gift, clues: v4_clues }
+          vong4: { gift: v4_gift, clues: v4_clues },
+          chp: chpQuestions,
+          khangia: kgQuestions
         };
       }
 
@@ -1226,10 +1395,12 @@
             const v1Count = (parsed.vong1?.luot1?.length || 0) + (parsed.vong1?.luot2?.length || 0);
             const v2Count = parsed.vong2?.length || 0;
             const v3Count = parsed.vong3?.length || 0;
+            const chpCount = parsed.chp?.length || 0;
+            const kgCount = parsed.khangia?.length || 0;
             updateExcelUIStatus(
               file.name,
               sizeStr,
-              `Đã nạp thành công: V1 (${v1Count} câu), V2 (${v2Count} chủ đề), V3 (${v3Count} câu), V4 (sẵn sàng)`,
+              `Đã nạp thành công: V1 (${v1Count}), V2 (${v2Count} CĐ), V3 (${v3Count}), V4 (OK), CHP (${chpCount}), Khán giả (${kgCount})`,
               true,
               false
             );
@@ -1316,10 +1487,12 @@
             const v1Count = (parsed.vong1?.luot1?.length || 0) + (parsed.vong1?.luot2?.length || 0);
             const v2Count = parsed.vong2?.length || 0;
             const v3Count = parsed.vong3?.length || 0;
+            const chpCount = parsed.chp?.length || 0;
+            const kgCount = parsed.khangia?.length || 0;
             updateExcelUIStatus(
               'Ẩn số vàng.xlsx',
               formatFileSize(arrayBuffer.byteLength),
-              `Đã nạp thành công từ server: V1 (${v1Count} câu), V2 (${v2Count} chủ đề), V3 (${v3Count} câu), V4 (sẵn sàng)`,
+              `Đã nạp từ server: V1 (${v1Count}), V2 (${v2Count} CĐ), V3 (${v3Count}), V4 (OK), CHP (${chpCount}), Khán giả (${kgCount})`,
               true,
               false
             );
@@ -1452,6 +1625,9 @@
         // Cập nhật Câu hỏi phụ (CHP) UI
         updateCHPControllerUI(state);
 
+        // Cập nhật View Khán giả UI
+        updateKhanGiaControllerUI(state);
+
         // Cập nhật Soundboard UI
         updateSoundboardControllerUI(state);
 
@@ -1469,8 +1645,12 @@
         const v3Key = state.vong3State?.revealedStage ?? 'none';
         const v4BoxesStr = JSON.stringify((state.vong4State?.boxes || []).map(b => `${b.id}_${b.money}_${b.revealedMoney}_${b.revealedClue}`));
         const v4Key = `${state.vong4State?.selectedBoxId}_${state.vong4State?.totalMoney}_${state.vong4State?.showGiftClue}_${state.vong4State?.showAnswer}_${state.vong4State?.resultStatus}_${v4BoxesStr}`;
-        const chpKey = state.chpState?.buzzerWinner ? state.chpState.buzzerWinner.playerId : 'none';
-        const previewStateKey = `${currentPreviewingView}_${v1Key}_${v2Key}_${v3Key}_${v4Key}_${chpKey}_${state.questions ? 'loaded' : 'no'}`;
+        const chpQ = state.chpState?.activeQuestion ? `${state.chpState.activeQuestion.index}_${state.chpState.activeQuestion.q}` : 'none';
+        const chpKey = `${state.chpState?.locked}_${state.chpState?.buzzerWinner ? state.chpState.buzzerWinner.playerId : 'none'}_${chpQ}_${state.chpState?.showQuestion}_${state.chpState?.showAnswer}_${state.chpState?.showOnViewer}`;
+        const kgState = state.khangiaState || {};
+        const kgQ = kgState.activeQuestion ? `${kgState.activeQuestion.index}_${kgState.activeQuestion.question}` : 'none';
+        const kgKey = `${kgQ}_${kgState.showQuestion}_${kgState.showOnViewer}_${kgState.showPrizeAmount}_${kgState.questionBoxPos}_${JSON.stringify(kgState.revealedOptions || {})}_${kgState.selectedOption}_${kgState.isGraded}_${JSON.stringify(kgState.gradedResults || {})}`;
+        const previewStateKey = `${currentPreviewingView}_${v1Key}_${v2Key}_${v3Key}_${v4Key}_${chpKey}_${kgKey}_${state.questions ? 'loaded' : 'no'}`;
 
         if (window._lastControllerPreviewKey !== previewStateKey) {
           window._lastControllerPreviewKey = previewStateKey;
@@ -1550,7 +1730,9 @@
             else if (track === 'Open.mp3') { btn.style.borderColor = '#7c3aed'; btn.style.color = '#c084fc'; }
             else if (track === 'Nhạc nền 1.mp3') { btn.style.borderColor = '#ca8a04'; btn.style.color = '#facc15'; }
             else if (track === 'Nhạc nền 2.mp3') { btn.style.borderColor = '#16a34a'; btn.style.color = '#4ade80'; }
+            else if (track === 'Nhạc nền 3.mp3') { btn.style.borderColor = '#5c7339'; btn.style.color = '#fadadd'; }
             else if (track === 'Congrat.mp3') { btn.style.borderColor = '#e11d48'; btn.style.color = '#f43f5e'; }
+            else if (track === '2M.mp3') { btn.style.borderColor = '#f59e0b'; btn.style.color = '#fbbf24'; }
           }
         });
 
@@ -1801,6 +1983,120 @@
             `;
           } else {
             winnerBanner.style.display = 'none';
+          }
+        }
+
+        // Cập nhật trạng thái câu hỏi CHP & nút Ẩn/Hiện đồ họa Viewer
+        const chpQStatus = document.getElementById('ctrl-chp-q-status');
+        const chpQText = document.getElementById('ctrl-chp-q-text');
+        const chpAnsText = document.getElementById('ctrl-chp-ans-text');
+        const btnChpToggleViewer = document.getElementById('btn-chp-toggle-viewer');
+
+        if (btnChpToggleViewer) {
+          const isViewerShown = chp.showOnViewer !== false;
+          if (isViewerShown) {
+            btnChpToggleViewer.textContent = 'Đồ họa Viewer: HIỆN';
+            btnChpToggleViewer.style.background = 'linear-gradient(135deg, #0ea5e9, #0284c7)';
+            btnChpToggleViewer.style.borderColor = '#38bdf8';
+          } else {
+            btnChpToggleViewer.textContent = 'Đồ họa Viewer: ĐÃ ẨN';
+            btnChpToggleViewer.style.background = 'linear-gradient(135deg, #475569, #334155)';
+            btnChpToggleViewer.style.borderColor = '#94a3b8';
+          }
+        }
+
+        if (chp.activeQuestion) {
+          if (chpQStatus) {
+            chpQStatus.textContent = chp.showQuestion
+              ? `CÂU PHỤ SỐ ${chp.activeQuestion.index || 1} (ĐANG HIỆN)`
+              : `CÂU PHỤ SỐ ${chp.activeQuestion.index || 1} (ĐÃ CHUẨN BỊ)`;
+            chpQStatus.style.color = chp.showQuestion ? '#4ade80' : '#facc15';
+          }
+          if (chpQText) chpQText.textContent = chp.activeQuestion.q || '';
+          if (chpAnsText) {
+            chpAnsText.textContent = chp.activeQuestion.a || '---';
+            chpAnsText.style.color = chp.showAnswer ? '#22c55e' : '#facc15';
+          }
+        } else {
+          if (chpQStatus) {
+            chpQStatus.textContent = 'Chưa mở câu hỏi phụ';
+            chpQStatus.style.color = '#38bdf8';
+          }
+          if (chpQText) chpQText.textContent = 'Bấm "Hiện câu hỏi" hoặc "Câu hỏi mới" để mở câu hỏi phụ.';
+          if (chpAnsText) {
+            chpAnsText.textContent = '---';
+            chpAnsText.style.color = '#94a3b8';
+          }
+        }
+      }
+
+      function updateKhanGiaControllerUI(state) {
+        const kg = state.khangiaState || {};
+        const qStatusEl = document.getElementById('ctrl-kg-q-status');
+        const selEl = document.getElementById('ctrl-kg-selected-label');
+        const corEl = document.getElementById('ctrl-kg-correct-label');
+        const optLetters = ['', 'A', 'B', 'C'];
+
+        if (qStatusEl) {
+          if (!kg.activeQuestion) {
+            qStatusEl.textContent = 'Chưa mở câu hỏi';
+            qStatusEl.style.color = '#94a3b8';
+          } else if (kg.showOnViewer === false || !kg.showQuestion) {
+            qStatusEl.textContent = `Câu ${kg.activeQuestion.index || 1} (Đang ẩn trên Viewer)`;
+            qStatusEl.style.color = '#facc15';
+          } else {
+            qStatusEl.textContent = `Câu ${kg.activeQuestion.index || 1} (Đang hiện)`;
+            qStatusEl.style.color = '#4ade80';
+          }
+        }
+
+        if (selEl) {
+          const sel = kg.selectedOption ? Number(kg.selectedOption) : null;
+          selEl.textContent = sel ? `Đáp án ${optLetters[sel] || sel}` : 'Chưa chọn';
+          selEl.style.color = sel ? '#c084fc' : '#94a3b8';
+        }
+
+        if (corEl) {
+          const cor = kg.activeQuestion ? Number(kg.activeQuestion.correct) : null;
+          corEl.textContent = cor ? `${optLetters[cor] || cor} (${kg.activeQuestion.options?.[cor - 1] || ''})` : '---';
+        }
+
+        const revealed = kg.revealedOptions || {};
+        document.querySelectorAll('.btn-kg-reveal').forEach(btn => {
+          const opt = Number(btn.getAttribute('data-opt'));
+          if (kg.activeQuestion && revealed[opt]) {
+            btn.style.outline = '2px solid #4ade80';
+            btn.style.boxShadow = '0 0 8px rgba(74, 222, 128, 0.5)';
+          } else {
+            btn.style.outline = 'none';
+            btn.style.boxShadow = 'none';
+          }
+        });
+
+        document.querySelectorAll('.btn-kg-select').forEach(btn => {
+          const opt = Number(btn.getAttribute('data-opt'));
+          if (Number(kg.selectedOption) === opt) {
+            btn.style.outline = '2px solid #facc15';
+            btn.style.boxShadow = '0 0 10px rgba(250, 204, 21, 0.5)';
+          } else {
+            btn.style.outline = 'none';
+            btn.style.boxShadow = 'none';
+          }
+        });
+
+        const btnTogglePrize = document.getElementById('btn-kg-toggle-prize');
+        if (btnTogglePrize) {
+          const isPrizeShown = kg.showPrizeAmount !== false;
+          if (isPrizeShown) {
+            btnTogglePrize.textContent = 'Số 2.000.000: HIỆN';
+            btnTogglePrize.style.background = '#eab308';
+            btnTogglePrize.style.color = '#000000';
+            btnTogglePrize.style.borderColor = '#facc15';
+          } else {
+            btnTogglePrize.textContent = 'Số 2.000.000: ĐÃ ẨN';
+            btnTogglePrize.style.background = '#475569';
+            btnTogglePrize.style.color = '#f8fafc';
+            btnTogglePrize.style.borderColor = '#94a3b8';
           }
         }
       }
@@ -4231,6 +4527,380 @@
         showNotification('Đã Reset tín hiệu chuông & KHÓA chuông CHP!');
       });
 
+      function pickNextUnusedChpQuestion(chpList, usedIndices) {
+        for (let i = 0; i < chpList.length; i++) {
+          if (!usedIndices.includes(i)) {
+            return { idx: i, item: chpList[i] };
+          }
+        }
+        return null;
+      }
+
+      document.getElementById('btn-chp-show-q')?.addEventListener('click', async () => {
+        const qData = getQuestionsData();
+        const chpList = qData?.chp || [];
+        if (chpList.length === 0) {
+          showPopup('Chưa có câu hỏi trong sheet CHP. Vui lòng nhấn "Nhập đề Excel" trước!');
+          return;
+        }
+        const chp = window.currentGameState.chpState || {};
+        if (chp.activeQuestion) {
+          await window.broadcastStateUpdate({
+            chpState: {
+              ...chp,
+              showQuestion: true,
+              showOnViewer: true
+            }
+          });
+          showNotification(`Đã hiện Câu hỏi phụ số ${chp.activeQuestion.index || 1}!`);
+          return;
+        }
+
+        const used = Array.isArray(chp.usedQuestionIndices) ? [...chp.usedQuestionIndices] : [];
+        const picked = pickNextUnusedChpQuestion(chpList, used);
+        if (!picked) {
+          showPopup(`Đã sử dụng hết toàn bộ ${chpList.length} câu hỏi phụ trong Excel!`);
+          return;
+        }
+        const newUsed = [...used, picked.idx];
+        await window.broadcastStateUpdate({
+          chpState: {
+            ...chp,
+            qIndex: picked.idx + 1,
+            usedQuestionIndices: newUsed,
+            activeQuestion: { q: picked.item.q, a: picked.item.a, index: picked.idx + 1 },
+            showQuestion: true,
+            showAnswer: false,
+            showOnViewer: true
+          }
+        });
+        showNotification(`Đã hiện Câu hỏi phụ số ${picked.idx + 1}!`);
+      });
+
+      document.getElementById('btn-chp-show-ans')?.addEventListener('click', async () => {
+        const chp = window.currentGameState.chpState || {};
+        if (!chp.activeQuestion || !chp.showQuestion) {
+          showPopup('Vui lòng bấm "Hiện câu hỏi" trước khi hiện đáp án đúng!');
+          return;
+        }
+        const now = Date.now();
+        if (typeof window.playEffectAudio === 'function') {
+          window.playEffectAudio('Hiendapandung.mp3');
+        }
+        await window.broadcastStateUpdate({
+          chpState: {
+            ...chp,
+            showAnswer: true
+          },
+          audioState: {
+            soundboard: { ...(window.currentGameState.audioState?.soundboard || {}) },
+            effects: {
+              track: 'Hiendapandung.mp3',
+              playing: true,
+              loop: false,
+              timestamp: now
+            }
+          }
+        });
+        showNotification(`Đã hiện đáp án đúng CHP: ${chp.activeQuestion.a}`);
+      });
+
+      document.getElementById('btn-chp-close-q')?.addEventListener('click', async () => {
+        const chp = window.currentGameState.chpState || {};
+        await window.broadcastStateUpdate({
+          chpState: {
+            ...chp,
+            activeQuestion: null,
+            showQuestion: false,
+            showAnswer: false,
+            locked: true,
+            buzzerWinner: null
+          }
+        });
+        showNotification('Đã ĐÓNG Câu hỏi phụ hiện tại & reset chuông.');
+      });
+
+      document.getElementById('btn-chp-new-q')?.addEventListener('click', async () => {
+        const qData = getQuestionsData();
+        const chpList = qData?.chp || [];
+        if (chpList.length === 0) {
+          showPopup('Chưa có câu hỏi trong sheet CHP. Vui lòng nhấn "Nhập đề Excel" trước!');
+          return;
+        }
+        const chp = window.currentGameState.chpState || {};
+        const used = Array.isArray(chp.usedQuestionIndices) ? [...chp.usedQuestionIndices] : [];
+        const picked = pickNextUnusedChpQuestion(chpList, used);
+        if (!picked) {
+          showPopup(`Đã sử dụng hết toàn bộ ${chpList.length} câu hỏi phụ trong Excel!`);
+          return;
+        }
+        const newUsed = [...used, picked.idx];
+        await window.broadcastStateUpdate({
+          chpState: {
+            ...chp,
+            qIndex: picked.idx + 1,
+            usedQuestionIndices: newUsed,
+            activeQuestion: { q: picked.item.q, a: picked.item.a, index: picked.idx + 1 },
+            showQuestion: true,
+            showAnswer: false,
+            showOnViewer: true,
+            locked: true,
+            buzzerWinner: null
+          }
+        });
+        showNotification(`Đã mở Câu hỏi phụ mới (Câu số ${picked.idx + 1})!`);
+      });
+
+      document.getElementById('btn-chp-toggle-viewer')?.addEventListener('click', async () => {
+        const chp = window.currentGameState.chpState || {};
+        const newShow = !(chp.showOnViewer !== false);
+        await window.broadcastStateUpdate({
+          chpState: {
+            ...chp,
+            showOnViewer: newShow
+          }
+        });
+        showNotification(newShow ? 'Đã HIỆN đồ họa Câu hỏi phụ trên Viewer!' : 'Đã ẨN đồ họa Câu hỏi phụ trên Viewer!');
+      });
+
+      // ==========================================
+      // BỘ ĐIỀU KHIỂN SỰ KIỆN VIEW KHÁN GIẢ
+      // ==========================================
+      function pickNextUnusedKhanGiaQuestion(kgList, usedIndices) {
+        for (let i = 0; i < kgList.length; i++) {
+          if (!usedIndices.includes(i)) {
+            return { idx: i, item: kgList[i] };
+          }
+        }
+        return null;
+      }
+
+      document.getElementById('btn-kg-show-q')?.addEventListener('click', async () => {
+        const qData = getQuestionsData();
+        const kgList = qData?.khangia || [];
+        if (kgList.length === 0) {
+          showPopup('Chưa có câu hỏi trong sheet Khán giả. Vui lòng nhấn "Nhập đề Excel" trước!');
+          return;
+        }
+
+        const kg = window.currentGameState.khangiaState || {};
+        if (kg.activeQuestion) {
+          await window.broadcastStateUpdate({
+            khangiaState: {
+              ...kg,
+              showQuestion: true,
+              showOnViewer: true
+            }
+          });
+          showNotification(`Đã hiện Câu hỏi Khán giả số ${kg.activeQuestion.index || 1}!`);
+          return;
+        }
+
+        const used = Array.isArray(kg.usedQuestionIndices) ? [...kg.usedQuestionIndices] : [];
+        const picked = pickNextUnusedKhanGiaQuestion(kgList, used);
+        if (!picked) {
+          showPopup(`Đã sử dụng hết toàn bộ ${kgList.length} câu hỏi Khán giả trong Excel!`);
+          return;
+        }
+        const newUsed = [...used, picked.idx];
+
+        await window.broadcastStateUpdate({
+          khangiaState: {
+            ...kg,
+            qIndex: picked.idx + 1,
+            usedQuestionIndices: newUsed,
+            activeQuestion: {
+              question: picked.item.question,
+              options: picked.item.options,
+              correct: picked.item.correct,
+              index: picked.idx + 1
+            },
+            showQuestion: true,
+            showOnViewer: true,
+            questionBoxPos: 2,
+            revealedOptions: { 1: false, 2: false, 3: false },
+            selectedOption: null,
+            isGraded: false,
+            gradedResults: { 1: null, 2: null, 3: null },
+            isResetOptions: true
+          }
+        });
+        showNotification(`Đã hiện Câu hỏi Khán giả số ${picked.idx + 1}!`);
+      });
+
+      document.querySelectorAll('.btn-kg-reveal').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const optNum = Number(btn.getAttribute('data-opt'));
+          const kg = window.currentGameState.khangiaState || {};
+          if (!kg.activeQuestion) {
+            showPopup('Vui lòng bấm "Hiện câu hỏi" trước!');
+            return;
+          }
+          const optLetters = ['', 'A', 'B', 'C'];
+          const now = Date.now();
+          if (typeof window.playEffectAudio === 'function') {
+            window.playEffectAudio('AudiQuesAns.mp3');
+          }
+          await window.broadcastStateUpdate({
+            khangiaState: {
+              ...kg,
+              showQuestion: true,
+              showOnViewer: true,
+              revealedOptions: {
+                ...(kg.revealedOptions || {}),
+                [optNum]: true
+              }
+            },
+            audioState: {
+              soundboard: { ...(window.currentGameState.audioState?.soundboard || {}) },
+              effects: {
+                track: 'AudiQuesAns.mp3',
+                playing: true,
+                loop: false,
+                timestamp: now
+              }
+            }
+          });
+          showNotification(`Đã hiện đáp án ${optLetters[optNum]}!`);
+        });
+      });
+
+      document.querySelectorAll('.btn-kg-select').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const optNum = Number(btn.getAttribute('data-opt'));
+          const kg = window.currentGameState.khangiaState || {};
+          if (!kg.activeQuestion) {
+            showPopup('Vui lòng bấm "Hiện câu hỏi" trước!');
+            return;
+          }
+          const optLetters = ['', 'A', 'B', 'C'];
+          const now = Date.now();
+          if (typeof window.playEffectAudio === 'function') {
+            window.playEffectAudio('Hiengoiy.mp3');
+          }
+          await window.broadcastStateUpdate({
+            khangiaState: {
+              ...kg,
+              showQuestion: true,
+              showOnViewer: true,
+              revealedOptions: {
+                ...(kg.revealedOptions || {}),
+                [optNum]: true
+              },
+              selectedOption: optNum,
+              isGraded: false,
+              gradedResults: {
+                ...(kg.gradedResults || {}),
+                [optNum]: null
+              }
+            },
+            audioState: {
+              soundboard: { ...(window.currentGameState.audioState?.soundboard || {}) },
+              effects: {
+                track: 'Hiengoiy.mp3',
+                playing: true,
+                loop: false,
+                timestamp: now
+              }
+            }
+          });
+          showNotification(`Đã chọn đáp án ${optLetters[optNum]} (Màu tím)!`);
+        });
+      });
+
+      document.getElementById('btn-kg-grade')?.addEventListener('click', async () => {
+        const kg = window.currentGameState.khangiaState || {};
+        if (!kg.activeQuestion) {
+          showPopup('Chưa có câu hỏi Khán giả đang mở!');
+          return;
+        }
+        const selectedOpt = kg.selectedOption ? Number(kg.selectedOption) : null;
+        if (!selectedOpt) {
+          showPopup('Vui lòng bấm "Chọn A", "Chọn B" hoặc "Chọn C" trước khi chấm Đúng hay Sai!');
+          return;
+        }
+
+        const correctOpt = Number(kg.activeQuestion.correct) || 1;
+        const isCorrect = (selectedOpt === correctOpt);
+        const optLetters = ['', 'A', 'B', 'C'];
+        const trackName = isCorrect ? 'Congrat.mp3' : 'SaiV4.mp3';
+        const now = Date.now();
+
+        if (typeof window.playEffectAudio === 'function') {
+          window.playEffectAudio(trackName);
+        }
+
+        await window.broadcastStateUpdate({
+          khangiaState: {
+            ...kg,
+            showQuestion: true,
+            showOnViewer: true,
+            isGraded: true,
+            gradedResults: {
+              ...(kg.gradedResults || {}),
+              [selectedOpt]: isCorrect ? 'correct' : 'wrong'
+            }
+          },
+          audioState: {
+            soundboard: { ...(window.currentGameState.audioState?.soundboard || {}) },
+            effects: {
+              track: trackName,
+              playing: true,
+              loop: false,
+              timestamp: now
+            }
+          }
+        });
+
+        if (isCorrect) {
+          showNotification(`CHÍNH XÁC! Đáp án ${optLetters[selectedOpt]} chuyển màu VÀNG!`);
+        } else {
+          showNotification(`CHƯA CHÍNH XÁC! Đáp án ${optLetters[selectedOpt]} chuyển màu ĐEN!`);
+        }
+      });
+
+      document.getElementById('btn-kg-hide-q')?.addEventListener('click', async () => {
+        const kg = window.currentGameState.khangiaState || {};
+        await window.broadcastStateUpdate({
+          khangiaState: {
+            ...kg,
+            showOnViewer: false
+          }
+        });
+        showNotification('Đã ẨN câu hỏi Khán giả trên Viewer (bấm "Hiện câu hỏi" để hiện lại).');
+      });
+
+      document.getElementById('btn-kg-close-q')?.addEventListener('click', async () => {
+        const kg = window.currentGameState.khangiaState || {};
+        await window.broadcastStateUpdate({
+          khangiaState: {
+            ...kg,
+            activeQuestion: null,
+            showQuestion: false,
+            showOnViewer: true,
+            questionBoxPos: 2,
+            revealedOptions: { 1: false, 2: false, 3: false },
+            selectedOption: null,
+            isGraded: false,
+            gradedResults: { 1: null, 2: null, 3: null },
+            isResetOptions: true
+          }
+        });
+        showNotification('Đã ĐÓNG câu hỏi Khán giả! Cả 3 ô đáp án đã trở về màu xanh dương.');
+      });
+
+      document.getElementById('btn-kg-toggle-prize')?.addEventListener('click', async () => {
+        const kg = window.currentGameState.khangiaState || {};
+        const newShow = !(kg.showPrizeAmount !== false);
+        await window.broadcastStateUpdate({
+          khangiaState: {
+            ...kg,
+            showPrizeAmount: newShow
+          }
+        });
+        showNotification(newShow ? 'Đã HIỆN số 2.000.000 màu vàng trên Viewer!' : 'Đã ẨN số 2.000.000 trên Viewer!');
+      });
+
       // ==========================================
       // RENDER PREVIEW CONTROLLER
       // ==========================================
@@ -4265,6 +4935,12 @@
           chpControlPanel.style.display = (viewKey === 'chp') ? 'flex' : 'none';
         }
 
+        // Chỉ xuất hiện bảng nút bấm điều khiển View Khán giả khi đang xem View Khán giả
+        const kgControlPanel = document.getElementById('controller-khangia-control-panel');
+        if (kgControlPanel) {
+          kgControlPanel.style.display = (viewKey === 'khangia') ? 'flex' : 'none';
+        }
+
         const area = document.getElementById('controller-preview-area');
         if (!area) return;
 
@@ -4283,6 +4959,9 @@
           const isLocked = (chp.locked === true || chp.locked === undefined);
           const winner = chp.buzzerWinner;
           const players = window.currentGameState.players || [];
+          const activeQ = chp.activeQuestion;
+          const showQ = !!chp.showQuestion;
+          const showAns = !!chp.showAnswer;
           let allowedList = [1, 2, 3, 4];
           if (Array.isArray(chp.allowedPlayerIds)) {
             allowedList = chp.allowedPlayerIds.map(Number);
@@ -4290,8 +4969,30 @@
             allowedList = [Number(chp.allowedPlayerId)];
           }
 
+          const ansNorm = String(activeQ?.a || '').trim().toLowerCase();
+          const isAnsDung = showAns && activeQ && (ansNorm === 'đúng' || ansNorm === 'dung' || ansNorm.includes('đúng')) && !ansNorm.includes('sai');
+          const isAnsSai = showAns && activeQ && ansNorm.includes('sai');
+
           area.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 12px; padding: 10px;">
+            <div style="display: flex; flex-direction: column; gap: 10px; padding: 8px;">
+              <!-- Khối hiển thị câu hỏi phụ giống Viewer (Câu hỏi + 2 ô Đúng / Sai, không có đồng hồ) -->
+              <div style="background: #0b1120; border: 1.5px solid #334155; border-radius: 6px; padding: 10px 14px; display: grid; grid-template-columns: 3fr 1fr 1fr; gap: 10px; align-items: stretch;">
+                <div style="background: #000000; border: 1.5px solid ${showQ && activeQ ? '#38bdf8' : '#334155'}; padding: 10px; min-height: 68px; display: flex; flex-direction: column; justify-content: center;">
+                  <div style="font-size: 10px; color: #38bdf8; margin-bottom: 3px;">
+                    ${activeQ ? `CÂU HỎI PHỤ SỐ ${activeQ.index || 1} (${showQ ? 'ĐANG HIỆN' : 'CHƯA HIỆN'}) | Đáp án đề: ${activeQ.a || '---'}` : 'CHƯA MỞ CÂU HỎI PHỤ'} | VIEWER: ${chp.showOnViewer === false ? 'ĐÃ ẨN' : 'ĐANG HIỆN'}
+                  </div>
+                  <div style="font-size: 13px; color: #ffffff; line-height: 1.35;">
+                    ${activeQ ? activeQ.q : '<span style="color:#64748b;">Chưa có câu hỏi nào đang mở.</span>'}
+                  </div>
+                </div>
+                <div style="background: #000000; border: 2px solid ${isAnsDung ? '#facc15' : '#334155'}; opacity: ${isAnsSai ? '0.4' : '1'}; box-shadow: ${isAnsDung ? '0 0 12px rgba(250,204,21,0.5)' : 'none'}; padding: 10px; min-height: 68px; display: flex; align-items: center; justify-content: center; text-align: center;">
+                  <span style="font-size: 18px; color: ${isAnsDung ? '#facc15' : '#ffffff'}; letter-spacing: 1px;">ĐÚNG</span>
+                </div>
+                <div style="background: #000000; border: 2px solid ${isAnsSai ? '#facc15' : '#334155'}; opacity: ${isAnsDung ? '0.4' : '1'}; box-shadow: ${isAnsSai ? '0 0 12px rgba(250,204,21,0.5)' : 'none'}; padding: 10px; min-height: 68px; display: flex; align-items: center; justify-content: center; text-align: center;">
+                  <span style="font-size: 18px; color: ${isAnsSai ? '#facc15' : '#ffffff'}; letter-spacing: 1px;">SAI</span>
+                </div>
+              </div>
+
               <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 6px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <span style="background: #fbbf24; color: #000; font-weight: 900; padding: 3px 8px; border-radius: 4px; font-size: 11px;">GIÁM SÁT CHUÔNG CÂU HỎI PHỤ</span>
@@ -4305,22 +5006,22 @@
               </div>
 
               ${winner ? `
-                <div style="background: linear-gradient(135deg, #15803d, #166534); border: 2px solid #facc15; border-radius: 8px; padding: 14px; text-align: center; box-shadow: 0 0 20px rgba(250, 204, 21, 0.4);">
+                <div style="background: linear-gradient(135deg, #15803d, #166534); border: 2px solid #facc15; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 0 20px rgba(250, 204, 21, 0.4);">
                   <div style="font-size: 11px; color: #fef08a; text-transform: uppercase; font-weight: bold;">THÍ SINH BẤM CHUÔNG NHANH NHẤT:</div>
-                  <div style="font-size: 20px; font-weight: 900; color: #ffffff; margin: 4px 0;">
+                  <div style="font-size: 18px; font-weight: 900; color: #ffffff; margin: 4px 0;">
                     ${winner.name.toUpperCase()} (PLAYER ${winner.playerId})
                   </div>
                   <div style="font-size: 12px; color: #facc15;">Thời gian ghi nhận: <b>${winner.time || ''}</b></div>
                 </div>
               ` : `
-                <div style="background: #1e293b; border: 1.5px dashed #475569; border-radius: 8px; padding: 14px; text-align: center;">
-                  <div style="font-size: 13px; color: ${isLocked ? '#94a3b8' : '#4ade80'}; font-weight: bold;">
+                <div style="background: #1e293b; border: 1.5px dashed #475569; border-radius: 8px; padding: 10px; text-align: center;">
+                  <div style="font-size: 12px; color: ${isLocked ? '#94a3b8' : '#4ade80'}; font-weight: bold;">
                     ${isLocked ? 'Chuông đang khóa - Bấm nút "Mở chuông" phía trên để thí sinh bấm' : 'Chuông đang mở! Đang chờ thí sinh bấm chuông...'}
                   </div>
                 </div>
               `}
 
-              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 4px;">
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 2px;">
                 ${[1, 2, 3, 4].map(id => {
                   const p = players.find(x => Number(x.id) === id) || { name: `Người chơi ${id}` };
                   const isEligible = allowedList.includes(id);
@@ -4345,6 +5046,98 @@
                     </div>
                   `;
                 }).join('')}
+              </div>
+            </div>
+          `;
+          return;
+        }
+
+        if (viewKey === 'khangia') {
+          const kg = window.currentGameState.khangiaState || {};
+          const activeQ = kg.activeQuestion || null;
+          const isQVisible = !!activeQ;
+          const qData = getQuestionsData();
+          const totalKg = qData?.khangia?.length || 0;
+          const revealed = isQVisible ? (kg.revealedOptions || {}) : {};
+          const selectedOpt = isQVisible ? kg.selectedOption : null;
+          const graded = isQVisible ? (kg.gradedResults || {}) : {};
+          const optLetters = ['A', 'B', 'C'];
+
+          const qText = activeQ ? activeQ.question : '';
+          const opts = activeQ ? (activeQ.options || ['', '', '']) : ['', '', ''];
+          const correctIdx = activeQ ? (Number(activeQ.correct) || 1) : null;
+
+          area.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 4px;">
+                <span style="font-size: 12px; color: #f472b6;">VIEW KHÁN GIẢ (${totalKg} câu trong Excel | Đã dùng: ${(kg.usedQuestionIndices || []).length})</span>
+                <span style="font-size: 11px; color: ${kg.showOnViewer === false ? '#f87171' : '#4ade80'};">
+                  ${kg.showOnViewer === false ? 'ĐANG ẨN TRÊN VIEWER' : 'ĐANG HIỆN TRÊN VIEWER'}
+                </span>
+              </div>
+
+              <!-- Mô phỏng bố cục Viewer Khán giả: Trái = Ô đen lớn 1 cao bằng (Ô đen lớn 2 + 3 ô đáp án + khoảng cách); Phải = Ô đen lớn 2 (chứa câu hỏi) + 3 ô đáp án -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: stretch;">
+                <div style="background: #000000; border: 2px solid #334155; padding: 12px; display: flex; flex-direction: column; justify-content: center;">
+                  <div style="font-size: 9px; color: #64748b; margin-bottom: 4px;">Ô ĐEN LỚN 1 (BÊN TRÁI)</div>
+                  <div style="font-size: 12px; color: #475569;">[Khung đen trái cao bằng tổng cột phải]</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <div style="background: #000000; border: 2px solid ${activeQ ? '#ec4899' : '#334155'}; padding: 12px; min-height: 110px; display: flex; flex-direction: column; justify-content: center;">
+                    <div style="font-size: 9px; color: #64748b; margin-bottom: 4px;">Ô ĐEN LỚN 2 (BÊN PHẢI - VỊ TRÍ CÂU)</div>
+                    <div style="font-size: 12px; color: #ffffff; line-height: 1.35;">${qText || '<span style="color:#475569;">[Trống]</span>'}</div>
+                  </div>
+                  ${[0, 1, 2].map(idx => {
+                    const oneBased = idx + 1;
+                    const isRev = !!(isQVisible && revealed[oneBased]);
+                    const isSel = !!(isQVisible && Number(selectedOpt) === oneBased);
+                    const gradeSt = isQVisible ? graded[oneBased] : null;
+                    const isCorrectAns = (correctIdx === oneBased);
+
+                    let bg = 'linear-gradient(90deg, #0284c7, #0369a1)';
+                    let color = '#ffffff';
+                    let border = '1.5px solid #38bdf8';
+                    if (gradeSt === 'correct') {
+                      bg = '#facc15';
+                      color = '#000000';
+                      border = '2px solid #ffffff';
+                    } else if (gradeSt === 'wrong') {
+                      bg = '#000000';
+                      color = '#64748b';
+                      border = '1.5px solid #334155';
+                    } else if (isSel) {
+                      bg = 'linear-gradient(90deg, #6d28d9, #4c1d95)';
+                      border = '1.5px solid #c084fc';
+                    }
+
+                    return `
+                      <div style="background: ${bg}; color: ${color}; border: ${border}; padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px;">
+                        <div>
+                          <b>${optLetters[idx]}.</b> ${activeQ ? (opts[idx] || '---') : '<span style="opacity:0.5;">[Chưa có câu]</span>'}
+                        </div>
+                        <div style="display: flex; gap: 4px; font-size: 9px; flex-shrink: 0;">
+                          ${activeQ ? `<span style="background: rgba(0,0,0,0.45); color: ${isRev ? '#4ade80' : '#94a3b8'}; padding: 2px 5px; border-radius: 3px;">${isRev ? 'ĐÃ HIỆN' : 'ĐANG ẨN'}</span>` : ''}
+                          ${isCorrectAns ? `<span style="background: #16a34a; color: #fff; padding: 2px 5px; border-radius: 3px;">ĐÁP ÁN ĐÚNG</span>` : ''}
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center;">
+                <div style="display: flex; align-items: center; justify-content: center;">
+                  ${kg.showPrizeAmount !== false ? `
+                    <div style="background: #000000; border: none; width: 100%; padding: 10px; text-align: center; color: #facc15; font-size: 20px; letter-spacing: 2px;">
+                      2.000.000
+                    </div>
+                  ` : `
+                    <div style="border: 1px dashed #334155; width: 100%; padding: 10px; text-align: center; color: #64748b; font-size: 11px;">
+                      [Số 2.000.000 đang ẩn]
+                    </div>
+                  `}
+                </div>
+                <div></div>
               </div>
             </div>
           `;
@@ -4884,10 +5677,12 @@
           const v1Count = (q.vong1?.luot1?.length || 0) + (q.vong1?.luot2?.length || 0);
           const v2Count = q.vong2?.length || 0;
           const v3Count = q.vong3?.length || 0;
+          const chpCount = q.chp?.length || 0;
+          const kgCount = q.khangia?.length || 0;
           updateExcelUIStatus(
             'Dữ liệu câu hỏi hiện tại',
             'Hệ thống',
-            `Đang có sẵn: V1 (${v1Count} câu), V2 (${v2Count} chủ đề), V3 (${v3Count} câu), V4 (sẵn sàng)`,
+            `Đang có sẵn: V1 (${v1Count}), V2 (${v2Count} CĐ), V3 (${v3Count}), V4 (OK), CHP (${chpCount}), Khán giả (${kgCount})`,
             true,
             false
           );
@@ -4990,6 +5785,36 @@
                 <div style="background: #1e293b; padding: 8px; border-radius: 6px; font-size: 12px;">
                   <div style="color: #38bdf8;">Mảnh ${c.index}</div>
                   <div style="margin-top: 2px;">${c.clue}</div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else if (activeTabQuestions === 'chp') {
+          const items = q.chp || [];
+          container.innerHTML = `
+            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">Câu hỏi phụ (CHP - ${items.length} câu):</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto;">
+              ${items.length === 0 ? '<div style="color:#64748b;">Chưa có câu hỏi phụ trong file Excel.</div>' : items.map((it, idx) => `
+                <div style="background: #1e293b; padding: 6px 10px; border-radius: 6px; font-size: 12px;">
+                  <span style="color: #fbbf24;">Câu ${idx + 1}:</span> ${it.q}
+                  <span style="color: #4ade80; float: right;">=> ${it.a}</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else if (activeTabQuestions === 'khangia') {
+          const items = q.khangia || [];
+          const letters = ['A', 'B', 'C'];
+          container.innerHTML = `
+            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">Phần thi Khán giả (${items.length} câu):</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto;">
+              ${items.length === 0 ? '<div style="color:#64748b;">Chưa có câu hỏi Khán giả trong file Excel.</div>' : items.map((it, idx) => `
+                <div style="background: #1e293b; padding: 8px 10px; border-radius: 6px; font-size: 12px;">
+                  <div style="color: #f472b6; margin-bottom: 4px;"><b>Câu ${idx + 1}:</b> ${it.question}</div>
+                  <div style="color: #cbd5e1; font-size: 11px;">
+                    ${(it.options || []).map((o, oIdx) => `<span style="margin-right: 12px; color: ${Number(it.correct) === (oIdx + 1) ? '#4ade80' : '#cbd5e1'};"><b>${letters[oIdx]}.</b> ${o}</span>`).join('')}
+                    <span style="color: #facc15; float: right;">[Đúng: ${letters[(Number(it.correct) || 1) - 1] || it.correct}]</span>
+                  </div>
                 </div>
               `).join('')}
             </div>

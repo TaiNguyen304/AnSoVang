@@ -789,7 +789,26 @@
       locked: true,
       buzzerWinner: null,
       allowedPlayerIds: [1, 2, 3, 4],
-      allowedPlayerId: 'all'
+      allowedPlayerId: 'all',
+      qIndex: 0,
+      usedQuestionIndices: [],
+      activeQuestion: null,
+      showQuestion: false,
+      showAnswer: false,
+      showOnViewer: true
+    },
+    khangiaState: {
+      qIndex: 0,
+      usedQuestionIndices: [],
+      activeQuestion: null,
+      showQuestion: false,
+      showOnViewer: true,
+      showPrizeAmount: true,
+      questionBoxPos: 2,
+      revealedOptions: { 1: false, 2: false, 3: false },
+      selectedOption: null,
+      isGraded: false,
+      gradedResults: {}
     },
     audioState: {
       soundboard: {
@@ -848,9 +867,9 @@
   // Bộ nhớ đệm Blob Audio toàn cục: Tải trước toàn bộ file nhạc để phát 0ms không phụ thuộc mạng
   const audioBlobCache = new Map();
   const KNOWN_AUDIO_TRACKS = [
-    '5s.mp3', 'Congrat.mp3', 'Intro.mp3', 'Nhạc nền 1.mp3', 'Nhạc nền 2.mp3', 'Open.mp3',
+    '5s.mp3', 'Congrat.mp3', 'Intro.mp3', 'Nhạc nền 1.mp3', 'Nhạc nền 2.mp3', 'Nhạc nền 3.mp3', 'Open.mp3',
     'Buzzer.mp3', 'Buzzer1.mp3', 'Hetgio.mp3', 'Hiengoiy.mp3', 'Hiendapandung.mp3', 'MoGoiy.mp3', 'SaiV3.mp3',
-    '60s.mp3', '120s.mp3'
+    'SaiV4.mp3', '2M.mp3', 'AudiQuesAns.mp3', 'AudiQues.mp3', '60s.mp3', '120s.mp3'
   ];
 
   async function preloadAllAudioFiles() {
@@ -868,8 +887,10 @@
         }
         if (res && res.ok) {
           const blob = await res.blob();
-          const blobUrl = URL.createObjectURL(blob);
-          audioBlobCache.set(track, blobUrl);
+          if (blob && blob.size > 0) {
+            const blobUrl = URL.createObjectURL(blob);
+            audioBlobCache.set(track, blobUrl);
+          }
         }
       } catch (e) {}
     }
@@ -1862,11 +1883,12 @@
     const vong3Changed = JSON.stringify(oldState.vong3State) !== JSON.stringify(newState.vong3State);
     const vong4Changed = JSON.stringify(oldState.vong4State) !== JSON.stringify(newState.vong4State);
     const chpChanged = JSON.stringify(oldState.chpState) !== JSON.stringify(newState.chpState);
+    const khangiaChanged = JSON.stringify(oldState.khangiaState) !== JSON.stringify(newState.khangiaState);
     const audioChanged = JSON.stringify(oldState.audioState) !== JSON.stringify(newState.audioState);
     const roomAuthChanged = JSON.stringify(oldState.roomAuth) !== JSON.stringify(newState.roomAuth);
 
     // Nếu không có gì thay đổi thì bỏ qua
-    if (!force && !viewChanged && !playersChanged && !questionsChanged && !vong1Changed && !vong2Changed && !vong3Changed && !vong4Changed && !chpChanged && !audioChanged && !roomAuthChanged && oldState.lastUpdated === newState.lastUpdated) {
+    if (!force && !viewChanged && !playersChanged && !questionsChanged && !vong1Changed && !vong2Changed && !vong3Changed && !vong4Changed && !chpChanged && !khangiaChanged && !audioChanged && !roomAuthChanged && oldState.lastUpdated === newState.lastUpdated) {
       return;
     }
 
@@ -1951,6 +1973,28 @@
         ...(window.currentGameState.chpState || {}),
         ...(newState.chpState || {})
       },
+      khangiaState: (() => {
+        const prevKg = window.currentGameState.khangiaState || {};
+        const nextKg = newState.khangiaState || {};
+        const mergedKg = {
+          ...prevKg,
+          ...nextKg,
+          revealedOptions: nextKg.isResetOptions
+            ? (nextKg.revealedOptions || { 1: false, 2: false, 3: false })
+            : {
+                ...(prevKg.revealedOptions || { 1: false, 2: false, 3: false }),
+                ...(nextKg.revealedOptions || {})
+              },
+          gradedResults: nextKg.isResetOptions
+            ? (nextKg.gradedResults || {})
+            : {
+                ...(prevKg.gradedResults || {}),
+                ...(nextKg.gradedResults || {})
+              }
+        };
+        delete mergedKg.isResetOptions;
+        return mergedKg;
+      })(),
       audioState: {
         ...(window.currentGameState.audioState || {}),
         ...(newState.audioState || {}),
@@ -2001,6 +2045,7 @@
       vong3Changed,
       vong4Changed,
       chpChanged,
+      khangiaChanged,
       audioChanged,
       roomAuthChanged
     });
@@ -2296,6 +2341,26 @@
       updatedState.chpState = {
         ...(window.currentGameState.chpState || {}),
         ...updatedFields.chpState
+      };
+    }
+    if (updatedFields.khangiaState) {
+      const prevKg = window.currentGameState.khangiaState || {};
+      const nextKg = updatedFields.khangiaState;
+      updatedState.khangiaState = {
+        ...prevKg,
+        ...nextKg,
+        revealedOptions: nextKg.isResetOptions
+          ? (nextKg.revealedOptions || { 1: false, 2: false, 3: false })
+          : {
+              ...(prevKg.revealedOptions || { 1: false, 2: false, 3: false }),
+              ...(nextKg.revealedOptions || {})
+            },
+        gradedResults: nextKg.isResetOptions
+          ? (nextKg.gradedResults || {})
+          : {
+              ...(prevKg.gradedResults || {}),
+              ...(nextKg.gradedResults || {})
+            }
       };
     }
     if (updatedFields.roomAuth) {

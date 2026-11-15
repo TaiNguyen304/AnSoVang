@@ -8,7 +8,12 @@
     <style>
       *, *::before, *::after {
         font-weight: bold !important;
+        font-family: 'Segoe UI', sans-serif;
         box-sizing: border-box;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
       }
       html, body {
         width: 100vw;
@@ -17,7 +22,7 @@
         padding: 0;
         overflow: hidden;
         box-sizing: border-box;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Segoe UI', sans-serif;
         background-color: #0b1120;
         color: #f8fafc;
       }
@@ -189,6 +194,11 @@
           e.preventDefault();
           return false;
         }, true);
+
+        window.addEventListener('selectstart', function (e) {
+          e.preventDefault();
+          return false;
+        }, true);
       }
       disableDevTools();
       window.disableDevTools = disableDevTools;
@@ -295,8 +305,14 @@
 
       <!-- VIEW CÂU HỎI PHỤ (CHP) -->
       <div id="view-chp" class="view-container" style="background: #1e293b; border-radius: 12px; padding: 12px; border: 2px solid #fbbf24;">
-        <h3 style="margin: 0 0 10px 0; font-size: 18px; color: #fbbf24; flex-shrink: 0;">CÂU HỎI PHỤ</h3>
-        <div id="player-chp-content" style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 20px;">Đang tải...</div>
+        <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #fbbf24; flex-shrink: 0;">CÂU HỎI PHỤ</h3>
+        <div id="player-chp-content" style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; padding: 6px;">Đang tải...</div>
+      </div>
+
+      <!-- VIEW KHÁN GIẢ -->
+      <div id="view-khangia" class="view-container" style="background: #1e293b; border-radius: 12px; padding: 12px; border: 2px solid #ec4899;">
+        <h3 style="margin: 0 0 10px 0; font-size: 18px; color: #f472b6; flex-shrink: 0;">VIEW KHÁN GIẢ</h3>
+        <div id="player-kg-content" style="flex: 1; min-height: 0; overflow-y: auto;">Đang chờ câu hỏi khán giả...</div>
       </div>
 
     </div>
@@ -310,6 +326,7 @@
       var lastRenderedV3Key = '';
       var lastRenderedV4Key = '';
       var lastRenderedCHPKey = '';
+      var lastRenderedKGKey = '';
 
       function checkPlayerAccess() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -331,7 +348,8 @@
         vong2: 'view-vong2',
         vong3: 'view-vong3',
         vong4: 'view-vong4',
-        chp: 'view-chp'
+        chp: 'view-chp',
+        khangia: 'view-khangia'
       };
 
       const viewDisplayNames = {
@@ -340,7 +358,8 @@
         vong2: 'VÒNG 2: ĐẶT CƯỢC',
         vong3: 'VÒNG 3: SO TÀI',
         vong4: 'VÒNG 4: ẨN SỐ MAY MẮN',
-        chp: 'CÂU HỎI PHỤ'
+        chp: 'CÂU HỎI PHỤ',
+        khangia: 'VIEW KHÁN GIẢ'
       };
 
       let currentPlayerView = null;
@@ -418,6 +437,7 @@
         try { renderPlayerVong3(state); } catch (e) {}
         try { renderPlayerVong4(state); } catch (e) {}
         try { renderPlayerCHP(state, myPlayerId); } catch (e) {}
+        try { renderPlayerKhanGia(state); } catch (e) {}
       });
 
       function renderPlayerVong1(state) {
@@ -1013,6 +1033,10 @@
         const chp = state.chpState || {};
         const isLocked = (chp.locked === true || chp.locked === undefined);
         const winner = chp.buzzerWinner;
+        const activeQ = chp.activeQuestion;
+        const showQ = !!chp.showQuestion;
+        const showAns = !!chp.showAnswer;
+
         let allowedList = [1, 2, 3, 4];
         if (Array.isArray(chp.allowedPlayerIds)) {
           allowedList = chp.allowedPlayerIds.map(Number);
@@ -1023,7 +1047,7 @@
         const isEligible = allowedList.includes(Number(pId));
         const isWinnerMe = (winner && String(winner.playerId) === String(pId));
 
-        const currentCHPKey = `${isLocked}_${winner ? winner.playerId : 'none'}_${isEligible}_${isWinnerMe}`;
+        const currentCHPKey = `${isLocked}_${winner ? winner.playerId : 'none'}_${isEligible}_${isWinnerMe}_${activeQ ? activeQ.index + '_' + activeQ.q + '_' + activeQ.a : 'none'}_${showQ}_${showAns}`;
         if (lastRenderedCHPKey === currentCHPKey && document.getElementById('btn-player-chp-buzzer')) {
           return;
         }
@@ -1056,10 +1080,32 @@
         }
 
         container.innerHTML = `
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%;">
-            <button id="btn-player-chp-buzzer" ${btnDisabled ? 'disabled' : ''} class="btn" style="width: 260px; height: 260px; border-radius: 50%; background: ${btnBg}; color: white; font-size: 22px; font-weight: 900; border: 6px solid #ffffff; box-shadow: ${btnShadow}; cursor: ${btnDisabled ? 'not-allowed' : 'pointer'}; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; line-height: 1.3;">
-              ${btnContent}
-            </button>
+          <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; height: 100%; justify-content: space-between;">
+            <div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
+              <div style="background: #0f172a; border-radius: 10px; padding: 10px 14px; border: 1.5px solid #fbbf24;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <span style="color: #fbbf24; font-size: 11px; text-transform: uppercase;">
+                    ${(showQ && activeQ) ? `CÂU HỎI PHỤ SỐ ${activeQ.index || 1}` : 'CÂU HỎI PHỤ'}
+                  </span>
+                </div>
+                <div style="font-size: 16px; color: #ffffff; line-height: 1.35; min-height: 28px;">
+                  ${(showQ && activeQ) ? (activeQ.q || '') : '<span style="color: #64748b;">Chờ Controller hiện câu hỏi phụ...</span>'}
+                </div>
+              </div>
+
+              ${(showQ && showAns && activeQ) ? `
+                <div style="background: linear-gradient(135deg, #065f46, #047857); border: 2px solid #22c55e; border-radius: 10px; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center;">
+                  <span style="color: #a7f3d0; font-size: 12px;">ĐÁP ÁN ĐÚNG:</span>
+                  <span style="font-size: 16px; color: #facc15; font-weight: 900;">${activeQ.a || '---'}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; min-height: 0;">
+              <button id="btn-player-chp-buzzer" ${btnDisabled ? 'disabled' : ''} class="btn" style="width: 210px; height: 210px; border-radius: 50%; background: ${btnBg}; color: white; font-size: 19px; font-weight: 900; border: 6px solid #ffffff; box-shadow: ${btnShadow}; cursor: ${btnDisabled ? 'not-allowed' : 'pointer'}; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; line-height: 1.3;">
+                ${btnContent}
+              </button>
+            </div>
           </div>
         `;
 
@@ -1078,6 +1124,75 @@
             }
           };
         }
+      }
+
+      function renderPlayerKhanGia(state) {
+        const container = document.getElementById('player-kg-content');
+        if (!container) return;
+
+        const kg = state.khangiaState || {};
+        const activeQ = (kg.showQuestion && kg.activeQuestion) ? kg.activeQuestion : null;
+        const revealed = kg.revealedOptions || {};
+        const selectedOpt = kg.selectedOption;
+        const gradedResults = kg.gradedResults || {};
+
+        const currentKey = `${activeQ ? activeQ.index + '_' + activeQ.question : 'none'}_${JSON.stringify(revealed)}_${selectedOpt}_${JSON.stringify(gradedResults)}`;
+        if (lastRenderedKGKey === currentKey && container.children.length > 0) {
+          return;
+        }
+        lastRenderedKGKey = currentKey;
+
+        if (!activeQ) {
+          container.innerHTML = `
+            <div style="background: #0f172a; border-radius: 12px; padding: 24px; text-align: center; border: 1.5px dashed #475569; color: #94a3b8; font-size: 14px;">
+              Đang chờ câu hỏi phần Khán giả...
+            </div>
+          `;
+          return;
+        }
+
+        const opts = activeQ.options || ['', '', ''];
+        const optLetters = ['A', 'B', 'C'];
+
+        container.innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="background: #0f172a; border-radius: 12px; padding: 14px 16px; border: 1.5px solid #ec4899;">
+              <div style="font-size: 11px; color: #f472b6; margin-bottom: 4px;">CÂU HỎI KHÁN GIẢ SỐ ${activeQ.index || 1}</div>
+              <div style="font-size: 16px; color: #ffffff; line-height: 1.4;">${activeQ.question || ''}</div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${opts.map((optText, idx) => {
+                const oneBased = idx + 1;
+                const isRevealed = !!revealed[oneBased];
+                const isSelected = (Number(selectedOpt) === oneBased);
+                const gradeStatus = gradedResults[oneBased];
+
+                let bg = 'linear-gradient(135deg, #0284c7, #0369a1)';
+                let border = '1.5px solid #38bdf8';
+                let color = '#ffffff';
+                if (gradeStatus === 'correct') {
+                  bg = '#facc15';
+                  border = '2px solid #ffffff';
+                  color = '#000000';
+                } else if (gradeStatus === 'wrong') {
+                  bg = '#020617';
+                  border = '1.5px solid #334155';
+                  color = '#64748b';
+                } else if (isSelected) {
+                  bg = 'linear-gradient(135deg, #9333ea, #7c3aed)';
+                  border = '2px solid #c084fc';
+                }
+
+                return `
+                  <div style="background: ${bg}; border: ${border}; color: ${color}; border-radius: 10px; padding: 10px 14px; font-size: 15px;">
+                    <b>${optLetters[idx]}.</b> ${isRevealed ? (optText || '---') : '<span style="opacity: 0.5;">[Chưa mở]</span>'}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
       }
     </script>
   </body>

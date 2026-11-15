@@ -8,7 +8,12 @@
     <style>
       *, *::before, *::after {
         font-weight: bold !important;
+        font-family: 'Segoe UI', sans-serif;
         box-sizing: border-box;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
       }
       html, body {
         width: 100vw;
@@ -17,7 +22,7 @@
         padding: 0;
         overflow: hidden;
         box-sizing: border-box;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Segoe UI', sans-serif;
         background-color: #0b1120;
         color: #f8fafc;
       }
@@ -113,6 +118,11 @@
         }, true);
 
         window.addEventListener('dragstart', function (e) {
+          e.preventDefault();
+          return false;
+        }, true);
+
+        window.addEventListener('selectstart', function (e) {
           e.preventDefault();
           return false;
         }, true);
@@ -273,6 +283,15 @@
         <div id="host-chp-content" style="flex: 1; min-height: 0; overflow-y: auto;">Đang tải thông tin...</div>
       </div>
 
+      <!-- VIEW KHÁN GIẢ -->
+      <div id="view-khangia" class="view-container" style="background: #1e293b; border-radius: 12px; padding: 12px; border: 2px solid #ec4899;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0;">
+          <h3 style="margin: 0; font-size: 18px; color: #f472b6;">VIEW KHÁN GIẢ</h3>
+          <span style="background: #be185d; color: white; padding: 3px 10px; border-radius: 999px; font-size: 11px;">Host Script</span>
+        </div>
+        <div id="host-kg-content" style="flex: 1; min-height: 0; overflow-y: auto;">Đang tải câu hỏi khán giả...</div>
+      </div>
+
     </div>
 
     <script>
@@ -311,7 +330,8 @@
         vong2: 'view-vong2',
         vong3: 'view-vong3',
         vong4: 'view-vong4',
-        chp: 'view-chp'
+        chp: 'view-chp',
+        khangia: 'view-khangia'
       };
 
       const viewDisplayNames = {
@@ -320,7 +340,8 @@
         vong2: 'VÒNG 2: ĐẶT CƯỢC',
         vong3: 'VÒNG 3: SO TÀI',
         vong4: 'VÒNG 4: ẨN SỐ MAY MẮN',
-        chp: 'CÂU HỎI PHỤ'
+        chp: 'CÂU HỎI PHỤ',
+        khangia: 'VIEW KHÁN GIẢ'
       };
 
       let currentHostRenderedView = null;
@@ -330,6 +351,7 @@
       var lastRenderedHostV3Key = '';
       var lastRenderedHostV4Key = '';
       var lastRenderedHostCHPKey = '';
+      var lastRenderedHostKGKey = '';
 
       window.onGameStateChange(function(state, changes) {
         if (!checkRoomAccess()) return;
@@ -382,6 +404,7 @@
         try { renderHostVong3(state); } catch (e) {}
         try { renderHostVong4(state); } catch (e) {}
         try { renderHostCHP(state); } catch (e) {}
+        try { renderHostKhanGia(state); } catch (e) {}
       });
 
       function renderHostVong1(state) {
@@ -997,7 +1020,9 @@
         const chp = state.chpState || {};
         const isLocked = chp.locked !== false;
         const winner = chp.buzzerWinner;
-        const players = state.players || [];
+        const activeQ = chp.activeQuestion;
+        const showQ = !!chp.showQuestion;
+        const showAns = !!chp.showAnswer;
 
         let allowedList = [1, 2, 3, 4];
         if (Array.isArray(chp.allowedPlayerIds)) {
@@ -1006,7 +1031,7 @@
           allowedList = [Number(chp.allowedPlayerId)];
         }
 
-        const currentHostCHPKey = `${isLocked}_${winner ? winner.playerId : 'none'}_${allowedList.join(',')}`;
+        const currentHostCHPKey = `${isLocked}_${winner ? winner.playerId : 'none'}_${allowedList.join(',')}_${activeQ ? activeQ.index + '_' + activeQ.q + '_' + activeQ.a : 'none'}_${showQ}_${showAns}`;
         if (lastRenderedHostCHPKey === currentHostCHPKey && chpEl.children.length > 0) {
           return;
         }
@@ -1020,38 +1045,156 @@
         }
 
         chpEl.innerHTML = `
-          <div style="display: flex; flex-direction: column; gap: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px 18px; border-radius: 12px; border: 1.5px solid #fbbf24;">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Ô CÂU HỎI & ĐÁP ÁN CÂU HỎI PHỤ -->
+            <div style="background: #0f172a; border-radius: 12px; padding: 14px 18px; border: 1.5px solid #fbbf24;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="color: #fbbf24; font-size: 12px; text-transform: uppercase;">
+                  ${activeQ ? `CÂU HỎI PHỤ SỐ ${activeQ.index || 1}` : 'CHỜ CONTROLLER HIỆN CÂU HỎI PHỤ'}
+                </span>
+                <span style="background: ${showQ && activeQ ? '#0284c7' : '#334155'}; color: white; padding: 2px 10px; border-radius: 6px; font-size: 11px;">
+                  ${showQ && activeQ ? 'ĐANG HIỆN CÂU HỎI' : 'CHƯA HIỆN CÂU HỎI'}
+                </span>
+              </div>
+              <div style="font-size: 18px; color: #ffffff; line-height: 1.4; min-height: 36px;">
+                ${(showQ && activeQ) ? (activeQ.q || '') : '<span style="color: #64748b;">Chờ Controller bấm "Hiện câu hỏi" hoặc "Câu hỏi mới"...</span>'}
+              </div>
+
+              ${activeQ ? `
+                <div style="margin-top: 10px; padding: 8px 14px; border-radius: 8px; background: ${showAns ? 'linear-gradient(135deg, #065f46, #047857)' : '#1e293b'}; border: 1.5px solid ${showAns ? '#22c55e' : '#334155'}; display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <span style="color: ${showAns ? '#a7f3d0' : '#94a3b8'}; font-size: 11px; text-transform: uppercase;">
+                      ${showAns ? 'ĐÁP ÁN ĐÚNG (ĐÃ MỞ):' : 'ĐÁP ÁN THAM KHẢO (HOST):'}
+                    </span>
+                    <div style="font-size: 16px; color: ${showAns ? '#facc15' : '#cbd5e1'}; margin-top: 2px;">
+                      ${activeQ.a || '---'}
+                    </div>
+                  </div>
+                  <span style="background: ${showAns ? '#facc15' : '#334155'}; color: ${showAns ? '#000000' : '#cbd5e1'}; padding: 3px 10px; border-radius: 6px; font-size: 11px;">
+                    ${showAns ? 'ĐÃ HIỆN' : 'HOST ONLY'}
+                  </span>
+                </div>
+              ` : ''}
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 10px 16px; border-radius: 12px; border: 1.5px solid #fbbf24;">
               <div>
                 <span style="font-size: 12px; color: #94a3b8;">QUYỀN BẤM CHUÔNG:</span>
-                <b style="font-size: 16px; color: #fbbf24; margin-left: 8px;">${allowedText}</b>
+                <b style="font-size: 15px; color: #fbbf24; margin-left: 8px;">${allowedText}</b>
               </div>
               <div>
-                <span style="background: ${isLocked ? '#dc2626' : '#16a34a'}; color: white; padding: 6px 14px; border-radius: 8px; font-weight: bold; font-size: 13px;">
+                <span style="background: ${isLocked ? '#dc2626' : '#16a34a'}; color: white; padding: 5px 12px; border-radius: 8px; font-weight: bold; font-size: 12px;">
                   ${isLocked ? 'CHUÔNG ĐANG KHÓA' : 'CHUÔNG ĐANG MỞ'}
                 </span>
               </div>
             </div>
 
             <!-- BẢNG TÍN HIỆU CHUÔNG Host Reference -->
-            <div style="background: #0f172a; border-radius: 14px; padding: 24px; border: 2px solid #38bdf8; text-align: center;">
-              <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #38bdf8;">TÍN HIỆU CHUÔNG CÂU HỎI PHỤ</h3>
+            <div style="background: #0f172a; border-radius: 14px; padding: 18px; border: 2px solid #38bdf8; text-align: center;">
+              <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #38bdf8;">TÍN HIỆU CHUÔNG CÂU HỎI PHỤ</h3>
 
               ${winner ? `
-                <div style="background: linear-gradient(135deg, #065f46, #047857); border: 3px solid #34d399; border-radius: 16px; padding: 24px; box-shadow: 0 0 30px rgba(52, 211, 153, 0.4);">
-                  <div style="font-size: 14px; color: #a7f3d0; font-weight: bold; text-transform: uppercase;">NGƯỜI BẤM CHUÔNG NHANH NHẤT:</div>
-                  <div style="font-size: 32px; font-weight: 900; color: #ffffff; margin: 10px 0; text-shadow: 0 0 10px rgba(255,255,255,0.8);">
+                <div style="background: linear-gradient(135deg, #065f46, #047857); border: 3px solid #34d399; border-radius: 14px; padding: 18px; box-shadow: 0 0 30px rgba(52, 211, 153, 0.4);">
+                  <div style="font-size: 13px; color: #a7f3d0; font-weight: bold; text-transform: uppercase;">NGƯỜI BẤM CHUÔNG NHANH NHẤT:</div>
+                  <div style="font-size: 28px; font-weight: 900; color: #ffffff; margin: 8px 0; text-shadow: 0 0 10px rgba(255,255,255,0.8);">
                     ${winner.name} (PLAYER ${winner.playerId})
                   </div>
-                  <div style="font-size: 15px; color: #facc15; font-weight: bold;">
+                  <div style="font-size: 14px; color: #facc15; font-weight: bold;">
                     Thời điểm bấm: ${winner.time || '---'}
                   </div>
                 </div>
               ` : `
-                <div style="background: #1e293b; border: 2px dashed #475569; border-radius: 14px; padding: 30px; color: #94a3b8; font-size: 16px;">
+                <div style="background: #1e293b; border: 2px dashed #475569; border-radius: 12px; padding: 22px; color: #94a3b8; font-size: 15px;">
                   Chưa có tín hiệu bấm chuông từ thí sinh.
                 </div>
               `}
+            </div>
+          </div>
+        `;
+      }
+
+      function renderHostKhanGia(state) {
+        const kgEl = document.getElementById('host-kg-content');
+        if (!kgEl) return;
+
+        const kg = state.khangiaState || {};
+        const activeQ = kg.activeQuestion;
+        const showQ = !!kg.showQuestion;
+        const revealed = kg.revealedOptions || {};
+        const selectedOpt = kg.selectedOption;
+        const gradedResults = kg.gradedResults || {};
+
+        const currentKey = `${activeQ ? activeQ.index + '_' + activeQ.question : 'none'}_${showQ}_${kg.showOnViewer}_${JSON.stringify(revealed)}_${selectedOpt}_${kg.isGraded}_${JSON.stringify(gradedResults)}`;
+        if (lastRenderedHostKGKey === currentKey && kgEl.children.length > 0) {
+          return;
+        }
+        lastRenderedHostKGKey = currentKey;
+
+        if (!activeQ) {
+          kgEl.innerHTML = `
+            <div style="background: #0f172a; border-radius: 12px; padding: 24px; text-align: center; border: 1.5px dashed #475569; color: #94a3b8; font-size: 15px;">
+              Chờ Controller bấm "Hiện câu hỏi" cho phần Khán giả...
+            </div>
+          `;
+          return;
+        }
+
+        const opts = activeQ.options || ['', '', ''];
+        const correctIdx = Number(activeQ.correct) || 1;
+        const optLetters = ['A', 'B', 'C'];
+
+        kgEl.innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="background: #0f172a; border-radius: 12px; padding: 14px 18px; border: 1.5px solid #ec4899;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="color: #f472b6; font-size: 12px;">CÂU HỎI KHÁN GIẢ SỐ ${activeQ.index || 1}</span>
+                <span style="background: ${kg.showOnViewer === false ? '#475569' : '#0284c7'}; color: white; padding: 2px 10px; border-radius: 6px; font-size: 11px;">
+                  ${kg.showOnViewer === false ? 'ĐANG ẨN TRÊN VIEWER' : 'ĐANG HIỆN TRÊN VIEWER'}
+                </span>
+              </div>
+              <div style="font-size: 18px; color: #ffffff; line-height: 1.4;">
+                ${activeQ.question || ''}
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${opts.map((optText, idx) => {
+                const oneBased = idx + 1;
+                const isRevealed = !!revealed[oneBased];
+                const isSelected = (Number(selectedOpt) === oneBased);
+                const gradeStatus = gradedResults[oneBased];
+                const isCorrectAns = (oneBased === correctIdx);
+
+                let bg = 'linear-gradient(135deg, #0284c7, #0369a1)';
+                let border = '1.5px solid #38bdf8';
+                let color = '#ffffff';
+                if (gradeStatus === 'correct') {
+                  bg = '#facc15';
+                  border = '2px solid #ffffff';
+                  color = '#000000';
+                } else if (gradeStatus === 'wrong') {
+                  bg = '#020617';
+                  border = '1.5px solid #334155';
+                  color = '#94a3b8';
+                } else if (isSelected) {
+                  bg = 'linear-gradient(135deg, #9333ea, #7c3aed)';
+                  border = '2px solid #c084fc';
+                }
+
+                return `
+                  <div style="background: ${bg}; border: ${border}; color: ${color}; border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <div style="font-size: 16px;">
+                      <b>${optLetters[idx]}.</b> ${optText || '---'}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+                      <span style="background: rgba(0,0,0,0.45); color: ${isRevealed ? '#4ade80' : '#94a3b8'}; padding: 2px 8px; border-radius: 4px;">
+                        ${isRevealed ? 'Đã mở trên Viewer' : 'Chưa mở trên Viewer'}
+                      </span>
+                      ${isCorrectAns ? `<span style="background: #16a34a; color: white; padding: 2px 8px; border-radius: 4px;">ĐÁP ÁN ĐÚNG (HOST)</span>` : ''}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
             </div>
           </div>
         `;

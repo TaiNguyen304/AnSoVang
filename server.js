@@ -19,7 +19,7 @@ function createDefaultGameState(roomId = '123456') {
   const rid = String(roomId || '123456').trim() || '123456';
   return {
     roomId: rid,
-    currentView: 'blank', // 'blank' | 'vong1' | 'vong2' | 'vong3' | 'vong4'
+    currentView: 'blank', // 'blank' | 'vong1' | 'vong2' | 'vong3' | 'vong4' | 'chp' | 'khangia'
     roomAuth: {
       roomId: rid,
       passwords: {
@@ -101,7 +101,26 @@ function createDefaultGameState(roomId = '123456') {
       locked: true,
       buzzerWinner: null,
       allowedPlayerIds: [1, 2, 3, 4],
-      allowedPlayerId: 'all'
+      allowedPlayerId: 'all',
+      qIndex: 0,
+      usedQuestionIndices: [],
+      activeQuestion: null,
+      showQuestion: false,
+      showAnswer: false,
+      showOnViewer: true
+    },
+    khangiaState: {
+      qIndex: 0,
+      usedQuestionIndices: [],
+      activeQuestion: null,
+      showQuestion: false,
+      showOnViewer: true,
+      showPrizeAmount: true,
+      questionBoxPos: 2,
+      revealedOptions: { 1: false, 2: false, 3: false },
+      selectedOption: null,
+      isGraded: false,
+      gradedResults: {}
     },
     audioState: {
       soundboard: {
@@ -656,6 +675,28 @@ app.post('/api/game/state', (req, res) => {
       ...(gameState.chpState || {}),
       ...data.chpState
     };
+  }
+
+  if (data.khangiaState) {
+    const prevKg = gameState.khangiaState || {};
+    const nextKg = data.khangiaState;
+    gameState.khangiaState = {
+      ...prevKg,
+      ...nextKg,
+      revealedOptions: nextKg.isResetOptions
+        ? (nextKg.revealedOptions || { 1: false, 2: false, 3: false })
+        : {
+            ...(prevKg.revealedOptions || { 1: false, 2: false, 3: false }),
+            ...(nextKg.revealedOptions || {})
+          },
+      gradedResults: nextKg.isResetOptions
+        ? (nextKg.gradedResults || {})
+        : {
+            ...(prevKg.gradedResults || {}),
+            ...(nextKg.gradedResults || {})
+          }
+    };
+    delete gameState.khangiaState.isResetOptions;
   }
 
   if (data.audioState) {
