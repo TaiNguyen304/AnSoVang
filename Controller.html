@@ -3299,7 +3299,7 @@
 
         const now = Date.now();
         if (typeof window.playEffectAudio === 'function') {
-          window.playEffectAudio('Hiendapandung.mp3');
+          window.playEffectAudio('DungV2.mp3');
         }
 
         await window.broadcastStateUpdate({
@@ -3311,7 +3311,7 @@
               ...(window.currentGameState.audioState?.soundboard || {})
             },
             effects: {
-              track: 'Hiendapandung.mp3',
+              track: 'DungV2.mp3',
               playing: true,
               loop: false,
               timestamp: now
