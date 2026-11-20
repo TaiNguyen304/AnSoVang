@@ -842,11 +842,11 @@
 
           </div>
 
-          <!-- KHU VỰC ĐIỀU KHIỂN CHI TIẾT VIEW KHÁN GIẢ -->
+          <!-- KHU VỰC ĐIỀU KHIỂN CHI TIẾT KHÁN GIẢ -->
           <div id="controller-khangia-control-panel" style="background: #0f172a; border-radius: 8px; padding: 8px 10px; border: 1.5px solid #ec4899; display: none; flex-direction: column; gap: 6px; flex-shrink: 0;">
 
-            <!-- Hàng 1: Hiện câu hỏi, Hiện đáp án A/B/C -->
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;">
+            <!-- Hàng 1: Hiện câu hỏi, Hiện đáp án A/B/C, Ẩn/Hiện graphic câu hỏi -->
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;">
               <button id="btn-kg-show-q" class="btn" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-weight: bold; padding: 6px 8px; border-radius: 5px; font-size: 11px;">
                 Hiện câu hỏi
               </button>
@@ -859,10 +859,13 @@
               <button class="btn btn-kg-reveal" data-opt="3" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; font-weight: bold; padding: 6px 8px; border-radius: 5px; font-size: 11px;">
                 Hiện đáp án C
               </button>
+              <button id="btn-kg-toggle-viewer" class="btn" title="Ẩn hoặc hiện graphic câu hỏi Khán giả trên Viewer" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 10.5px; border: 1px solid #38bdf8;">
+                Graphic câu hỏi: HIỆN
+              </button>
             </div>
 
-            <!-- Hàng 2: Chọn A/B/C, Đúng hay Sai (Chấm điểm), Ẩn câu, Đóng câu -->
-            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px;">
+            <!-- Hàng 2: Chọn A/B/C, Đúng hay Sai (Chấm điểm), Ẩn câu (ẩn/hiện nội dung), Đóng câu, Câu hỏi mới -->
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">
               <button class="btn btn-kg-select" data-opt="1" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
                 Chọn A
               </button>
@@ -875,11 +878,14 @@
               <button id="btn-kg-grade" class="btn" style="background: linear-gradient(135deg, #eab308, #ca8a04); color: #000000; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
                 Đúng hay Sai
               </button>
-              <button id="btn-kg-hide-q" class="btn" style="background: #475569; color: white; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
+              <button id="btn-kg-hide-q" class="btn" title="Ẩn hoặc hiện nội dung câu hỏi và các đáp án của câu hiện tại" style="background: #475569; color: white; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
                 Ẩn câu
               </button>
-              <button id="btn-kg-close-q" class="btn" style="background: #334155; color: #f87171; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
+              <button id="btn-kg-close-q" class="btn" title="Đóng câu hiện tại và trả 3 ô đáp án về xanh dương (không đổi câu mới)" style="background: #334155; color: #f87171; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
                 Đóng câu
+              </button>
+              <button id="btn-kg-new-q" class="btn" style="background: linear-gradient(135deg, #db2777, #9d174d); color: white; font-weight: bold; padding: 6px 6px; border-radius: 5px; font-size: 11px;">
+                Câu hỏi mới
               </button>
             </div>
 
@@ -1159,7 +1165,7 @@
         vong3: 'VÒNG 3: SO TÀI',
         vong4: 'VÒNG 4: ẨN SỐ MAY MẮN',
         chp: 'CÂU HỎI PHỤ',
-        khangia: 'VIEW KHÁN GIẢ'
+        khangia: 'KHÁN GIẢ'
       };
 
       function parseExcelWorkbookWithoutHeaders(workbook) {
@@ -2041,12 +2047,43 @@
           if (!kg.activeQuestion) {
             qStatusEl.textContent = 'Chưa mở câu hỏi';
             qStatusEl.style.color = '#94a3b8';
-          } else if (kg.showOnViewer === false || !kg.showQuestion) {
-            qStatusEl.textContent = `Câu ${kg.activeQuestion.index || 1} (Đang ẩn trên Viewer)`;
+          } else if (kg.showOnViewer === false) {
+            qStatusEl.textContent = `Câu ${kg.activeQuestion.index || 1} (Graphic đang ẩn)`;
+            qStatusEl.style.color = '#f87171';
+          } else if (!kg.showQuestion) {
+            qStatusEl.textContent = `Câu ${kg.activeQuestion.index || 1} (Nội dung đang ẩn)`;
             qStatusEl.style.color = '#facc15';
           } else {
             qStatusEl.textContent = `Câu ${kg.activeQuestion.index || 1} (Đang hiện)`;
             qStatusEl.style.color = '#4ade80';
+          }
+        }
+
+        const btnKgToggleViewer = document.getElementById('btn-kg-toggle-viewer');
+        if (btnKgToggleViewer) {
+          const isGraphicShown = kg.showOnViewer !== false;
+          if (isGraphicShown) {
+            btnKgToggleViewer.textContent = 'Graphic câu hỏi: HIỆN';
+            btnKgToggleViewer.style.background = 'linear-gradient(135deg, #0ea5e9, #0284c7)';
+            btnKgToggleViewer.style.borderColor = '#38bdf8';
+          } else {
+            btnKgToggleViewer.textContent = 'Graphic câu hỏi: ĐÃ ẨN';
+            btnKgToggleViewer.style.background = 'linear-gradient(135deg, #475569, #334155)';
+            btnKgToggleViewer.style.borderColor = '#94a3b8';
+          }
+        }
+
+        const btnKgHideQ = document.getElementById('btn-kg-hide-q');
+        if (btnKgHideQ) {
+          const isContentHidden = !!(kg.activeQuestion && !kg.showQuestion);
+          if (isContentHidden) {
+            btnKgHideQ.textContent = 'Hiện lại câu';
+            btnKgHideQ.style.background = '#f59e0b';
+            btnKgHideQ.style.color = '#000000';
+          } else {
+            btnKgHideQ.textContent = 'Ẩn câu';
+            btnKgHideQ.style.background = '#475569';
+            btnKgHideQ.style.color = '#ffffff';
           }
         }
 
@@ -3299,7 +3336,7 @@
 
         const now = Date.now();
         if (typeof window.playEffectAudio === 'function') {
-          window.playEffectAudio('DungV2.mp3');
+          window.playEffectAudio('Hiendapandung.mp3');
         }
 
         await window.broadcastStateUpdate({
@@ -3311,7 +3348,7 @@
               ...(window.currentGameState.audioState?.soundboard || {})
             },
             effects: {
-              track: 'DungV2.mp3',
+              track: 'Hiendapandung.mp3',
               playing: true,
               loop: false,
               timestamp: now
@@ -4688,8 +4725,7 @@
           await window.broadcastStateUpdate({
             khangiaState: {
               ...kg,
-              showQuestion: true,
-              showOnViewer: true
+              showQuestion: true
             }
           });
           showNotification(`Đã hiện Câu hỏi Khán giả số ${kg.activeQuestion.index || 1}!`);
@@ -4716,7 +4752,7 @@
               index: picked.idx + 1
             },
             showQuestion: true,
-            showOnViewer: true,
+            showOnViewer: kg.showOnViewer !== false,
             questionBoxPos: 2,
             revealedOptions: { 1: false, 2: false, 3: false },
             selectedOption: null,
@@ -4733,7 +4769,7 @@
           const optNum = Number(btn.getAttribute('data-opt'));
           const kg = window.currentGameState.khangiaState || {};
           if (!kg.activeQuestion) {
-            showPopup('Vui lòng bấm "Hiện câu hỏi" trước!');
+            showPopup('Vui lòng bấm "Hiện câu hỏi" hoặc "Câu hỏi mới" trước!');
             return;
           }
           const optLetters = ['', 'A', 'B', 'C'];
@@ -4745,7 +4781,6 @@
             khangiaState: {
               ...kg,
               showQuestion: true,
-              showOnViewer: true,
               revealedOptions: {
                 ...(kg.revealedOptions || {}),
                 [optNum]: true
@@ -4770,7 +4805,7 @@
           const optNum = Number(btn.getAttribute('data-opt'));
           const kg = window.currentGameState.khangiaState || {};
           if (!kg.activeQuestion) {
-            showPopup('Vui lòng bấm "Hiện câu hỏi" trước!');
+            showPopup('Vui lòng bấm "Hiện câu hỏi" hoặc "Câu hỏi mới" trước!');
             return;
           }
           const optLetters = ['', 'A', 'B', 'C'];
@@ -4782,7 +4817,6 @@
             khangiaState: {
               ...kg,
               showQuestion: true,
-              showOnViewer: true,
               revealedOptions: {
                 ...(kg.revealedOptions || {}),
                 [optNum]: true
@@ -4834,7 +4868,6 @@
           khangiaState: {
             ...kg,
             showQuestion: true,
-            showOnViewer: true,
             isGraded: true,
             gradedResults: {
               ...(kg.gradedResults || {}),
@@ -4861,13 +4894,22 @@
 
       document.getElementById('btn-kg-hide-q')?.addEventListener('click', async () => {
         const kg = window.currentGameState.khangiaState || {};
+        if (!kg.activeQuestion) {
+          showPopup('Chưa có câu hỏi Khán giả đang mở!');
+          return;
+        }
+        const newShowQ = !kg.showQuestion;
         await window.broadcastStateUpdate({
           khangiaState: {
             ...kg,
-            showOnViewer: false
+            showQuestion: newShowQ
           }
         });
-        showNotification('Đã ẨN câu hỏi Khán giả trên Viewer (bấm "Hiện câu hỏi" để hiện lại).');
+        showNotification(
+          newShowQ
+            ? 'Đã HIỆN lại nội dung câu hỏi và các đáp án hiện tại!'
+            : 'Đã ẨN nội dung câu hỏi và các đáp án hiện tại (bấm lại để hiện).'
+        );
       });
 
       document.getElementById('btn-kg-close-q')?.addEventListener('click', async () => {
@@ -4875,9 +4917,7 @@
         await window.broadcastStateUpdate({
           khangiaState: {
             ...kg,
-            activeQuestion: null,
             showQuestion: false,
-            showOnViewer: true,
             questionBoxPos: 2,
             revealedOptions: { 1: false, 2: false, 3: false },
             selectedOption: null,
@@ -4886,7 +4926,59 @@
             isResetOptions: true
           }
         });
-        showNotification('Đã ĐÓNG câu hỏi Khán giả! Cả 3 ô đáp án đã trở về màu xanh dương.');
+        showNotification('Đã ĐÓNG câu hỏi hiện tại (không đổi sang câu mới). Cả 3 ô đáp án đã trở về màu xanh dương.');
+      });
+
+      document.getElementById('btn-kg-new-q')?.addEventListener('click', async () => {
+        const qData = getQuestionsData();
+        const kgList = qData?.khangia || [];
+        if (kgList.length === 0) {
+          showPopup('Chưa có câu hỏi trong sheet Khán giả. Vui lòng nhấn "Nhập đề Excel" trước!');
+          return;
+        }
+        const kg = window.currentGameState.khangiaState || {};
+        const used = Array.isArray(kg.usedQuestionIndices) ? [...kg.usedQuestionIndices] : [];
+        const picked = pickNextUnusedKhanGiaQuestion(kgList, used);
+        if (!picked) {
+          showPopup(`Đã sử dụng hết toàn bộ ${kgList.length} câu hỏi Khán giả trong Excel!`);
+          return;
+        }
+        const newUsed = [...used, picked.idx];
+
+        await window.broadcastStateUpdate({
+          khangiaState: {
+            ...kg,
+            qIndex: picked.idx + 1,
+            usedQuestionIndices: newUsed,
+            activeQuestion: {
+              question: picked.item.question,
+              options: picked.item.options,
+              correct: picked.item.correct,
+              index: picked.idx + 1
+            },
+            showQuestion: true,
+            showOnViewer: kg.showOnViewer !== false,
+            questionBoxPos: 2,
+            revealedOptions: { 1: false, 2: false, 3: false },
+            selectedOption: null,
+            isGraded: false,
+            gradedResults: { 1: null, 2: null, 3: null },
+            isResetOptions: true
+          }
+        });
+        showNotification(`Đã mở Câu hỏi Khán giả mới (Câu số ${picked.idx + 1})!`);
+      });
+
+      document.getElementById('btn-kg-toggle-viewer')?.addEventListener('click', async () => {
+        const kg = window.currentGameState.khangiaState || {};
+        const newShow = !(kg.showOnViewer !== false);
+        await window.broadcastStateUpdate({
+          khangiaState: {
+            ...kg,
+            showOnViewer: newShow
+          }
+        });
+        showNotification(newShow ? 'Đã HIỆN graphic câu hỏi Khán giả trên Viewer!' : 'Đã ẨN graphic câu hỏi Khán giả trên Viewer!');
       });
 
       document.getElementById('btn-kg-toggle-prize')?.addEventListener('click', async () => {
@@ -5070,9 +5162,9 @@
           area.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 10px;">
               <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 4px;">
-                <span style="font-size: 12px; color: #f472b6;">VIEW KHÁN GIẢ (${totalKg} câu trong Excel | Đã dùng: ${(kg.usedQuestionIndices || []).length})</span>
-                <span style="font-size: 11px; color: ${kg.showOnViewer === false ? '#f87171' : '#4ade80'};">
-                  ${kg.showOnViewer === false ? 'ĐANG ẨN TRÊN VIEWER' : 'ĐANG HIỆN TRÊN VIEWER'}
+                <span style="font-size: 12px; color: #f472b6;">KHÁN GIẢ (${totalKg} câu trong Excel | Đã dùng: ${(kg.usedQuestionIndices || []).length})</span>
+                <span style="font-size: 11px; color: ${kg.showOnViewer === false ? '#f87171' : (!kg.showQuestion && activeQ ? '#facc15' : '#4ade80')};">
+                  ${kg.showOnViewer === false ? 'GRAPHIC ĐANG ẨN TRÊN VIEWER' : (!kg.showQuestion && activeQ ? 'NỘI DUNG CÂU ĐANG ẨN TRÊN VIEWER' : 'ĐANG HIỆN TRÊN VIEWER')}
                 </span>
               </div>
 
